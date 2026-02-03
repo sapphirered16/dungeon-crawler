@@ -286,17 +286,71 @@ class GameEngine:
     def describe_room(self):
         """Describe the current room to the player."""
         print(f"\n--- Floor {self.player.position[2]+1}, Room ({self.player.position[0]}, {self.player.position[1]}) ---")
-        print(self.current_room.description)
         
-        if self.current_room.has_entity(Enemy):
-            for entity in self.current_room.entities:
-                if isinstance(entity, Enemy) and entity.is_alive():
-                    print(f"A {entity.name} is here!")
+        # Generate dynamic room description based on current contents
+        living_enemies = [e for e in self.current_room.entities if isinstance(e, Enemy) and e.is_alive()]
+        room_items = self.current_room.items
         
-        if self.current_room.items:
+        # Generate dynamic description based on contents
+        if living_enemies and room_items:
+            print("A room with both hostile creatures and treasures!")
+        elif living_enemies:
+            print("A room with hostile creatures lurks ahead.")
+        elif room_items:
+            print("A treasure room filled with gleaming objects.")
+        elif self.current_room.room_type == "trap":
+            print("A dangerous-looking room with potential hazards.")
+        else:
+            print("An empty, quiet room.")
+        
+        # Display living enemies
+        if living_enemies:
+            for entity in living_enemies:
+                print(f"A {entity.name} is here!")
+        
+        # Display items in the room
+        if room_items:
             print("Items in the room:")
-            for item in self.current_room.items:
+            for item in room_items:
                 print(f"- {item.name}")
+        
+        # Show adjacent room information
+        print("\nAdjacent areas:")
+        for direction in Direction:
+            if direction in self.current_room.connections:
+                adj_room = self.current_room.connections[direction]
+                
+                # Generate dynamic description for adjacent room based on its contents
+                adj_living_enemies = [e for e in adj_room.entities if isinstance(e, Enemy) and e.is_alive()]
+                adj_items = adj_room.items
+                
+                # Determine description based on contents
+                if adj_living_enemies and adj_items:
+                    adj_desc = "A room with both hostile creatures and treasures!"
+                elif adj_living_enemies:
+                    adj_desc = "A room with hostile creatures lurks ahead."
+                elif adj_items:
+                    adj_desc = "A treasure room filled with gleaming objects."
+                elif adj_room.room_type == "trap":
+                    adj_desc = "A dangerous-looking room with potential hazards."
+                else:
+                    adj_desc = "An empty, quiet room."
+                
+                # Count contents for display
+                enemy_count = len(adj_living_enemies)
+                item_count = len(adj_items)
+                
+                desc_parts = []
+                if enemy_count > 0:
+                    desc_parts.append(f"{enemy_count} enemy{'s' if enemy_count != 1 else ''}")
+                if item_count > 0:
+                    desc_parts.append(f"{item_count} item{'s' if item_count != 1 else ''}")
+                if not desc_parts:
+                    desc_parts.append("appears empty")
+                
+                print(f"  {direction.value.capitalize()}: {', '.join(desc_parts)} - {adj_desc}")
+            else:
+                print(f"  {direction.value.capitalize()}: blocked")
     
     def look_around(self):
         """Look around the current room."""
@@ -346,8 +400,11 @@ class GameEngine:
     
     def equip_item(self, item_index: int) -> bool:
         """Equip an item from the inventory."""
-        if 0 <= item_index < len(self.player.inventory):
-            item = self.player.inventory[item_index]
+        # Adjust item_index since the game displays items starting from 1
+        adjusted_index = item_index - 1
+        
+        if 0 <= adjusted_index < len(self.player.inventory):
+            item = self.player.inventory[adjusted_index]
             
             if item.type == ItemType.WEAPON:
                 # Unequip current weapon if any
@@ -762,7 +819,7 @@ def main():
                 print("Invalid direction. Use: north, south, east, or west.")
         elif command.startswith("attack "):
             try:
-                enemy_num = int(command[7:]) - 1
+                enemy_num = int(command[7:])  # Pass the original number (1-based)
                 if game.attack_enemy(enemy_num):
                     if game.player.is_alive():
                         game.save_game()  # Auto-save after successful attack
@@ -777,14 +834,14 @@ def main():
                 print("Please specify a valid enemy number to attack.")
         elif command.startswith("take "):
             try:
-                item_num = int(command[5:]) - 1
+                item_num = int(command[5:])  # Pass the original number (1-based)
                 if game.take_item(item_num):
                     game.save_game()  # Auto-save after taking an item
             except ValueError:
                 print("Please specify a valid item number to take.")
         elif command.startswith("equip "):
             try:
-                item_num = int(command[6:]) - 1
+                item_num = int(command[6:])  # Pass the original number (1-based)
                 if game.equip_item(item_num):
                     game.save_game()  # Auto-save after equipping an item
             except ValueError:
