@@ -10,6 +10,8 @@ class Direction(Enum):
     SOUTH = "south"
     EAST = "east"
     WEST = "west"
+    UP = "up"
+    DOWN = "down"
 
 
 class ItemType(Enum):
@@ -137,7 +139,9 @@ class Room:
             Direction.NORTH: Direction.SOUTH,
             Direction.SOUTH: Direction.NORTH,
             Direction.EAST: Direction.WEST,
-            Direction.WEST: Direction.EAST
+            Direction.WEST: Direction.EAST,
+            Direction.UP: Direction.DOWN,
+            Direction.DOWN: Direction.UP
         }[direction]
         room.connections[opposite_direction] = self
 
@@ -266,6 +270,32 @@ class Dungeon:
                 neighbor_pos = (x + dx, y + dy, floor)
                 if neighbor_pos in self.rooms:  # Only connect if the neighbor exists
                     room.connect(direction, self.rooms[neighbor_pos])
+        
+        # Add stairs between floors (as special directional connections)
+        for floor in range(self.floors - 1):  # Connect each floor to the one below it
+            # Find a room on the current floor that is accessible (has connections)
+            current_floor_rooms_with_connections = []
+            next_floor_rooms_with_connections = []
+            
+            for pos, room in self.rooms.items():
+                if pos[2] == floor and len(room.connections) > 0:  # Room is on current floor and has connections
+                    current_floor_rooms_with_connections.append(pos)
+            
+            for pos, room in self.rooms.items():
+                if pos[2] == floor + 1 and len(room.connections) > 0:  # Room is on next floor and has connections
+                    next_floor_rooms_with_connections.append(pos)
+            
+            if current_floor_rooms_with_connections and next_floor_rooms_with_connections:
+                # Pick a connected room from each floor to connect with stairs
+                current_room_pos = random.choice(current_floor_rooms_with_connections)
+                next_room_pos = random.choice(next_floor_rooms_with_connections)
+                
+                current_room = self.rooms[current_room_pos]
+                next_room = self.rooms[next_room_pos]
+                
+                # Create special directional connections for stairs
+                current_room.connections[Direction.DOWN] = next_room
+                next_room.connections[Direction.UP] = current_room
 
     def create_corridor(self, x1, y1, x2, y2, floor):
         """Create an L-shaped corridor between two points"""
@@ -959,7 +989,7 @@ def main():
         print()
         game.describe_room()
         print("\nPossible actions:")
-        print("  move <direction> - Move north, south, east, or west")
+        print("  move <direction> - Move north, south, east, west, up, or down")
         print("  attack <number> - Attack enemy number in room")
         print("  take <number> - Take item number from room")
         print("  equip <number> - Equip item number from inventory")
@@ -972,6 +1002,7 @@ def main():
         print("  load - Load a saved game")
         print("  quit - Quit the game")
         print("\nExample: python game_engine.py move north")
+        print("         python game_engine.py move down")
         print("         python game_engine.py attack 1")
         print("         python game_engine.py take 1")
         print("         python game_engine.py equip 1")
@@ -993,7 +1024,7 @@ def main():
             print("Thanks for playing!")
         elif command == "help":
             print("\nAvailable commands:")
-            print("  move <direction> - Move north, south, east, or west")
+            print("  move <direction> - Move north, south, east, west, up, or down")
             print("  attack <number> - Attack enemy number in room")
             print("  take <number> - Take item number from room")
             print("  equip <number> - Equip item number from inventory")
@@ -1012,7 +1043,7 @@ def main():
                 game.move_player(direction)
                 game.save_game()  # Auto-save after each move (quietly)
             except ValueError:
-                print("Invalid direction. Use: north, south, east, or west.")
+                print("Invalid direction. Use: north, south, east, west, up, or down.")
         elif command.startswith("attack "):
             try:
                 enemy_num = int(command[7:])  # Pass the original number (1-based)
