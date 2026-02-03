@@ -562,7 +562,8 @@ class GameEngine:
             self.dungeon.rooms = {}
             
             # Recreate rooms from saved data
-            temp_rooms = {}  # Temporary storage for rooms with string keys
+            temp_rooms = {}  # Temporary storage for rooms
+            room_map = {}    # Map from position tuples to rooms
             for pos_str, room_data in dungeon_data["rooms"].items():
                 # Convert string key back to tuple
                 pos_tuple = tuple(int(x) for x in pos_str.strip('()').split(','))
@@ -599,32 +600,27 @@ class GameEngine:
                     )
                     room.items.append(item)
                 
-                temp_rooms[pos_str] = (room, pos_tuple)  # Store both room and position tuple
+                temp_rooms[pos_str] = room  # Store room directly
+                room_map[pos_tuple] = room  # Map for easy lookup later
             
-            # Now recreate connections before storing rooms permanently
-            for pos_str, (room, pos_tuple) in temp_rooms.items():
+            # Now add all rooms to the dungeon first
+            for pos_str, room in temp_rooms.items():
+                # Convert string key back to tuple
+                pos_tuple = tuple(int(x) for x in pos_str.strip('()').split(','))
+                self.dungeon.rooms[pos_tuple] = room
+            
+            # Now recreate connections after all rooms exist
+            for pos_str, room in temp_rooms.items():
                 # Create connections
                 for direction_str, target_coords in dungeon_data["rooms"][pos_str]["connections"].items():
                     target_pos = tuple(target_coords)  # Convert [x, y, floor] back to tuple
-                    # Find the target room in our temp_rooms
-                    target_room = None
-                    for t_pos_str, (t_room, t_pos_tuple) in temp_rooms.items():
-                        if t_pos_tuple == target_pos:
-                            target_room = t_room
-                            break
+                    target_room = self.dungeon.rooms.get(target_pos)
                     
                     if target_room:
                         direction = Direction(direction_str)
                         room.connect(direction, target_room)
-                
-                # Finally add the room to the dungeon
-                self.dungeon.rooms[pos_tuple] = room
             
-            # Set current room after dungeon is fully reconstructed
-            pos = self.player.position
-            self.current_room = self.dungeon.get_room(pos[0], pos[1], pos[2])
-            
-            # Reconstruct player
+            # Reconstruct player first
             player_data = game_state["player"]
             self.player = Player(player_data["name"])
             self.player.health = player_data["health"]
@@ -643,6 +639,10 @@ class GameEngine:
             self.player.floors_explored = set(player_data.get("floors_explored", []))
             self.player.rooms_explored = set(map(tuple, player_data.get("rooms_explored", [])))
             self.player.distance_traveled = player_data.get("distance_traveled", 0)
+            
+            # Now set current room after dungeon and player are fully reconstructed
+            pos = self.player.position
+            self.current_room = self.dungeon.get_room(pos[0], pos[1], pos[2])
             
             # Reconstruct inventory
             for item_data in player_data["inventory"]:
@@ -679,25 +679,13 @@ class GameEngine:
             return True
         except FileNotFoundError:
             print(f"No save file found at {filename}. Starting a new game.")
-            # Initialize a new game if no save file exists
-            self.player = Player()
-            self.dungeon = Dungeon()  # Create a fresh dungeon
-            # Find first available room in dungeon
-            for pos, room in self.dungeon.rooms.items():
-                self.current_room = room
-                self.player.position = pos
-                break
+            # Don't reset the game state here since it was already initialized
+            # when the GameEngine was created
             return False
         except Exception as e:
             print(f"Error loading game: {e}")
-            # Initialize a new game in case of error
-            self.player = Player()
-            self.dungeon = Dungeon()  # Create a fresh dungeon
-            # Find first available room in dungeon
-            for pos, room in self.dungeon.rooms.items():
-                self.current_room = room
-                self.player.position = pos
-                break
+            # Don't reset the game state here since it was already initialized
+            # when the GameEngine was created
             return False
 
 
@@ -707,9 +695,12 @@ def main():
     # Check if a command was provided as an argument
     args = sys.argv[1:]  # Exclude script name
     
-    # Initialize game (load if exists, otherwise start new)
+    # Initialize game (try to load if exists, otherwise start new)
     game = GameEngine()
-    game.load_game()  # Attempt to load existing game, starts new if no save exists
+    loaded = game.load_game()  # Attempt to load existing game, returns True if successful
+    
+    # If no save was found, we have a new game with random dungeon
+    # If save was loaded, we have the saved state
     
     if not args:
         # No command provided - show current status and possible actions
@@ -734,6 +725,11 @@ def main():
         print("         python game_engine.py attack 1")
         print("         python game_engine.py take 1")
         print("         python game_engine.py stats")
+        
+        # If this is a new game (no save was loaded), save the initial state
+        if not loaded:
+            game.save_game()
+        
         return
     
     # Process the command from arguments
