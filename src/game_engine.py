@@ -61,6 +61,12 @@ class Player(Entity):
         self.equipped_armor: Optional[Item] = None
         self.position = (0, 0, 0)  # x, y, floor
         self.gold = 0
+        self.score = 0  # Total score
+        self.enemies_defeated = 0  # Count of enemies defeated
+        self.treasures_collected = 0  # Count of valuable items collected
+        self.floors_explored = set()  # Set of floors visited
+        self.rooms_explored = set()  # Set of rooms visited
+        self.distance_traveled = 0  # Total moves made
 
     @property
     def total_attack(self):
@@ -80,6 +86,8 @@ class Player(Entity):
 
     def gain_experience(self, exp: int):
         self.experience += exp
+        # Add to score based on experience gained
+        self.score += exp
         if self.experience >= self.experience_to_next_level:
             self.level_up()
 
@@ -249,9 +257,29 @@ class GameEngine:
         
         new_room = self.current_room.connections[direction]
         self.current_room = new_room
+        old_position = self.player.position
         self.player.position = (new_room.x, new_room.y, new_room.floor)
         
-        print(f"You move {direction.value}.")
+        # Track exploration
+        self.player.floors_explored.add(new_room.floor)
+        self.player.rooms_explored.add((new_room.x, new_room.y, new_room.floor))
+        self.player.distance_traveled += 1
+        
+        # Award points for exploration
+        # If it's a new room, award exploration points
+        if (new_room.x, new_room.y, new_room.floor) not in self.player.rooms_explored or new_room.floor not in self.player.floors_explored:
+            exploration_points = 10
+            self.player.score += exploration_points
+            print(f"You move {direction.value}. (+{exploration_points} exploration points)")
+        else:
+            print(f"You move {direction.value}.")
+        
+        # Award bonus points for reaching new floors
+        if new_room.floor not in self.player.floors_explored:
+            floor_bonus = 50
+            self.player.score += floor_bonus
+            print(f"You reached a new floor! (+{floor_bonus} floor bonus)")
+        
         self.describe_room()
         return True
     
@@ -284,6 +312,12 @@ class GameEngine:
         print(f"EXP: {self.player.experience}/{self.player.experience_to_next_level}")
         print(f"Gold: {self.player.gold}")
         print(f"Position: Floor {self.player.position[2]+1}, ({self.player.position[0]}, {self.player.position[1]})")
+        print(f"Score: {self.player.score}")
+        print(f"Enemies Defeated: {self.player.enemies_defeated}")
+        print(f"Treasures Collected: {self.player.treasures_collected}")
+        print(f"Floors Explored: {len(self.player.floors_explored)}")
+        print(f"Rooms Explored: {len(self.player.rooms_explored)}")
+        print(f"Distance Traveled: {self.player.distance_traveled}")
         
         if self.player.equipped_weapon:
             print(f"Weapon: {self.player.equipped_weapon.name}")
@@ -349,8 +383,11 @@ class GameEngine:
             print("There are no enemies here to attack.")
             return False
         
-        if 0 <= enemy_index < len(alive_enemies):
-            enemy = alive_enemies[enemy_index]
+        # Adjust enemy_index since the game displays enemies starting from 1
+        adjusted_index = enemy_index - 1
+        
+        if 0 <= adjusted_index < len(alive_enemies):
+            enemy = alive_enemies[adjusted_index]
             print(f"You attack the {enemy.name}!")
             
             # Player attacks enemy
@@ -359,6 +396,13 @@ class GameEngine:
             
             if not enemy.is_alive():
                 print(f"The {enemy.name} is defeated!")
+                
+                # Update scoring for defeating enemy
+                self.player.enemies_defeated += 1
+                # Score based on enemy strength
+                enemy_score_value = enemy.exp_reward + (enemy.max_health // 2) + (enemy.attack * 2)
+                self.player.score += enemy_score_value
+                print(f"You earned {enemy_score_value} points for defeating the {enemy.name}!")
                 
                 # Gain experience and loot
                 self.player.gain_experience(enemy.exp_reward)
@@ -387,8 +431,11 @@ class GameEngine:
     
     def take_item(self, item_index: int) -> bool:
         """Take an item from the current room."""
-        if 0 <= item_index < len(self.current_room.items):
-            item = self.current_room.items[item_index]
+        # Adjust item_index since the game displays items starting from 1
+        adjusted_index = item_index - 1
+        
+        if 0 <= adjusted_index < len(self.current_room.items):
+            item = self.current_room.items[adjusted_index]
             
             # Check if inventory is full
             if len(self.player.inventory) >= 10:
@@ -398,6 +445,14 @@ class GameEngine:
             self.current_room.items.remove(item)
             self.player.inventory.append(item)
             print(f"You take the {item.name}.")
+            
+            # Update scoring for collecting treasure
+            self.player.treasures_collected += 1
+            # Score based on item value and bonuses
+            item_score_value = item.value + item.attack_bonus * 5 + item.defense_bonus * 5 + item.health_bonus * 2
+            self.player.score += item_score_value
+            print(f"You earned {item_score_value} points for collecting the {item.name}!")
+            
             return True
         else:
             print("Invalid item selection.")
@@ -472,7 +527,13 @@ class GameEngine:
                 "equipped_weapon": self.player.equipped_weapon.name if self.player.equipped_weapon else None,
                 "equipped_armor": self.player.equipped_armor.name if self.player.equipped_armor else None,
                 "position": self.player.position,
-                "gold": self.player.gold
+                "gold": self.player.gold,
+                "score": self.player.score,
+                "enemies_defeated": self.player.enemies_defeated,
+                "treasures_collected": self.player.treasures_collected,
+                "floors_explored": list(self.player.floors_explored),
+                "rooms_explored": list(self.player.rooms_explored),
+                "distance_traveled": self.player.distance_traveled
             },
             "dungeon": {
                 "width": self.dungeon.width,
@@ -495,8 +556,8 @@ class GameEngine:
             
             # Reconstruct dungeon first
             dungeon_data = game_state["dungeon"]
+            # Create a new dungeon without generating rooms initially
             self.dungeon = Dungeon(dungeon_data["width"], dungeon_data["height"], dungeon_data["floors"])
-            
             # Clear the auto-generated rooms and recreate from save
             self.dungeon.rooms = {}
             
@@ -575,6 +636,13 @@ class GameEngine:
             self.player.experience_to_next_level = player_data["experience_to_next_level"]
             self.player.gold = player_data["gold"]
             self.player.position = tuple(player_data["position"])
+            # Restore score-related properties
+            self.player.score = player_data.get("score", 0)
+            self.player.enemies_defeated = player_data.get("enemies_defeated", 0)
+            self.player.treasures_collected = player_data.get("treasures_collected", 0)
+            self.player.floors_explored = set(player_data.get("floors_explored", []))
+            self.player.rooms_explored = set(map(tuple, player_data.get("rooms_explored", [])))
+            self.player.distance_traveled = player_data.get("distance_traveled", 0)
             
             # Reconstruct inventory
             for item_data in player_data["inventory"]:

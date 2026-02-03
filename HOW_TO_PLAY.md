@@ -47,6 +47,12 @@ You can also use just the direction: `north`, `south`, `east`, `west`.
 - **Defense**: Reduces damage taken from enemies
 - **EXP**: Experience points needed to level up
 - **Gold**: Currency collected from defeated enemies
+- **Score**: Points accumulated through various activities
+- **Enemies Defeated**: Total number of enemies you've defeated
+- **Treasures Collected**: Total number of treasures you've collected
+- **Floors Explored**: Number of unique dungeon floors you've visited
+- **Rooms Explored**: Number of unique rooms you've entered
+- **Distance Traveled**: Total number of moves you've made
 
 ### Equipment
 - **Weapons**: Increase your attack power

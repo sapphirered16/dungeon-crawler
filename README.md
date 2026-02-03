@@ -8,6 +8,7 @@ A turn-based dungeon crawler game that runs in the terminal, inspired by nethack
 - Combat system with various enemy types
 - Equipment and inventory management
 - Character progression system
+- Scoring system with multiple metrics
 
 ## How to Play
 - Run the game executable to start a new game

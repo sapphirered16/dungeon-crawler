@@ -29,6 +29,13 @@ A turn-based dungeon crawler game that runs in the terminal. The game features p
 - New abilities unlocked at certain levels
 - Skill points to allocate to different attributes
 
+### Scoring System
+- Points awarded for defeating enemies (based on enemy strength)
+- Points awarded for collecting treasures (based on item value/bonuses)
+- Exploration points for discovering new rooms
+- Bonus points for reaching new dungeon floors
+- Distance traveled contributes to overall score
+
 ### Dungeon Generation
 - Procedurally generated rooms and corridors
 - Different room types (treasure rooms, monster lairs, puzzle rooms)
