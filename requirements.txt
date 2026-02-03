@@ -1,0 +1,9 @@
+# Requirements for the Terminal Dungeon Crawler game
+
+# For the core game (no additional packages required for basic functionality)
+# Python standard library is sufficient for the initial implementation
+
+# Potential future enhancements that might require packages:
+# colorama - for colored terminal output
+# numpy - for advanced dungeon generation algorithms
+# pyyaml - for configuration files
