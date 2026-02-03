@@ -258,7 +258,6 @@ class Dungeon:
                     artifact_room.description = "A mystical chamber glows with ethereal light. At the center lies the legendary Artifact of Power!"
                     artifact_room.items.append(Item("Artifact of Power", ItemType.CONSUMABLE, value=1000, 
                                                   attack_bonus=50, defense_bonus=50, health_bonus=100))
-                    print(f"DEBUG: Artifact placed at position {artifact_pos}")
 
         # Now create connections between adjacent accessible rooms
         for (x, y, floor), room in self.rooms.items():
@@ -798,7 +797,7 @@ class GameEngine:
         with open(filename, 'w') as f:
             json.dump(game_state, f, indent=2)
         
-        print(f"Game saved to {filename}.")
+        # Quietly saved - don't print message
     
     def load_game(self, filename: str = "savegame.json"):
         """Load a saved game state from a file."""
@@ -927,12 +926,10 @@ class GameEngine:
             pos = self.player.position
             self.current_room = self.dungeon.get_room(pos[0], pos[1], pos[2])
             
-            print(f"Game loaded from {filename}.")
+            # Quietly loaded - don't print message
             return True
         except FileNotFoundError:
-            print(f"No save file found at {filename}. Starting a new game.")
-            # Don't reset the game state here since it was already initialized
-            # when the GameEngine was created
+            # No save file - this is expected for new games
             return False
         except Exception as e:
             print(f"Error loading game: {e}")
@@ -981,7 +978,7 @@ def main():
         print("         python game_engine.py unequip armor")
         print("         python game_engine.py stats")
         
-        # If this is a new game (no save was loaded), save the initial state
+        # If this is a new game (no save was loaded), save the initial state quietly
         if not loaded:
             game.save_game()
         
@@ -993,7 +990,7 @@ def main():
     try:
         if command in ["quit", "exit"]:
             game.save_game()
-            print("Game saved. Thanks for playing!")
+            print("Thanks for playing!")
         elif command == "help":
             print("\nAvailable commands:")
             print("  move <direction> - Move north, south, east, or west")
@@ -1013,7 +1010,7 @@ def main():
             try:
                 direction = Direction(direction_str)
                 game.move_player(direction)
-                game.save_game()  # Auto-save after each move
+                game.save_game()  # Auto-save after each move (quietly)
             except ValueError:
                 print("Invalid direction. Use: north, south, east, or west.")
         elif command.startswith("attack "):
@@ -1021,7 +1018,7 @@ def main():
                 enemy_num = int(command[7:])  # Pass the original number (1-based)
                 if game.attack_enemy(enemy_num):
                     if game.player.is_alive():
-                        game.save_game()  # Auto-save after successful attack
+                        game.save_game()  # Auto-save after successful attack (quietly)
                     else:
                         print("\nGame over! You have died.")
                         print("Your save file remains with your last healthy state.")
@@ -1035,21 +1032,21 @@ def main():
             try:
                 item_num = int(command[5:])  # Pass the original number (1-based)
                 if game.take_item(item_num):
-                    game.save_game()  # Auto-save after taking an item
+                    game.save_game()  # Auto-save after taking an item (quietly)
             except ValueError:
                 print("Please specify a valid item number to take.")
         elif command.startswith("equip "):
             try:
                 item_num = int(command[6:])  # Pass the original number (1-based)
                 if game.equip_item(item_num):
-                    game.save_game()  # Auto-save after equipping an item
+                    game.save_game()  # Auto-save after equipping an item (quietly)
             except ValueError:
                 print("Please specify a valid item number to equip.")
         elif command.startswith("unequip "):
             item_type = command[8:].lower()
             if item_type in ["weapon", "armor"]:
                 if game.unequip_item(item_type):
-                    game.save_game()  # Auto-save after unequipping an item
+                    game.save_game()  # Auto-save after unequipping an item (quietly)
             else:
                 print("Please specify a valid item type to unequip: 'weapon' or 'armor'.")
         elif command == "look":
@@ -1060,11 +1057,15 @@ def main():
             game.show_stats()
         elif command == "rest":
             game.rest()
-            game.save_game()  # Auto-save after resting
+            game.save_game()  # Auto-save after resting (quietly)
         elif command == "save":
             game.save_game()
+            print("Game saved.")
         elif command == "load":
-            game.load_game()
+            if game.load_game():
+                print("Game loaded.")
+            else:
+                print("No save file found.")
         else:
             print("Unknown command. Type 'python game_engine.py help' for a list of commands.")
     
