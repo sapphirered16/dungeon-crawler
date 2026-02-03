@@ -1,46 +1,51 @@
 # Game Design Document - Terminal Dungeon Crawler
 
 ## Overview
-A turn-based dungeon crawler game that runs in the terminal. The game features procedurally generated dungeons, turn-based combat, and character progression through equipment upgrades.
+Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. The game features turn-based exploration of a dungeon with combat, equipment, and progression systems. The ultimate goal is to find the Artifact of Power located at the bottom of the dungeon.
 
 ## Core Mechanics
 
-### Movement System
-- Grid-based movement (north, south, east, west)
-- Each move consumes 1 turn
-- Different terrain types affect movement speed
-- Doors may require keys or special abilities to pass through
+### Movement
+- Player can move in four directions: north, south, east, west
+- Each movement is a discrete action
+- The game maintains a coordinate system for the dungeon across multiple floors
+- Structured dungeon layout with rooms and hallways instead of open grid
 
-### Combat System
-- Turn-based combat initiated when encountering enemies
-- Player and enemies have HP, attack power, and defense values
-- Critical hits and misses based on random chance
-- Different weapon types have varying effectiveness against different enemies
+### Combat
+- Turn-based combat system
+- Player attacks enemy, then enemy counterattacks
+- Damage calculated as attacker's attack minus defender's defense (minimum 1 damage)
+- Player and enemies have health points
+- Experience and leveling system
+- Enemies become significantly stronger on deeper floors
 
-### Equipment System
-- Weapons, armor, and accessories with different stats
-- Rarity system (common, uncommon, rare, epic, legendary)
-- Equipment affects player stats (attack, defense, special abilities)
-- Inventory space limits
+### Equipment
+- Weapon and armor systems
+- Equipment provides attack and defense bonuses
+- Player can equip/unequip items
+- Limited inventory space (10 items maximum)
 
-### Character Progression
-- Level system based on experience gained from defeating enemies
-- Stats increase with each level
-- New abilities unlocked at certain levels
-- Skill points to allocate to different attributes
+### Progression
+- Multiple dungeon floors (3 floors by default)
+- Increasing difficulty as player descends
+- Character advancement through experience
+- Treasure collection
+- Branching pathways encourage exploration on each floor
+- Ultimate goal: Obtain the Artifact of Power from the deepest floor
 
-### Scoring System
-- Points awarded for defeating enemies (based on enemy strength)
-- Points awarded for collecting treasures (based on item value/bonuses)
-- Exploration points for discovering new rooms
-- Bonus points for reaching new dungeon floors
-- Distance traveled contributes to overall score
+### Scoring
+- Points awarded for defeating enemies
+- Points for collecting treasure
+- Exploration bonuses for discovering new rooms and floors
+- Distance traveled bonuses
+- Major bonus for finding the Artifact of Power (win condition)
 
 ### Dungeon Generation
-- Procedurally generated rooms and corridors
-- Different room types (treasure rooms, monster lairs, puzzle rooms)
-- Multiple floors with increasing difficulty
-- Special items and boss encounters on deeper levels
+- Structured layout with rectangular rooms of varying sizes
+- Hallways connecting rooms using L-shaped corridors
+- Blocked areas preventing movement through walls
+- Each floor has multiple branching pathways
+- Ultimate Artifact of Power placed on the deepest floor
 
 ## Technical Implementation
 
@@ -55,6 +60,6 @@ A turn-based dungeon crawler game that runs in the terminal. The game features p
 - Error handling for invalid commands
 
 ### Display System
-- ASCII-based rendering of dungeon rooms
 - Status display showing player stats and current room
+- Shows adjacent room information to aid navigation
 - Menu systems for inventory and character screens

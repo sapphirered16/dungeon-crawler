@@ -145,74 +145,219 @@ class Room:
         return any(isinstance(e, entity_type) for e in self.entities)
 
 
+class RoomInfo:
+    def __init__(self, x, y, width, height, floor):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.floor = floor
+        self.center_x = x + width // 2
+        self.center_y = y + height // 2
+
 class Dungeon:
-    def __init__(self, width: int = 10, height: int = 10, floors: int = 5):
+    def __init__(self, width: int = 30, height: int = 30, floors: int = 3):
         self.width = width
         self.height = height
         self.floors = floors
         self.rooms: Dict[Tuple[int, int, int], Room] = {}
+        self.room_layouts = {}  # Store room boundaries for collision detection
         self.generate_dungeon()
 
     def generate_dungeon(self):
-        # Generate basic grid of rooms
+        # Generate structured dungeon with rooms and corridors
         for floor in range(self.floors):
-            for x in range(self.width):
-                for y in range(self.height):
-                    # Randomly skip some rooms to create irregular layout
-                    if random.random() > 0.2:  # 80% of rooms exist
-                        room = Room(x, y, floor)
-                        
-                        # Set room type
-                        rand = random.random()
-                        if rand < 0.1:
-                            room.room_type = "treasure"
-                            room.description = "A treasure room filled with gleaming objects."
-                            # Add some treasure
-                            if random.random() < 0.7:
-                                room.items.append(self.generate_random_item())
-                        elif rand < 0.3:
-                            room.room_type = "monster"
-                            room.description = "A room with hostile creatures lurks ahead."
-                            # Add an enemy
-                            room.entities.append(self.generate_random_enemy(floor))
-                        elif rand < 0.4:
-                            room.room_type = "trap"
-                            room.description = "A dangerous-looking room with potential hazards."
-                        else:
-                            room.room_type = "empty"
-                            room.description = "An empty, quiet room."
-                        
-                        self.rooms[(x, y, floor)] = room
-        
-        # Create connections between adjacent rooms
+            # Create rooms
+            rooms_info = []
+            num_rooms = random.randint(8, 15)  # Number of rooms for this floor
+            
+            for _ in range(num_rooms):
+                # Random room size
+                room_width = random.randint(3, 6)
+                room_height = random.randint(3, 6)
+                
+                # Random position (ensuring it fits in the grid)
+                x = random.randint(1, self.width - room_width - 1)
+                y = random.randint(1, self.height - room_height - 1)
+                
+                # Check for overlap with existing rooms
+                overlaps = False
+                for existing_room in rooms_info:
+                    # Simple overlap check
+                    if not (x + room_width < existing_room.x or 
+                           existing_room.x + existing_room.width < x or
+                           y + room_height < existing_room.y or 
+                           existing_room.y + existing_room.height < y):
+                        overlaps = True
+                        break
+                
+                if not overlaps:
+                    room_info = RoomInfo(x, y, room_width, room_height, floor)
+                    rooms_info.append(room_info)
+                    
+                    # Create rooms for each cell in the room rectangle
+                    for rx in range(room_info.x, room_info.x + room_info.width):
+                        for ry in range(room_info.y, room_info.y + room_info.height):
+                            room = Room(rx, ry, floor)
+                            
+                            # Set room type based on position in room
+                            if rx == room_info.x or rx == room_info.x + room_info.width - 1 or \
+                               ry == room_info.y or ry == room_info.y + room_info.height - 1:
+                                room.room_type = "hallway"  # Border cells treated as hallway
+                                room.description = "A narrow hallway."
+                            else:
+                                # Center cells - determine type
+                                rand = random.random()
+                                if rand < 0.1:
+                                    room.room_type = "treasure"
+                                    room.description = "A treasure room filled with gleaming objects."
+                                    # Add some treasure
+                                    if random.random() < 0.7:
+                                        room.items.append(self.generate_random_item())
+                                elif rand < 0.3:
+                                    room.room_type = "monster"
+                                    room.description = "A room with hostile creatures lurks ahead."
+                                    # Add an enemy
+                                    room.entities.append(self.generate_random_enemy(floor))
+                                elif rand < 0.4:
+                                    room.room_type = "trap"
+                                    room.description = "A dangerous-looking room with potential hazards."
+                                else:
+                                    room.room_type = "empty"
+                                    room.description = "An empty, quiet room."
+                            
+                            self.rooms[(rx, ry, floor)] = room
+            
+            # Connect rooms with hallways
+            for i in range(len(rooms_info) - 1):
+                room1 = rooms_info[i]
+                room2 = rooms_info[i + 1]
+                
+                # Create L-shaped corridor between room centers
+                self.create_corridor(room1.center_x, room1.center_y, 
+                                   room2.center_x, room2.center_y, floor)
+            
+            # Ensure the first room connects to the second room for full connectivity
+            if len(rooms_info) > 1:
+                # Create additional connections to ensure all rooms are reachable
+                for i in range(len(rooms_info)):
+                    # Connect to a random other room to ensure good connectivity
+                    j = random.randint(0, len(rooms_info) - 1)
+                    if i != j:
+                        self.create_corridor(rooms_info[i].center_x, rooms_info[i].center_y,
+                                           rooms_info[j].center_x, rooms_info[j].center_y, floor)
+            
+            # Place the ultimate artifact on the deepest floor
+            if floor == self.floors - 1:  # Last floor (deepest)
+                # Find a random room in this floor to place the artifact
+                floor_rooms = [(x, y, z) for x, y, z in self.rooms.keys() if z == floor]
+                if floor_rooms:
+                    artifact_pos = random.choice(floor_rooms)
+                    artifact_room = self.rooms[artifact_pos]
+                    artifact_room.room_type = "artifact"
+                    artifact_room.description = "A mystical chamber glows with ethereal light. At the center lies the legendary Artifact of Power!"
+                    artifact_room.items.append(Item("Artifact of Power", ItemType.CONSUMABLE, value=1000, 
+                                                  attack_bonus=50, defense_bonus=50, health_bonus=100))
+                    print(f"DEBUG: Artifact placed at position {artifact_pos}")
+
+        # Now create connections between adjacent accessible rooms
         for (x, y, floor), room in self.rooms.items():
             for dx, dy, direction in [(0, -1, Direction.NORTH), (0, 1, Direction.SOUTH),
                                       (1, 0, Direction.EAST), (-1, 0, Direction.WEST)]:
                 neighbor_pos = (x + dx, y + dy, floor)
-                if neighbor_pos in self.rooms:
+                if neighbor_pos in self.rooms:  # Only connect if the neighbor exists
                     room.connect(direction, self.rooms[neighbor_pos])
+
+    def create_corridor(self, x1, y1, x2, y2, floor):
+        """Create an L-shaped corridor between two points"""
+        # Horizontal first, then vertical
+        if random.choice([True, False]):  # Random choice of L-shape orientation
+            # Horizontal corridor
+            min_x, max_x = min(x1, x2), max(x1, x2)
+            for x in range(min_x, max_x + 1):
+                pos = (x, y1, floor)
+                if pos not in self.rooms:
+                    room = Room(x, y1, floor)
+                    room.room_type = "hallway"
+                    room.description = "A narrow hallway."
+                    self.rooms[pos] = room
+            
+            # Vertical corridor
+            min_y, max_y = min(y1, y2), max(y1, y2)
+            for y in range(min_y, max_y + 1):
+                pos = (x2, y, floor)
+                if pos not in self.rooms:
+                    room = Room(x2, y, floor)
+                    room.room_type = "hallway"
+                    room.description = "A narrow hallway."
+                    self.rooms[pos] = room
+        else:
+            # Vertical first, then horizontal
+            # Vertical corridor
+            min_y, max_y = min(y1, y2), max(y1, y2)
+            for y in range(min_y, max_y + 1):
+                pos = (x1, y, floor)
+                if pos not in self.rooms:
+                    room = Room(x1, y, floor)
+                    room.room_type = "hallway"
+                    room.description = "A narrow hallway."
+                    self.rooms[pos] = room
+            
+            # Horizontal corridor
+            min_x, max_x = min(x1, x2), max(x1, x2)
+            for x in range(min_x, max_x + 1):
+                pos = (x, y2, floor)
+                if pos not in self.rooms:
+                    room = Room(x, y2, floor)
+                    room.room_type = "hallway"
+                    room.description = "A narrow hallway."
+                    self.rooms[pos] = room
 
     def get_room(self, x: int, y: int, floor: int) -> Optional[Room]:
         return self.rooms.get((x, y, floor))
 
     def generate_random_enemy(self, floor: int) -> Enemy:
-        enemy_types = [
-            ("Goblin", 20, 5, 1, 20, 1, 5),
-            ("Orc", 35, 8, 3, 35, 3, 8),
-            ("Skeleton", 30, 7, 2, 30, 2, 6),
-            ("Zombie", 25, 6, 1, 25, 1, 4),
-            ("Spider", 15, 6, 0, 15, 1, 3),
-            ("Ogre", 50, 12, 5, 50, 5, 12),
-            ("Demon", 75, 15, 8, 75, 8, 18),
-        ]
+        # Define enemy tiers based on floor depth
+        if floor <= 0:  # Floor 1 (0-indexed)
+            # Shallow floors - basic enemies
+            enemy_types = [
+                ("Goblin", 20, 5, 1, 20, 1, 5),
+                ("Skeleton", 30, 7, 2, 30, 2, 6),
+                ("Zombie", 25, 6, 1, 25, 1, 4),
+                ("Spider", 15, 6, 0, 15, 1, 3),
+            ]
+        elif floor <= 1:  # Floor 2 (0-indexed)
+            # Mid floors - moderate enemies
+            enemy_types = [
+                ("Goblin", 20, 5, 1, 20, 1, 5),
+                ("Orc", 35, 8, 3, 35, 3, 8),
+                ("Skeleton", 30, 7, 2, 30, 2, 6),
+                ("Zombie", 25, 6, 1, 25, 1, 4),
+                ("Ogre", 50, 12, 5, 50, 5, 12),
+            ]
+        else:  # Floor 3 and deeper (0-indexed)
+            # Deep floors - powerful enemies
+            enemy_types = [
+                ("Orc", 35, 8, 3, 35, 3, 8),
+                ("Ogre", 50, 12, 5, 50, 5, 12),
+                ("Demon", 75, 15, 8, 75, 8, 18),
+                ("Dragon", 120, 20, 12, 120, 12, 25),
+                ("Ancient Guardian", 150, 25, 15, 150, 15, 30),
+            ]
         
-        # Select harder enemies for deeper floors
-        eligible_enemies = [e for e in enemy_types if e[5] <= floor * 2 + 5]
-        if not eligible_enemies:
-            eligible_enemies = enemy_types[-1:]  # Use hardest if floor is very high
-            
-        enemy_data = random.choice(eligible_enemies)
-        return Enemy(*enemy_data[:5], *enemy_data[5:])
+        # Select enemy from appropriate tier
+        enemy_data = random.choice(enemy_types)
+        
+        # Scale stats based on floor with increased difficulty curve
+        base_hp, base_attack, base_defense, base_exp, base_gold_min, base_gold_max = enemy_data[1], enemy_data[2], enemy_data[3], enemy_data[4], enemy_data[5], enemy_data[6]
+        hp = int(base_hp * (1 + floor * 0.4))  # Increased scaling factor
+        attack = int(base_attack * (1 + floor * 0.35))  # Increased scaling factor
+        defense = int(base_defense * (1 + floor * 0.35))  # Increased scaling factor
+        exp = int(base_exp * (1 + floor * 0.3))
+        gold_min = int(base_gold_min * (1 + floor * 0.25))
+        gold_max = int(base_gold_max * (1 + floor * 0.25))
+        
+        return Enemy(enemy_data[0], hp, attack, defense, exp, gold_min, gold_max)
 
     def generate_random_item(self) -> Item:
         item_types = [
@@ -432,6 +577,41 @@ class GameEngine:
             print("Invalid item number.")
             return False
     
+    def unequip_item(self, item_type: str) -> bool:
+        """Unequip an equipped item and return it to inventory."""
+        if item_type.lower() == "weapon":
+            if self.player.equipped_weapon:
+                # Check if inventory has space
+                if len(self.player.inventory) >= 10:
+                    print("Your inventory is full! You need to drop something first.")
+                    return False
+                
+                self.player.inventory.append(self.player.equipped_weapon)
+                print(f"You unequip the {self.player.equipped_weapon.name}.")
+                self.player.equipped_weapon = None
+                return True
+            else:
+                print("You don't have a weapon equipped.")
+                return False
+        
+        elif item_type.lower() == "armor":
+            if self.player.equipped_armor:
+                # Check if inventory has space
+                if len(self.player.inventory) >= 10:
+                    print("Your inventory is full! You need to drop something first.")
+                    return False
+                
+                self.player.inventory.append(self.player.equipped_armor)
+                print(f"You unequip the {self.player.equipped_armor.name}.")
+                self.player.equipped_armor = None
+                return True
+            else:
+                print("You don't have armor equipped.")
+                return False
+        else:
+            print("Invalid item type. Use 'weapon' or 'armor'.")
+            return False
+    
     def attack_enemy(self, enemy_index: int) -> bool:
         """Attack an enemy in the current room."""
         alive_enemies = [e for e in self.current_room.entities if isinstance(e, Enemy) and e.is_alive()]
@@ -493,6 +673,21 @@ class GameEngine:
         
         if 0 <= adjusted_index < len(self.current_room.items):
             item = self.current_room.items[adjusted_index]
+            
+            # Check if this is the artifact (win condition)
+            if item.name == "Artifact of Power":
+                print(f"\nCongratulations! You have obtained the {item.name}!")
+                print("You have completed your quest and emerged victorious!")
+                print(f"Final Score: {self.player.score}")
+                print(f"Enemies Defeated: {self.player.enemies_defeated}")
+                print(f"Treasures Collected: {self.player.treasures_collected}")
+                print(f"Floors Explored: {len(self.player.floors_explored)}")
+                print(f"Rooms Explored: {len(self.player.rooms_explored)}")
+                print(f"Distance Traveled: {self.player.distance_traveled}")
+                print("\nThank you for playing Terminal Dungeon Crawler!")
+                
+                # Exit the game after winning
+                exit(0)
             
             # Check if inventory is full
             if len(self.player.inventory) >= 10:
@@ -771,6 +966,7 @@ def main():
         print("  attack <number> - Attack enemy number in room")
         print("  take <number> - Take item number from room")
         print("  equip <number> - Equip item number from inventory")
+        print("  unequip <weapon|armor> - Unequip weapon or armor")
         print("  look - Look around the current room")
         print("  inventory - View your inventory")
         print("  stats - View your character stats")
@@ -781,6 +977,8 @@ def main():
         print("\nExample: python game_engine.py move north")
         print("         python game_engine.py attack 1")
         print("         python game_engine.py take 1")
+        print("         python game_engine.py equip 1")
+        print("         python game_engine.py unequip armor")
         print("         python game_engine.py stats")
         
         # If this is a new game (no save was loaded), save the initial state
@@ -802,6 +1000,7 @@ def main():
             print("  attack <number> - Attack enemy number in room")
             print("  take <number> - Take item number from room")
             print("  equip <number> - Equip item number from inventory")
+            print("  unequip <weapon|armor> - Unequip weapon or armor")
             print("  look - Look around the current room")
             print("  inventory - View your inventory")
             print("  stats - View your character stats")
@@ -846,6 +1045,13 @@ def main():
                     game.save_game()  # Auto-save after equipping an item
             except ValueError:
                 print("Please specify a valid item number to equip.")
+        elif command.startswith("unequip "):
+            item_type = command[8:].lower()
+            if item_type in ["weapon", "armor"]:
+                if game.unequip_item(item_type):
+                    game.save_game()  # Auto-save after unequipping an item
+            else:
+                print("Please specify a valid item type to unequip: 'weapon' or 'armor'.")
         elif command == "look":
             game.look_around()
         elif command == "inventory":

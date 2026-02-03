@@ -1,66 +1,41 @@
-# Playing the Terminal Dungeon Crawler
+# How to Play Terminal Dungeon Crawler
 
-## Starting the Game
-To start a new game, simply run:
-```
-./play.sh
-```
+## Objective
+Explore the multi-level dungeon, defeat increasingly difficult enemies, collect treasure, and find better equipment to progress deeper into the dungeon. Your ultimate goal is to find the Artifact of Power located at the bottom of the dungeon.
 
-## Game Commands
-Once in the game, you can enter the following commands:
+## Basic Gameplay
+The game is turn-based and played through command-line arguments. Each action you take consumes one turn. The dungeon consists of multiple floors connected by staircases, with rooms and hallways forming branching pathways to explore.
 
-### Movement
-- `move north` - Move north
-- `move south` - Move south
-- `move east` - Move east
-- `move west` - Move west
-
-You can also use just the direction: `north`, `south`, `east`, `west`.
-
-### Combat
-- `attack <number>` - Attack an enemy by number (they appear numbered in the room)
-
-### Items
-- `take <number>` - Take an item by number from the current room
-- `equip <number>` - Equip an item from your inventory
-
-### Information
+## Commands
+- `move <direction>` - Move in a direction (north, south, east, west)
+- `attack <enemy_number>` - Attack an enemy in the current room (enemies are numbered)
+- `take <item_number>` - Take an item from the current room (items are numbered)
+- `equip <item_number>` - Equip an item from your inventory (items are numbered)
+- `unequip <weapon|armor>` - Unequip weapon or armor
 - `look` - Look around the current room
 - `inventory` - View your inventory
 - `stats` - View your character stats
-
-### Survival
 - `rest` - Rest to recover health
-
-### Game Management
-- `save` - Save your current game
+- `save` - Save the game
 - `load` - Load a saved game
-- `help` - Show the help menu
-- `quit` or `exit` - Exit the game
 
-## Game Elements
+## Combat
+Combat is turn-based. When you attack an enemy, you deal damage based on your attack stat minus the enemy's defense. The enemy then counterattacks. Combat continues until either you or the enemy is defeated. Enemies become progressively stronger on deeper dungeon levels.
 
-### Character Stats
-- **Level**: Your character's level, increases with experience
-- **HP**: Your health points; if this reaches 0, you die
-- **Attack**: Your offensive capability
-- **Defense**: Reduces damage taken from enemies
-- **EXP**: Experience points needed to level up
-- **Gold**: Currency collected from defeated enemies
-- **Score**: Points accumulated through various activities
-- **Enemies Defeated**: Total number of enemies you've defeated
-- **Treasures Collected**: Total number of treasures you've collected
-- **Floors Explored**: Number of unique dungeon floors you've visited
-- **Rooms Explored**: Number of unique rooms you've entered
-- **Distance Traveled**: Total number of moves you've made
+## Equipment
+You can equip weapons and armor to increase your attack and defense stats. You can only have one weapon and one armor equipped at a time.
 
-### Equipment
-- **Weapons**: Increase your attack power
-- **Armor**: Increase your defense and sometimes health
-- **Consumables**: Items that provide temporary benefits
+## Scoring
+Your score increases based on:
+- Enemies defeated
+- Treasure collected
+- Exploration (rooms and floors explored)
+- Distance traveled
+- Finding the ultimate Artifact of Power (major bonus!)
 
-### Enemies
-Different enemies have different stats and drop different rewards when defeated.
-
-## Objective
-Explore the dungeon, defeat enemies, collect better equipment, and venture deeper into the dungeon to face greater challenges and richer rewards.
+## Strategy Tips
+- Explore thoroughly to find better equipment and treasure
+- Defeat enemies to gain experience and improve your stats
+- Each floor has multiple branching pathways - try different routes
+- Deeper floors contain stronger enemies but also better rewards
+- Your ultimate goal is to reach the bottom floor and claim the Artifact of Power
