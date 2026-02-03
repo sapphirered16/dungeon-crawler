@@ -414,6 +414,48 @@ class GameEngine:
     
     def save_game(self, filename: str = "savegame.json"):
         """Save the current game state to a file."""
+        # Prepare dungeon data for saving
+        dungeon_data = {}
+        for pos, room in self.dungeon.rooms.items():
+            # Convert tuple position to string for JSON serialization
+            pos_key = f"({pos[0]},{pos[1]},{pos[2]})"
+            dungeon_data[pos_key] = {
+                "x": room.x,
+                "y": room.y,
+                "floor": room.floor,
+                "room_type": room.room_type,
+                "description": room.description,
+                "connections": {dir.value: [target_room.x, target_room.y, target_room.floor] 
+                               for dir, target_room in room.connections.items()},
+                "entities": [],
+                "items": []
+            }
+            
+            # Save entities (enemies)
+            for entity in room.entities:
+                if isinstance(entity, Enemy):
+                    dungeon_data[pos_key]["entities"].append({
+                        "name": entity.name,
+                        "health": entity.health,
+                        "max_health": entity.max_health,
+                        "attack": entity.attack,
+                        "defense": entity.defense,
+                        "exp_reward": entity.exp_reward,
+                        "gold_min": entity.gold_min,
+                        "gold_max": entity.gold_max
+                    })
+            
+            # Save items
+            for item in room.items:
+                dungeon_data[pos_key]["items"].append({
+                    "name": item.name,
+                    "type": item.type.value,
+                    "value": item.value,
+                    "attack_bonus": item.attack_bonus,
+                    "defense_bonus": item.defense_bonus,
+                    "health_bonus": item.health_bonus
+                })
+        
         game_state = {
             "player": {
                 "name": self.player.name,
@@ -432,7 +474,12 @@ class GameEngine:
                 "position": self.player.position,
                 "gold": self.player.gold
             },
-            "current_room": self.player.position
+            "dungeon": {
+                "width": self.dungeon.width,
+                "height": self.dungeon.height,
+                "floors": self.dungeon.floors,
+                "rooms": dungeon_data
+            }
         }
         
         with open(filename, 'w') as f:
@@ -445,6 +492,76 @@ class GameEngine:
         try:
             with open(filename, 'r') as f:
                 game_state = json.load(f)
+            
+            # Reconstruct dungeon first
+            dungeon_data = game_state["dungeon"]
+            self.dungeon = Dungeon(dungeon_data["width"], dungeon_data["height"], dungeon_data["floors"])
+            
+            # Clear the auto-generated rooms and recreate from save
+            self.dungeon.rooms = {}
+            
+            # Recreate rooms from saved data
+            temp_rooms = {}  # Temporary storage for rooms with string keys
+            for pos_str, room_data in dungeon_data["rooms"].items():
+                # Convert string key back to tuple
+                pos_tuple = tuple(int(x) for x in pos_str.strip('()').split(','))
+                x, y, floor = pos_tuple
+                
+                room = Room(x, y, floor)
+                room.room_type = room_data["room_type"]
+                room.description = room_data["description"]
+                
+                # Recreate entities
+                for entity_data in room_data["entities"]:
+                    enemy = Enemy(
+                        name=entity_data["name"],
+                        health=entity_data["max_health"],  # Full health when saved
+                        attack=entity_data["attack"],
+                        defense=entity_data["defense"],
+                        exp_reward=entity_data["exp_reward"],
+                        gold_min=entity_data["gold_min"],
+                        gold_max=entity_data["gold_max"]
+                    )
+                    # Set current health to saved value
+                    enemy.health = entity_data["health"]
+                    room.entities.append(enemy)
+                
+                # Recreate items
+                for item_data in room_data["items"]:
+                    item = Item(
+                        name=item_data["name"],
+                        item_type=ItemType(item_data["type"]),
+                        value=item_data["value"],
+                        attack_bonus=item_data["attack_bonus"],
+                        defense_bonus=item_data["defense_bonus"],
+                        health_bonus=item_data["health_bonus"]
+                    )
+                    room.items.append(item)
+                
+                temp_rooms[pos_str] = (room, pos_tuple)  # Store both room and position tuple
+            
+            # Now recreate connections before storing rooms permanently
+            for pos_str, (room, pos_tuple) in temp_rooms.items():
+                # Create connections
+                for direction_str, target_coords in dungeon_data["rooms"][pos_str]["connections"].items():
+                    target_pos = tuple(target_coords)  # Convert [x, y, floor] back to tuple
+                    # Find the target room in our temp_rooms
+                    target_room = None
+                    for t_pos_str, (t_room, t_pos_tuple) in temp_rooms.items():
+                        if t_pos_tuple == target_pos:
+                            target_room = t_room
+                            break
+                    
+                    if target_room:
+                        direction = Direction(direction_str)
+                        room.connect(direction, target_room)
+                
+                # Finally add the room to the dungeon
+                self.dungeon.rooms[pos_tuple] = room
+            
+            # Set current room after dungeon is fully reconstructed
+            pos = self.player.position
+            self.current_room = self.dungeon.get_room(pos[0], pos[1], pos[2])
             
             # Reconstruct player
             player_data = game_state["player"]
@@ -493,95 +610,143 @@ class GameEngine:
             print(f"Game loaded from {filename}.")
             return True
         except FileNotFoundError:
-            print(f"No save file found at {filename}.")
+            print(f"No save file found at {filename}. Starting a new game.")
+            # Initialize a new game if no save file exists
+            self.player = Player()
+            self.dungeon = Dungeon()  # Create a fresh dungeon
+            # Find first available room in dungeon
+            for pos, room in self.dungeon.rooms.items():
+                self.current_room = room
+                self.player.position = pos
+                break
             return False
         except Exception as e:
             print(f"Error loading game: {e}")
+            # Initialize a new game in case of error
+            self.player = Player()
+            self.dungeon = Dungeon()  # Create a fresh dungeon
+            # Find first available room in dungeon
+            for pos, room in self.dungeon.rooms.items():
+                self.current_room = room
+                self.player.position = pos
+                break
             return False
 
 
 def main():
-    print("Welcome to Terminal Dungeon Crawler!")
-    print("Type 'help' for a list of commands.")
+    import sys
     
+    # Check if a command was provided as an argument
+    args = sys.argv[1:]  # Exclude script name
+    
+    # Initialize game (load if exists, otherwise start new)
     game = GameEngine()
-    game.describe_room()
+    game.load_game()  # Attempt to load existing game, starts new if no save exists
     
-    while game.player.is_alive():
-        try:
-            command = input("\n> ").strip().lower()
-            
-            if command in ["quit", "exit"]:
-                save_choice = input("Would you like to save before quitting? (y/n): ")
-                if save_choice.lower() in ["y", "yes"]:
-                    game.save_game()
-                print("Thanks for playing!")
-                break
-            elif command == "help":
-                print("\nAvailable commands:")
-                print("  move <direction> - Move north, south, east, or west")
-                print("  attack <number> - Attack enemy number in room")
-                print("  take <number> - Take item number from room")
-                print("  equip <number> - Equip item number from inventory")
-                print("  look - Look around the current room")
-                print("  inventory - View your inventory")
-                print("  stats - View your character stats")
-                print("  rest - Rest to recover health")
-                print("  save - Save the game")
-                print("  load - Load a saved game")
-                print("  quit - Quit the game")
-            elif command.startswith("move "):
-                direction_str = command[5:]
-                try:
-                    direction = Direction(direction_str)
-                    game.move_player(direction)
-                except ValueError:
-                    print("Invalid direction. Use: north, south, east, or west.")
-            elif command.startswith("attack "):
-                try:
-                    enemy_num = int(command[7:]) - 1
-                    if not game.attack_enemy(enemy_num):
-                        if not game.player.is_alive():
-                            break
-                except ValueError:
-                    print("Please specify a valid enemy number to attack.")
-            elif command.startswith("take "):
-                try:
-                    item_num = int(command[5:]) - 1
-                    game.take_item(item_num)
-                except ValueError:
-                    print("Please specify a valid item number to take.")
-            elif command.startswith("equip "):
-                try:
-                    item_num = int(command[6:]) - 1
-                    game.equip_item(item_num)
-                except ValueError:
-                    print("Please specify a valid item number to equip.")
-            elif command == "look":
-                game.look_around()
-            elif command == "inventory":
-                game.show_inventory()
-            elif command == "stats":
-                game.show_stats()
-            elif command == "rest":
-                game.rest()
-            elif command == "save":
-                game.save_game()
-            elif command == "load":
-                game.load_game()
-            else:
-                print("Unknown command. Type 'help' for a list of commands.")
-        
-        except KeyboardInterrupt:
-            print("\n\nGame interrupted. Thanks for playing!")
-            break
-        except EOFError:
-            print("\n\nGame ended. Thanks for playing!")
-            break
+    if not args:
+        # No command provided - show current status and possible actions
+        print("=== TERMINAL DUNGEON CRAWLER ===")
+        print("Current Status:")
+        game.show_stats()
+        print()
+        game.describe_room()
+        print("\nPossible actions:")
+        print("  move <direction> - Move north, south, east, or west")
+        print("  attack <number> - Attack enemy number in room")
+        print("  take <number> - Take item number from room")
+        print("  equip <number> - Equip item number from inventory")
+        print("  look - Look around the current room")
+        print("  inventory - View your inventory")
+        print("  stats - View your character stats")
+        print("  rest - Rest to recover health")
+        print("  save - Save the game")
+        print("  load - Load a saved game")
+        print("  quit - Quit the game")
+        print("\nExample: python game_engine.py move north")
+        print("         python game_engine.py attack 1")
+        print("         python game_engine.py take 1")
+        print("         python game_engine.py stats")
+        return
     
-    if not game.player.is_alive():
-        print("\nGame over! You have died.")
-        print("Thanks for playing!")
+    # Process the command from arguments
+    command = " ".join(args).strip().lower()
+    
+    try:
+        if command in ["quit", "exit"]:
+            game.save_game()
+            print("Game saved. Thanks for playing!")
+        elif command == "help":
+            print("\nAvailable commands:")
+            print("  move <direction> - Move north, south, east, or west")
+            print("  attack <number> - Attack enemy number in room")
+            print("  take <number> - Take item number from room")
+            print("  equip <number> - Equip item number from inventory")
+            print("  look - Look around the current room")
+            print("  inventory - View your inventory")
+            print("  stats - View your character stats")
+            print("  rest - Rest to recover health")
+            print("  save - Save the game")
+            print("  load - Load a saved game")
+            print("  quit - Quit the game")
+        elif command.startswith("move "):
+            direction_str = command[5:]
+            try:
+                direction = Direction(direction_str)
+                game.move_player(direction)
+                game.save_game()  # Auto-save after each move
+            except ValueError:
+                print("Invalid direction. Use: north, south, east, or west.")
+        elif command.startswith("attack "):
+            try:
+                enemy_num = int(command[7:]) - 1
+                if game.attack_enemy(enemy_num):
+                    if game.player.is_alive():
+                        game.save_game()  # Auto-save after successful attack
+                    else:
+                        print("\nGame over! You have died.")
+                        print("Your save file remains with your last healthy state.")
+                else:
+                    if not game.player.is_alive():
+                        print("\nGame over! You have died.")
+                        print("Your save file remains with your last healthy state.")
+            except ValueError:
+                print("Please specify a valid enemy number to attack.")
+        elif command.startswith("take "):
+            try:
+                item_num = int(command[5:]) - 1
+                if game.take_item(item_num):
+                    game.save_game()  # Auto-save after taking an item
+            except ValueError:
+                print("Please specify a valid item number to take.")
+        elif command.startswith("equip "):
+            try:
+                item_num = int(command[6:]) - 1
+                if game.equip_item(item_num):
+                    game.save_game()  # Auto-save after equipping an item
+            except ValueError:
+                print("Please specify a valid item number to equip.")
+        elif command == "look":
+            game.look_around()
+        elif command == "inventory":
+            game.show_inventory()
+        elif command == "stats":
+            game.show_stats()
+        elif command == "rest":
+            game.rest()
+            game.save_game()  # Auto-save after resting
+        elif command == "save":
+            game.save_game()
+        elif command == "load":
+            game.load_game()
+        else:
+            print("Unknown command. Type 'python game_engine.py help' for a list of commands.")
+    
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    
+    # If player died, don't save the dead state
+    if game.player.is_alive():
+        game.save_game()
 
 
 if __name__ == "__main__":
