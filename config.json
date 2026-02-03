@@ -1,0 +1,17 @@
+{
+  "dungeon_settings": {
+    "width": 10,
+    "height": 10,
+    "floors": 5
+  },
+  "player_settings": {
+    "start_health": 100,
+    "start_attack": 10,
+    "start_defense": 5
+  },
+  "difficulty_settings": {
+    "exp_multiplier": 1.0,
+    "enemy_hp_multiplier": 1.0,
+    "enemy_attack_multiplier": 1.0
+  }
+}
