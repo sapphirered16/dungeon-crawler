@@ -60,27 +60,32 @@ class DungeonVisualizer:
         room_layouts = {}
         
         for floor in range(self.floors):
-            # Create rooms
+            # Create rooms with spacing
             rooms_info = []
             num_rooms = random.randint(8, 15)  # Number of rooms for this floor
             
             for _ in range(num_rooms):
-                # Random room size
-                room_width = random.randint(3, 6)
-                room_height = random.randint(3, 6)
+                # Random room size (larger rooms)
+                room_width = random.randint(4, 8)
+                room_height = random.randint(4, 8)
                 
-                # Random position (ensuring it fits in the grid)
-                x = random.randint(1, self.width - room_width - 1)
-                y = random.randint(1, self.height - room_height - 1)
+                # Random position (ensuring it fits in the grid with spacing)
+                # Add spacing buffer to prevent rooms from being too close
+                spacing_buffer = 3  # Minimum space between rooms
+                x = random.randint(spacing_buffer, self.width - room_width - spacing_buffer)
+                y = random.randint(spacing_buffer, self.height - room_height - spacing_buffer)
                 
-                # Check for overlap with existing rooms
+                # Check for overlap with existing rooms (with spacing)
                 overlaps = False
                 for existing_room in rooms_info:
-                    # Simple overlap check
-                    if not (x + room_width < existing_room.x or 
-                           existing_room.x + existing_room.width < x or
-                           y + room_height < existing_room.y or 
-                           existing_room.y + existing_room.height < y):
+                    # Check for overlap with spacing buffer
+                    min_dist_x = existing_room.x - room_width - spacing_buffer
+                    max_dist_x = existing_room.x + existing_room.width + spacing_buffer
+                    min_dist_y = existing_room.y - room_height - spacing_buffer
+                    max_dist_y = existing_room.y + existing_room.height + spacing_buffer
+                    
+                    if not (x > max_dist_x or x + room_width < min_dist_x or 
+                           y > max_dist_y or y + room_height < min_dist_y):
                         overlaps = True
                         break
                 
@@ -88,48 +93,50 @@ class DungeonVisualizer:
                     room_info = self.RoomInfo(x, y, room_width, room_height, floor)
                     rooms_info.append(room_info)
                     
-                    # Create rooms for each cell in the room rectangle
+                    # Create the main room area (not individual cells)
+                    # Each room is now a single unit with a larger area
+                    pos = (room_info.center_x, room_info.center_y, floor)  # Use center as main room position
+                    
+                    # Set room type for the whole room
+                    rand = random.random()
+                    if rand < 0.1:
+                        room_type = RoomType.TREASURE
+                    elif rand < 0.3:
+                        room_type = RoomType.MONSTER
+                    elif rand < 0.4:
+                        room_type = RoomType.TRAP
+                    elif rand < 0.45:  # 5% chance for NPC
+                        room_type = RoomType.NPC
+                    else:
+                        room_type = RoomType.EMPTY
+                    
+                    self.rooms[pos] = room_type
+                    self.connections[pos] = RoomConnection()
+                    
+                    # Mark the entire room area in the grid for visualization
                     for rx in range(room_info.x, room_info.x + room_info.width):
                         for ry in range(room_info.y, room_info.y + room_info.height):
-                            pos = (rx, ry, floor)
-                            
-                            # Set room type based on position in room
-                            if rx == room_info.x or rx == room_info.x + room_info.width - 1 or \
-                               ry == room_info.y or ry == room_info.y + room_info.height - 1:
-                                room_type = RoomType.HALLWAY
-                            else:
-                                # Center cells - determine type
-                                rand = random.random()
-                                if rand < 0.1:
-                                    room_type = RoomType.TREASURE
-                                elif rand < 0.3:
-                                    room_type = RoomType.MONSTER
-                                elif rand < 0.4:
-                                    room_type = RoomType.TRAP
-                                elif rand < 0.45:  # 5% chance for NPC
-                                    room_type = RoomType.NPC
-                                else:
-                                    room_type = RoomType.EMPTY
-                            
-                            self.rooms[pos] = room_type
-                            self.connections[pos] = RoomConnection()
+                            grid_pos = (rx, ry, floor)
+                            if grid_pos != pos:  # Don't overwrite the main room position
+                                self.rooms[grid_pos] = RoomType.HALLWAY
+                                self.connections[grid_pos] = RoomConnection()
             
             # Connect rooms with hallways
-            for i in range(len(rooms_info) - 1):
-                room1 = rooms_info[i]
-                room2 = rooms_info[i + 1]
-                
-                # Create L-shaped corridor between room centers
-                self._create_corridor(room1.center_x, room1.center_y, 
-                                   room2.center_x, room2.center_y, floor)
-            
-            # Ensure the first room connects to the second room for full connectivity
             if len(rooms_info) > 1:
-                # Create additional connections to ensure all rooms are reachable
+                # Create hallways connecting rooms in sequence
+                for i in range(len(rooms_info) - 1):
+                    room1 = rooms_info[i]
+                    room2 = rooms_info[i + 1]
+                    
+                    # Create L-shaped corridor between room centers
+                    self._create_corridor(room1.center_x, room1.center_y, 
+                                       room2.center_x, room2.center_y, floor)
+                
+                # Ensure good connectivity by adding extra connections
                 for i in range(len(rooms_info)):
-                    # Connect to a random other room to ensure good connectivity
+                    # Connect to a random other room to ensure all rooms are reachable
                     j = random.randint(0, len(rooms_info) - 1)
-                    if i != j:
+                    if i != j and random.random() < 0.3:  # 30% chance of extra connection
                         self._create_corridor(rooms_info[i].center_x, rooms_info[i].center_y,
                                            rooms_info[j].center_x, rooms_info[j].center_y, floor)
             
@@ -141,43 +148,33 @@ class DungeonVisualizer:
                     artifact_pos = random.choice(floor_rooms)
                     self.rooms[artifact_pos] = RoomType.ARTIFACT
 
-        # Now create connections between adjacent accessible rooms
-        for (x, y, floor), room_connection in self.connections.items():
-            for dx, dy, direction in [(0, -1, Direction.NORTH), (0, 1, Direction.SOUTH),
-                                      (1, 0, Direction.EAST), (-1, 0, Direction.WEST)]:
-                neighbor_pos = (x + dx, y + dy, floor)
-                if neighbor_pos in self.connections:  # Only connect if the neighbor exists
-                    room_connection.connections[direction] = neighbor_pos
-                    # Connect back
-                    opposite_direction = {
-                        Direction.NORTH: Direction.SOUTH,
-                        Direction.SOUTH: Direction.NORTH,
-                        Direction.EAST: Direction.WEST,
-                        Direction.WEST: Direction.EAST,
-                        Direction.UP: Direction.DOWN,
-                        Direction.DOWN: Direction.UP
-                    }[direction]
-                    self.connections[neighbor_pos].connections[opposite_direction] = (x, y, floor)
+        # With the new room structure, rooms are connected via hallways created earlier,
+        # not through adjacent grid positions. The hallway creation already established
+        # connections between rooms, so we don't need this automatic grid-based connection.
+        # Rooms exist as single units in the grid (their center position) and are connected
+        # via the hallway system created earlier.
         
         # Add stairs between floors (using special room flags)
         # Ensure at least one staircase exists between each pair of floors
         for floor in range(self.floors - 1):  # Connect each floor to the one below it
             # Find a room on the current floor that is accessible (has connections)
-            current_floor_rooms_with_connections = []
-            next_floor_rooms_with_connections = []
+            current_floor_rooms = []
+            next_floor_rooms = []
             
             for pos, room_connection in self.connections.items():
-                if pos[2] == floor and len(room_connection.connections) > 0:  # Room is on current floor and has connections
-                    current_floor_rooms_with_connections.append(pos)
+                # Since rooms are not connected in a grid pattern, we need to find rooms that have hallways
+                # For simplicity, we'll connect any two rooms on different floors
+                if pos[2] == floor:
+                    current_floor_rooms.append(pos)
             
             for pos, room_connection in self.connections.items():
-                if pos[2] == floor + 1 and len(room_connection.connections) > 0:  # Room is on next floor and has connections
-                    next_floor_rooms_with_connections.append(pos)
+                if pos[2] == floor + 1:
+                    next_floor_rooms.append(pos)
             
-            if current_floor_rooms_with_connections and next_floor_rooms_with_connections:
-                # Pick a connected room from each floor to place stairs
-                current_room_pos = current_floor_rooms_with_connections[0]  # Use first accessible room
-                next_room_pos = next_floor_rooms_with_connections[0]  # Use first accessible room on next floor
+            if current_floor_rooms and next_floor_rooms:
+                # Pick a room from each floor to place stairs
+                current_room_pos = current_floor_rooms[0]  # Use first room
+                next_room_pos = next_floor_rooms[0]  # Use first room on next floor
                 
                 current_room_connection = self.connections[current_room_pos]
                 next_room_connection = self.connections[next_room_pos]
@@ -189,65 +186,51 @@ class DungeonVisualizer:
                 next_room_connection.stairs_up_target = current_room_pos   # Going up leads back to current floor room
 
         # Add locked doors and blocked passages for puzzle elements
-        all_accessible_rooms = [pos for pos, conn in self.connections.items() if len(conn.connections) > 0]
+        all_rooms = [pos for pos, conn in self.connections.items()]
         
         # Add some locked doors (about 10% of accessible rooms)
-        num_locked_doors = max(1, len(all_accessible_rooms) // 10)
-        selected_rooms_for_doors = random.sample(all_accessible_rooms, min(num_locked_doors, len(all_accessible_rooms)))
+        num_locked_doors = max(1, len(all_rooms) // 10)
+        selected_rooms_for_doors = random.sample(all_rooms, min(num_locked_doors, len(all_rooms)))
         
         for pos in selected_rooms_for_doors:
             room_connection = self.connections[pos]
             
-            # Find a direction that has a connection but isn't stairs
-            available_directions = []
-            for direction, connected_pos in room_connection.connections.items():
-                # Don't lock stair directions
-                if not ((direction == Direction.UP and room_connection.has_stairs_up) or 
-                       (direction == Direction.DOWN and room_connection.has_stairs_down)):
-                    available_directions.append(direction)
-            
-            if available_directions:
-                direction_to_lock = random.choice(available_directions)
-                # Add locked door - require a specific key type
-                key_types = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key", "Crystal Key"]
-                key_required = random.choice(key_types)
-                room_connection.locked_doors[direction_to_lock] = key_required
+            # Since we don't have grid-based connections, we'll just mark the doors as locked without specifying directions
+            # This is a simplification for the visualization
+            key_types = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key", "Crystal Key"]
+            key_required = random.choice(key_types)
+            # We'll add a flag to indicate this room has locked doors
+            room_connection.locked_door_types = [key_required]
 
         # Add some blocked passages (about 5% of accessible rooms)
-        num_blocked_passages = max(1, len(all_accessible_rooms) // 20)
+        num_blocked_passages = max(1, len(all_rooms) // 20)
         # Select from remaining rooms that don't already have locked doors
-        remaining_rooms = [pos for pos in selected_rooms_for_doors 
-                          if len(self.connections[pos].locked_doors) == 0]
+        remaining_rooms = [pos for pos in all_rooms 
+                          if not hasattr(self.connections[pos], 'locked_door_types')]
         if len(remaining_rooms) < num_blocked_passages:
             # Add more rooms if needed
-            additional_rooms = [pos for pos in all_accessible_rooms if pos not in selected_rooms_for_doors]
+            additional_rooms = [pos for pos in all_rooms if pos not in selected_rooms_for_doors]
             num_additional_needed = num_blocked_passages - len(remaining_rooms)
             if num_additional_needed > 0 and len(additional_rooms) > 0:
                 num_to_select = min(num_additional_needed, len(additional_rooms))
                 additional_selected = random.sample(additional_rooms, num_to_select)
-                remaining_rooms.extend(additional_selected)
+            remaining_rooms.extend(additional_selected)
         
         selected_rooms_for_passages = random.sample(remaining_rooms, min(num_blocked_passages, len(remaining_rooms)))
         
         for pos in selected_rooms_for_passages:
             room_connection = self.connections[pos]
             
-            # Find a direction that has a connection
-            available_directions = [d for d in room_connection.connections.keys() 
-                                  if not ((d == Direction.UP and room_connection.has_stairs_up) or 
-                                         (d == Direction.DOWN and room_connection.has_stairs_down))]
-            
-            if available_directions:
-                direction_to_block = random.choice(available_directions)
-                # Add blocked passage - require a specific trigger item
-                trigger_types = ["Rune", "Powder", "Crystal", "Stone", "Charm", "Sundial", "Sunday"]
-                trigger_required = random.choice(trigger_types)
-                if trigger_required == "Sunday":
-                    # Special case for Sunday
-                    trigger_name = "Sunday"
-                else:
-                    trigger_name = f"Power {trigger_required}"
-                room_connection.blocked_passages[direction_to_block] = trigger_name
+            # Add blocked passage - require a specific trigger item
+            trigger_types = ["Rune", "Powder", "Crystal", "Stone", "Charm", "Sundial", "Sunday"]
+            trigger_required = random.choice(trigger_types)
+            if trigger_required == "Sunday":
+                # Special case for Sunday
+                trigger_name = "Sunday"
+            else:
+                trigger_name = f"Power {trigger_required}"
+            # We'll add a flag to indicate this room has blocked passages
+            room_connection.blocked_passage_types = [trigger_name]
 
     def _create_corridor(self, x1, y1, x2, y2, floor):
         """Create an L-shaped corridor between two points"""
@@ -291,7 +274,7 @@ class DungeonVisualizer:
         print(f"\n--- FLOOR {floor + 1} VISUALIZATION (Seed: {self.seed}) ---")
         
         # Create a grid representation of the floor
-        grid = [['.' for _ in range(self.width)] for _ in range(self.height)]
+        grid = [[' ' for _ in range(self.width)] for _ in range(self.height)]
         
         # Mark rooms and special features on the grid
         for (x, y, f), room_type in self.rooms.items():
@@ -307,7 +290,7 @@ class DungeonVisualizer:
         
         # Print legend
         print("\nLegend:")
-        print("  . = Empty/Hallway")
+        print("     = Empty/Corridor")
         print("  $ = Treasure Room")
         print("  M = Monster Room")
         print("  T = Trap Room")
@@ -321,7 +304,7 @@ class DungeonVisualizer:
         """Get a symbol for a room type."""
         symbols = {
             RoomType.EMPTY: '.',
-            RoomType.HALLWAY: '.',
+            RoomType.HALLWAY: '-',
             RoomType.TREASURE: '$',
             RoomType.MONSTER: 'M',
             RoomType.TRAP: 'T',
@@ -351,13 +334,11 @@ class DungeonVisualizer:
         if connection.has_stairs_down:
             info += "  - Has stairs going DOWN\n"
         
-        if connection.locked_doors:
-            for direction, key in connection.locked_doors.items():
-                info += f"  - {direction.value} locked (need {key})\n"
+        if hasattr(connection, 'locked_door_types'):
+            info += f"  - Has locked doors ({connection.locked_door_types[0]})\n"
         
-        if connection.blocked_passages:
-            for direction, item in connection.blocked_passages.items():
-                info += f"  - {direction.value} blocked (need {item})\n"
+        if hasattr(connection, 'blocked_passage_types'):
+            info += f"  - Has blocked passages ({connection.blocked_passage_types[0]})\n"
         
         return info
 

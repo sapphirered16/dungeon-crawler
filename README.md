@@ -22,6 +22,7 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - Themed dungeon environments (cavern, castle, forest, magical, etc.)
 - Seed-based dungeon generation for efficient saves and deterministic behavior
 - Visual dungeon mapping tool for debugging and analysis
+- Improved dungeon generation with larger rooms connected by narrow hallways
 
 ## How to Play
 - Run the game executable to start a new game

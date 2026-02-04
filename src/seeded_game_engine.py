@@ -247,27 +247,32 @@ class SeededDungeon:
         room_layouts = {}
         
         for floor in range(self.floors):
-            # Create rooms
+            # Create rooms with spacing
             rooms_info = []
             num_rooms = random.randint(8, 15)  # Number of rooms for this floor
             
             for _ in range(num_rooms):
-                # Random room size
-                room_width = random.randint(3, 6)
-                room_height = random.randint(3, 6)
+                # Random room size (larger rooms)
+                room_width = random.randint(4, 8)
+                room_height = random.randint(4, 8)
                 
-                # Random position (ensuring it fits in the grid)
-                x = random.randint(1, self.width - room_width - 1)
-                y = random.randint(1, self.height - room_height - 1)
+                # Random position (ensuring it fits in the grid with spacing)
+                # Add spacing buffer to prevent rooms from being too close
+                spacing_buffer = 3  # Minimum space between rooms
+                x = random.randint(spacing_buffer, self.width - room_width - spacing_buffer)
+                y = random.randint(spacing_buffer, self.height - room_height - spacing_buffer)
                 
-                # Check for overlap with existing rooms
+                # Check for overlap with existing rooms (with spacing)
                 overlaps = False
                 for existing_room in rooms_info:
-                    # Simple overlap check
-                    if not (x + room_width < existing_room.x or 
-                           existing_room.x + existing_room.width < x or
-                           y + room_height < existing_room.y or 
-                           existing_room.y + existing_room.height < y):
+                    # Check for overlap with spacing buffer
+                    min_dist_x = existing_room.x - room_width - spacing_buffer
+                    max_dist_x = existing_room.x + existing_room.width + spacing_buffer
+                    min_dist_y = existing_room.y - room_height - spacing_buffer
+                    max_dist_y = existing_room.y + existing_room.height + spacing_buffer
+                    
+                    if not (x > max_dist_x or x + room_width < min_dist_x or 
+                           y > max_dist_y or y + room_height < min_dist_y):
                         overlaps = True
                         break
                 
@@ -275,80 +280,111 @@ class SeededDungeon:
                     room_info = self.RoomInfo(x, y, room_width, room_height, floor)
                     rooms_info.append(room_info)
                     
-                    # Create rooms for each cell in the room rectangle
-                    for rx in range(room_info.x, room_info.x + room_info.width):
-                        for ry in range(room_info.y, room_info.y + room_info.height):
-                            # Create the base room state
-                            pos = (rx, ry, floor)
-                            room_state = RoomState(pos)
-                            
-                            # Set room type based on position in room
-                            if rx == room_info.x or rx == room_info.x + room_info.width - 1 or \
-                               ry == room_info.y or ry == room_info.y + room_info.height - 1:
-                                room_state.room_type = "hallway"  # Border cells treated as hallway
-                                room_state.description = "A narrow hallway."
-                            else:
-                                # Center cells - determine type
-                                rand = random.random()
-                                if rand < 0.1:
-                                    room_state.room_type = "treasure"
-                                    room_state.description = "A treasure room filled with gleaming objects."
-                                    # Add some treasure
-                                    if random.random() < 0.7:
-                                        room_state.items.append(self._generate_random_item())
-                                elif rand < 0.3:
-                                    room_state.room_type = "monster"
-                                    room_state.description = "A room with hostile creatures lurks ahead."
-                                    # Add an enemy
-                                    room_state.entities.append(self._generate_random_enemy(floor))
-                                elif rand < 0.4:
-                                    room_state.room_type = "trap"
-                                    room_state.description = "A dangerous-looking room with potential hazards."
-                                elif rand < 0.45:  # 5% chance for NPC with quest
-                                    room_state.room_type = "npc"
-                                    room_state.description = "A room with a mysterious stranger."
-                                    
-                                    # Create an NPC with a quest
-                                    npc_dialogues = [
-                                        "Greetings, traveler. I seek a powerful item that was lost in these depths.",
-                                        "Hello adventurer, I have a task for you if you're brave enough.",
-                                        "Welcome, hero. I need someone to retrieve something precious to me.",
-                                        "Oh, a visitor! Perhaps you can assist me with a small matter."
-                                    ]
-                                    
-                                    # Choose a boss monster whose drop is the quest target
-                                    boss_monsters = ["Orc", "Ogre", "Demon", "Dragon", "Ancient Guardian"]
-                                    target_monster = random.choice(boss_monsters)
-                                    target_item = f"{target_monster} Trophy"
-                                    
-                                    # Create a reward
-                                    reward_types = [
-                                        Item("Flame Sword", ItemType.WEAPON, value=100, attack_bonus=15, defense_bonus=2, status_effects={"burn": 3}),
-                                        Item("Frost Helm", ItemType.ARMOR, value=80, attack_bonus=3, defense_bonus=10, health_bonus=20, status_effects={"chill": 2}),
-                                        Item("Lightning Blade", ItemType.WEAPON, value=120, attack_bonus=20, defense_bonus=0, status_effects={"shock": 2}),
-                                        Item("Healing Amulet", ItemType.ARMOR, value=60, attack_bonus=5, defense_bonus=5, health_bonus=50),
-                                        Item("Thunder Hammer", ItemType.WEAPON, value=150, attack_bonus=25, defense_bonus=3, status_effects={"stun": 2})
-                                    ]
-                                    reward = random.choice(reward_types)
-                                    
-                                    quest_description = f"I need you to defeat a {target_monster} and bring me its trophy. In return, I'll give you this {reward.name}."
-                                    
-                                    npc = NonPlayerCharacter(
-                                        name="Wandering Sage",
-                                        health=1,
-                                        dialogue=random.choice(npc_dialogues),
-                                        quest={
-                                            "target_item": target_item,
-                                            "reward": reward,
-                                            "description": quest_description
-                                        }
-                                    )
-                                    room_state.npcs.append(npc)
-                                else:
-                                    room_state.room_type = "empty"
-                                    room_state.description = "An empty, quiet room."
-                            
-                            self.room_states[pos] = room_state
+                    # Create the main room area (not individual cells)
+                    # Each room is now a single unit with a larger area
+                    pos = (room_info.center_x, room_info.center_y, floor)  # Use center as main room position
+                    room_state = RoomState(pos)
+                    
+                    # Set room type for the whole room
+                    rand = random.random()
+                    if rand < 0.1:
+                        room_state.room_type = "treasure"
+                        room_state.description = "A treasure room filled with gleaming objects."
+                        # Add multiple treasures
+                        num_treasures = random.randint(1, 3)
+                        for _ in range(num_treasures):
+                            room_state.items.append(self._generate_random_item())
+                    elif rand < 0.3:
+                        room_state.room_type = "monster"
+                        room_state.description = "A room with hostile creatures lurks ahead."
+                        # Add multiple enemies
+                        num_enemies = random.randint(1, 2)
+                        for _ in range(num_enemies):
+                            room_state.entities.append(self._generate_random_enemy(floor))
+                    elif rand < 0.4:
+                        room_state.room_type = "trap"
+                        room_state.description = "A dangerous-looking room with potential hazards."
+                    elif rand < 0.45:  # 5% chance for NPC with quest
+                        room_state.room_type = "npc"
+                        room_state.description = "A room with a mysterious stranger."
+                        
+                        # Create an NPC with a quest
+                        npc_dialogues = [
+                            "Greetings, traveler. I seek a powerful item that was lost in these depths.",
+                            "Hello adventurer, I have a task for you if you're brave enough.",
+                            "Welcome, hero. I need someone to retrieve something precious to me.",
+                            "Oh, a visitor! Perhaps you can assist me with a small matter."
+                        ]
+                        
+                        # Choose a boss monster whose drop is the quest target
+                        boss_monsters = ["Orc", "Ogre", "Demon", "Dragon", "Ancient Guardian"]
+                        target_monster = random.choice(boss_monsters)
+                        target_item = f"{target_monster} Trophy"
+                        
+                        # Create a reward
+                        reward_types = [
+                            Item("Flame Sword", ItemType.WEAPON, value=100, attack_bonus=15, defense_bonus=2, status_effects={"burn": 3}),
+                            Item("Frost Helm", ItemType.ARMOR, value=80, attack_bonus=3, defense_bonus=10, health_bonus=20, status_effects={"chill": 2}),
+                            Item("Lightning Blade", ItemType.WEAPON, value=120, attack_bonus=20, defense_bonus=0, status_effects={"shock": 2}),
+                            Item("Healing Amulet", ItemType.ARMOR, value=60, attack_bonus=5, defense_bonus=5, health_bonus=50),
+                            Item("Thunder Hammer", ItemType.WEAPON, value=150, attack_bonus=25, defense_bonus=3, status_effects={"stun": 2})
+                        ]
+                        reward = random.choice(reward_types)
+                        
+                        quest_description = f"I need you to defeat a {target_monster} and bring me its trophy. In return, I'll give you this {reward.name}."
+                        
+                        npc = NonPlayerCharacter(
+                            name="Wandering Sage",
+                            health=1,
+                            dialogue=random.choice(npc_dialogues),
+                            quest={
+                                "target_item": target_item,
+                                "reward": reward,
+                                "description": quest_description
+                            }
+                        )
+                        room_state.npcs.append(npc)
+                    else:
+                        room_state.room_type = "empty"
+                        room_state.description = "An empty, quiet room."
+                    
+                    # Add some extra items to treasure and empty rooms
+                    if room_state.room_type in ["treasure", "empty"]:
+                        if random.random() < 0.3:  # 30% chance to add extra item
+                            room_state.items.append(self._generate_random_item())
+                    
+                    self.room_states[pos] = room_state
+            
+            # Connect rooms with hallways (this creates the narrow connections between rooms)
+            if len(rooms_info) > 1:
+                # Create hallways connecting rooms in sequence
+                for i in range(len(rooms_info) - 1):
+                    room1 = rooms_info[i]
+                    room2 = rooms_info[i + 1]
+                    
+                    # Create L-shaped corridor between room centers
+                    self._create_corridor(room1.center_x, room1.center_y, 
+                                       room2.center_x, room2.center_y, floor)
+                
+                # Ensure good connectivity by adding extra connections
+                for i in range(len(rooms_info)):
+                    # Connect to a random other room to ensure all rooms are reachable
+                    j = random.randint(0, len(rooms_info) - 1)
+                    if i != j and random.random() < 0.3:  # 30% chance of extra connection
+                        self._create_corridor(rooms_info[i].center_x, rooms_info[i].center_y,
+                                           rooms_info[j].center_x, rooms_info[j].center_y, floor)
+            
+            # Place the ultimate artifact on the deepest floor
+            if floor == self.floors - 1:  # Last floor (deepest)
+                # Find a random room in this floor to place the artifact
+                floor_rooms = [(x, y, z) for x, y, z in self.room_states.keys() if z == floor]
+                if floor_rooms:
+                    artifact_pos = random.choice(floor_rooms)
+                    artifact_room = self.room_states[artifact_pos]
+                    artifact_room.room_type = "artifact"
+                    artifact_room.description = "A mystical chamber glows with ethereal light. At the center lies the legendary Artifact of Power!"
+                    artifact_room.items.append(Item("Artifact of Power", ItemType.CONSUMABLE, value=1000, 
+                                                  attack_bonus=50, defense_bonus=50, health_bonus=100))
             
             # Connect rooms with hallways
             for i in range(len(rooms_info) - 1):
@@ -381,15 +417,11 @@ class SeededDungeon:
                     artifact_room.items.append(Item("Artifact of Power", ItemType.CONSUMABLE, value=1000, 
                                                   attack_bonus=50, defense_bonus=50, health_bonus=100))
 
-        # Now create connections between adjacent accessible rooms
-        for (x, y, floor), room_state in self.room_states.items():
-            for dx, dy, direction in [(0, -1, Direction.NORTH), (0, 1, Direction.SOUTH),
-                                      (1, 0, Direction.EAST), (-1, 0, Direction.WEST)]:
-                neighbor_pos = (x + dx, y + dy, floor)
-                if neighbor_pos in self.room_states:  # Only connect if the neighbor exists
-                    if not hasattr(room_state, 'connections'):
-                        room_state.connections = {}
-                    room_state.connections[direction] = neighbor_pos
+        # With the new room structure, rooms are connected via hallways created earlier,
+        # not through adjacent grid positions. The hallway creation already established
+        # connections between rooms, so we don't need this automatic grid-based connection.
+        # Rooms exist as single units in the grid (their center position) and are connected
+        # via the hallway system created earlier.
         
         # Add stairs between floors (using special room flags)
         # Ensure at least one staircase exists between each pair of floors
