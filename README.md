@@ -62,22 +62,25 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 
 ## 🚀 Usage
 
-### Basic Gameplay
+### Interactive Gameplay (Recommended)
 ```bash
-# Start a new game or continue from save
-python src/seeded_game_engine.py
+# Start a new game with interactive mode
+python src/main.py
 
-# Execute individual commands
-python src/seeded_game_engine.py move north
-python src/seeded_game_engine.py attack 1
-python src/seeded_game_engine.py take 1
-python src/seeded_game_engine.py stats
+# Or use the play script
+./play.sh
+
+# Start with a specific seed
+./play.sh 12345
 ```
 
-### Batch Commands
+### Individual Commands (For Testing)
 ```bash
-# Execute multiple commands in sequence
-python src/batch_processor.py "move north" "look" "take 1" "stats"
+# Execute individual commands
+python src/main.py move north
+python src/main.py attack 1
+python src/main.py take 1
+python src/main.py stats
 ```
 
 ### Visualize Dungeon
@@ -88,7 +91,7 @@ python src/dungeon_visualizer.py 12345 0  # Visualize only floor 0
 ```
 
 ### Available Commands
-- `move <direction>` - Move north, south, east, west, up, or down
+- `move <direction>` - Move north, south, east, west, up, or down (automatically looks after movement)
 - `attack <number>` - Attack enemy number in room
 - `take <number>` - Take item number from room
 - `equip <number>` - Equip item number from inventory
@@ -97,10 +100,13 @@ python src/dungeon_visualizer.py 12345 0  # Visualize only floor 0
 - `look` - Look around the current room
 - `inventory` - View your inventory
 - `stats` - View your character stats
+- `map` - Show current floor map
+- `local` or `lm` - Show 5x5 local map around player
 - `rest` - Rest to recover health
 - `save` - Save the game
 - `load` - Load a saved game
 - `quit` - Quit the game
+- `help` - Show available commands and tips
 
 ## 📁 Directory Structure
 ```

@@ -268,6 +268,8 @@ class SeededGameEngine:
                 self.player.travel_to(target_pos)
                 print("⬆️  You climb up the stairs...")
                 self._log_action(f"Moved UP from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                # Automatically look around after moving
+                self.look_around()
                 return True
         elif direction == Direction.DOWN and self.current_room_state.has_stairs_down:
             target_pos = self.current_room_state.stairs_down_target
@@ -279,6 +281,8 @@ class SeededGameEngine:
                 # Process monster AI after moving
                 self.process_monster_ai()
                 self._log_action(f"Moved DOWN from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                # Automatically look around after moving
+                self.look_around()
                 return True
         elif direction in self.current_room_state.connections:
             new_pos = self.current_room_state.connections[direction]
@@ -288,6 +292,8 @@ class SeededGameEngine:
             # Process monster AI after moving
             self.process_monster_ai()
             self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+            # Automatically look around after moving
+            self.look_around()
             return True
         
         print(f"❌ You cannot move {direction.value}.")

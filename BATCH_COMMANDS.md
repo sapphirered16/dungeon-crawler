@@ -2,22 +2,33 @@
 
 The dungeon crawler now supports batch command processing, allowing you to execute multiple commands in sequence.
 
+**IMPORTANT**: Batch processing is intended for **testing and automation purposes only**. For actual gameplay, use the interactive mode:
+
+```bash
+# Recommended for gameplay
+python -m src.main
+# or
+./play.sh
+```
+
+The batch processor does not maintain proper game state continuity and can cause unexpected behavior during actual gameplay.
+
 ## Usage
 
-### Running Batch Commands
+### Running Batch Commands (Testing Only)
 ```bash
 python src/batch_processor.py "command1" "command2" "command3" ...
 ```
 
 ### Examples
 ```bash
-# Navigate and explore
+# Automated testing
 python src/batch_processor.py "move north" "move east" "look" "stats"
 
-# Combat sequence
+# Combat sequence testing
 python src/batch_processor.py "move north" "attack 1" "take 1" "equip 1" "stats"
 
-# Exploration and mapping
+# Exploration testing
 python src/batch_processor.py "move north" "move north" "move east" "move south" "look" "inventory"
 ```
 
@@ -39,9 +50,8 @@ python src/batch_processor.py "move north" "move north" "move east" "move south"
 ## Benefits
 
 - **Automated Testing**: Test game mechanics with predefined command sequences
-- **Scripted Gameplay**: Create custom adventure sequences
-- **Exploration Assistance**: Automate routine navigation tasks
-- **Integration**: Easily integrate with other tools or scripts
+- **Debugging**: Quickly execute command sequences for development
+- **Integration**: Easily integrate with other tools or scripts for testing
 
 ## Notes
 
@@ -49,3 +59,4 @@ python src/batch_processor.py "move north" "move north" "move east" "move south"
 - The game state is automatically saved after batch execution
 - Invalid commands are reported but don't halt execution of remaining commands
 - Use quotes around commands that contain spaces
+- **Not recommended for actual gameplay** - use interactive mode instead

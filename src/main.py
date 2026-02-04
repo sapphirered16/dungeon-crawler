@@ -28,12 +28,17 @@ def main():
     # Create command processor
     command_processor = CommandProcessor(game)
     
+    # Show initial room
+    print("You enter the dungeon...")
+    command_processor.process_command('look')
+    print()
+    
     # Main game loop
     game_running = True
     while game_running and not game.is_game_over():
         try:
             # Get user input
-            command = input("\n >> ").strip()
+            command = input(" >> ").strip()
             
             # Process command
             game_running = command_processor.process_command(command)
@@ -47,8 +52,12 @@ def main():
     
     # Game over message
     if game.is_game_over():
-        print("\n💀 Game Over! You have been defeated...")
-        print(f"Final Score: {game.player.score}")
+        if game.player.victory:
+            print("\n🎉 CONGRATULATIONS! You have conquered the dungeon! 🏆")
+        elif not game.player.is_alive():
+            print("\n💀 You have been defeated... Better luck next time! 😵")
+        else:
+            print(f"\nFinal Score: {game.player.score}")
     else:
         print("\n👋 Thanks for playing! Goodbye!")
 
