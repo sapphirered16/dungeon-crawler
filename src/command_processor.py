@@ -30,6 +30,9 @@ class CommandProcessor:
             'speak': self.talk_command,
             'save': self.save_command,
             'load': self.load_command,
+            'clear': self.clear_command,
+            'log': self.log_command,
+            'history': self.log_command,
             'quit': self.quit_command,
             'q': self.quit_command,
             'exit': self.quit_command,
@@ -89,12 +92,16 @@ class CommandProcessor:
         print("  map               - Show current floor map")
         print("  save              - Save game")
         print("  load              - Load game")
+        print("  clear             - Clear save and log files")
+        print("  log/history       - View game log history (optional: <num> lines)")
         print("  quit/q/exit       - Quit game")
         print("\n💡 Tips:")
         print("  - You can move directly by typing direction names (e.g., 'north')")
         print("  - Items and monsters are numbered in room descriptions")
         print("  - NPCs are numbered separately in room descriptions")
         print("  - Type 'look' to see what's in the current room")
+        print("  - Use 'log' to review your adventure history")
+        print("  - Use 'clear' to start fresh (with confirmation)")
         return True
 
     def stats_command(self, args: List[str]) -> bool:
@@ -267,4 +274,33 @@ class CommandProcessor:
         except ValueError:
             print(f"❌ Invalid NPC number: {args[0]}.")
         
+        return True
+
+    def clear_command(self, args: List[str]) -> bool:
+        """Clear save files and log files."""
+        print("⚠️  WARNING: This will permanently delete all save files and log files.")
+        confirm = input("Type 'YES' to confirm: ").strip()
+        
+        if confirm == "YES":
+            self.game_engine.clear_save_and_logs()
+        else:
+            print("❌ Clear operation cancelled.")
+        
+        return True
+
+    def log_command(self, args: List[str]) -> bool:
+        """View game log history."""
+        lines = 20  # Default number of lines
+        
+        if args and len(args) == 1:
+            try:
+                lines = int(args[0])
+                if lines <= 0:
+                    print("❌ Please specify a positive number of lines to show.")
+                    return True
+            except ValueError:
+                print(f"❌ Invalid number: {args[0]}.")
+                return True
+        
+        self.game_engine.view_log_history(lines)
         return True

@@ -3,6 +3,7 @@
 import json
 import os
 import random
+from datetime import datetime
 from typing import Tuple, List, Dict, Any
 from .classes.dungeon import SeededDungeon
 from .classes.character import Player
@@ -18,6 +19,11 @@ class SeededGameEngine:
         self.player = Player()
         self.current_room_state = self._find_starting_room()
         self.data_provider = DataProvider()
+        
+        # Initialize logging
+        self.log_file = f"dungeon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        self.log_actions = []
+        self._log_action("Game started", self.player.position)
         
     def _find_starting_room(self):
         """Find the starting room (z=0 floor)."""
@@ -133,6 +139,7 @@ class SeededGameEngine:
         
         if not npcs:
             print("There are no NPCs here to talk to.")
+            self._log_action("Tried to talk but no NPCs present", self.player.position)
             return False
         
         # Adjust index since the game displays NPCs starting from 1
@@ -192,6 +199,7 @@ class SeededGameEngine:
                                 
                                 # Note: In a full implementation, we might want to track completed quests
                                 # to prevent re-completion, but for now we'll just complete it
+                                self._log_action(f"Completed quest with {npc.name}, received {reward_item.name}", self.player.position)
                                 break
                             else:
                                 # Player doesn't have the required item, give hint about the quest
@@ -200,17 +208,21 @@ class SeededGameEngine:
                                 print(f"Required: {required_item_name}")
                                 print(f"Reward: {quest['reward']['name']}")
                                 print(f"Description: {quest['description']}")
+                                self._log_action(f"Started quest with {npc.name}: {quest['name']}", self.player.position)
                                 break
                     else:
                         print(f"{npc.name} nods politely.")
+                        self._log_action(f"Talked to {npc.name} (no quest)", self.player.position)
                     break
             
             if not npc_found_in_data:
                 print(f"{npc.name} nods politely.")
+                self._log_action(f"Talked to {npc.name} (no quest)", self.player.position)
             
             return True
         else:
             print("Invalid NPC selection.")
+            self._log_action("Invalid NPC selection", self.player.position)
             return False
 
     def move_player(self, direction: Direction):
@@ -223,10 +235,12 @@ class SeededGameEngine:
                 if item.name == key_name and item.item_type.value == "key":
                     print(f"✨ You use the {key_name} to unlock the magical barrier!")
                     del self.current_room_state.locked_doors[direction]
+                    self._log_action(f"Used {key_name} to unlock door", self.player.position)
                     break
             else:
                 print(f"🔑 You don't have the required key: {key_name}")
                 print(f"💡 Hint: Look for {key_name}s in earlier areas of the dungeon.")
+                self._log_action(f"Failed to unlock door - no {key_name}", self.player.position)
                 return False
 
         if direction in self.current_room_state.blocked_passages:
@@ -237,38 +251,47 @@ class SeededGameEngine:
                 if item.name == trigger_name:
                     print(f"✨ You use the {trigger_name} to dispel the magical blockage!")
                     del self.current_room_state.blocked_passages[direction]
+                    self._log_action(f"Used {trigger_name} to unblock passage", self.player.position)
                     break
             else:
                 print(f"🔮 You don't have the required item: {trigger_name}")
                 print(f"💡 Hint: Search for {trigger_name}s in rooms before reaching this area.")
+                self._log_action(f"Failed to unblock passage - no {trigger_name}", self.player.position)
                 return False
 
         # Handle special directions (stairs)
         if direction == Direction.UP and self.current_room_state.has_stairs_up:
             target_pos = self.current_room_state.stairs_up_target
             if target_pos:
+                old_pos = self.player.position
                 self.current_room_state = self.dungeon.room_states[target_pos]
                 self.player.travel_to(target_pos)
                 print("⬆️  You climb up the stairs...")
+                self._log_action(f"Moved UP from {old_pos} to {target_pos}", old_pos)
                 return True
         elif direction == Direction.DOWN and self.current_room_state.has_stairs_down:
             target_pos = self.current_room_state.stairs_down_target
             if target_pos:
+                old_pos = self.player.position
                 self.current_room_state = self.dungeon.room_states[target_pos]
                 self.player.travel_to(target_pos)
                 print("⬇️  You descend down the stairs...")
                 # Process monster AI after moving
                 self.process_monster_ai()
+                self._log_action(f"Moved DOWN from {old_pos} to {target_pos}", old_pos)
                 return True
         elif direction in self.current_room_state.connections:
             new_pos = self.current_room_state.connections[direction]
+            old_pos = self.player.position
             self.current_room_state = self.dungeon.room_states[new_pos]
             self.player.travel_to(new_pos)
             # Process monster AI after moving
             self.process_monster_ai()
+            self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos}", old_pos)
             return True
         
         print(f"❌ You cannot move {direction.value}.")
+        self._log_action(f"Tried to move {direction.value} but failed", self.player.position)
         return False
 
     def attack_enemy(self, enemy_index: int) -> bool:
@@ -285,6 +308,7 @@ class SeededGameEngine:
         
         if not living_enemies:
             print("There are no enemies here to attack.")
+            self._log_action("Tried to attack but no enemies present", self.player.position)
             return False
         
         # Adjust enemy_index since the game displays enemies starting from 1
@@ -329,12 +353,15 @@ class SeededGameEngine:
                     print(f"The {enemy.name} dropped: {dropped_item.name}!")
                 # Process monster AI after combat
                 self.process_monster_ai()
+                self._log_action(f"Defeated {enemy.name}", self.player.position)
                 return True
             else:
                 print(f"The {enemy.name} has {enemy.health}/{enemy.max_health} HP remaining.")
+                self._log_action(f"Attacked {enemy.name}, dealt {enemy_damage} damage", self.player.position)
                 
             if not self.player.is_alive():
                 print("You have been defeated...")
+                self._log_action("Player defeated in combat", self.player.position)
                 return False
             
             # Process monster AI after combat
@@ -342,6 +369,7 @@ class SeededGameEngine:
             return True
         else:
             print("Invalid enemy selection.")
+            self._log_action("Invalid enemy selection", self.player.position)
             return False
 
     def take_item(self, item_index: int) -> bool:
@@ -364,14 +392,17 @@ class SeededGameEngine:
                 print(f"⚔️  ENEMIES DEFEATED: {self.player.enemies_defeated}")
                 print(f"💎 TREASURES COLLECTED: {self.player.treasures_collected}")
                 print("\\n🙏 Thanks for playing the dungeon crawler!")
+                self._log_action(f"WON GAME by taking {item.name} (artifact)", self.player.position)
                 return True  # Return early to indicate game completion
             
             self.current_room_state.items.remove(item)
             # Process monster AI after taking an item (noise might attract attention)
             self.process_monster_ai()
+            self._log_action(f"Took item {item.name}", self.player.position)
             return True
         else:
             print("Invalid item selection.")
+            self._log_action("Invalid item selection", self.player.position)
             return False
 
     def visualize_floor(self, floor: int = None):
@@ -543,6 +574,8 @@ class SeededGameEngine:
                         # Print action description if there is one
                         if action_result["action_description"]:
                             print(action_result["action_description"])
+                        # Log the movement
+                        self._log_action(f"Enemy {entity.name} moved from {old_pos} to {new_pos}", self.player.position)
                     
                     elif action_result["attacked"]:
                         # Action description already contains the attack info
@@ -625,3 +658,60 @@ class SeededGameEngine:
                 adjacent.append(new_pos)
         
         return adjacent
+
+    def _log_action(self, action: str, position: Tuple[int, int, int] = None):
+        """Log an action to the game log."""
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if position is None:
+            position = self.player.position
+        log_entry = f"[{timestamp}] Position: {position} | Action: {action}"
+        self.log_actions.append(log_entry)
+        
+        # Write to log file
+        with open(self.log_file, 'a', encoding='utf-8') as f:
+            f.write(log_entry + '\n')
+
+    def clear_save_and_logs(self):
+        """Clear all save files and log files."""
+        import glob
+        
+        # Clear save files
+        save_files = glob.glob("savegame*.json")
+        for file in save_files:
+            try:
+                os.remove(file)
+                print(f"🗑️  Deleted save file: {file}")
+            except Exception as e:
+                print(f"❌ Could not delete save file {file}: {e}")
+        
+        # Clear log files
+        log_files = glob.glob("dungeon_log_*.txt")
+        for file in log_files:
+            try:
+                os.remove(file)
+                print(f"🗑️  Deleted log file: {file}")
+            except Exception as e:
+                print(f"❌ Could not delete log file {file}: {e}")
+        
+        # Reset log actions
+        self.log_actions = []
+        
+        print("✅ Save and log files cleared successfully!")
+        print("💡 A new game session will start with a fresh save and log.")
+
+    def view_log_history(self, lines: int = 20):
+        """View the last N lines of the game log."""
+        if not self.log_actions:
+            print("📋 No log entries yet.")
+            return
+        
+        print(f"\n📋 LAST {min(lines, len(self.log_actions))} LOG ENTRIES:")
+        print("-" * 60)
+        
+        # Show the last 'lines' entries
+        recent_entries = self.log_actions[-lines:]
+        for entry in recent_entries:
+            print(entry)
+        
+        print("-" * 60)
+        print(f"Total log entries: {len(self.log_actions)}")
