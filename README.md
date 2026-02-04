@@ -18,6 +18,10 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - Strategic combat with tactical depth
 - Locked doors and blocked passages that require special items to pass
 - Item stacking for consumable items
+- NPC quest system for additional challenges
+- Themed dungeon environments (cavern, castle, forest, magical, etc.)
+- Seed-based dungeon generation for efficient saves and deterministic behavior
+- Visual dungeon mapping tool for debugging and analysis
 
 ## How to Play
 - Run the game executable to start a new game
@@ -37,3 +41,13 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - `rest` - Rest to recover health
 - `save` - Save the game
 - `load` - Load a saved game
+
+## Visualization Tool
+A dungeon visualization tool is included to help debug and analyze dungeon layouts:
+
+```bash
+python src/dungeon_visualizer.py <seed> [floor]
+```
+
+Example: `python src/dungeon_visualizer.py 12345` to visualize all floors of dungeon with seed 12345
+Example: `python src/dungeon_visualizer.py 12345 0` to visualize only floor 0 of dungeon with seed 12345
