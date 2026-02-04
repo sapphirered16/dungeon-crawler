@@ -36,6 +36,34 @@ class Entity:
         self.health -= actual_damage
         return actual_damage
 
+    def apply_status_effects(self):
+        """Apply active status effects at the beginning of the turn."""
+        if not hasattr(self, 'active_status_effects'):
+            self.active_status_effects = {}
+        
+        effects_to_remove = []
+        for effect, duration in self.active_status_effects.items():
+            if duration > 0:
+                if effect == "burn":
+                    # Burn damage is equal to 10% of max health
+                    burn_damage = max(1, self.max_health // 10)
+                    self.health -= burn_damage
+                    print(f"The {self.name} takes {burn_damage} burn damage!")
+                elif effect == "poison":
+                    # Poison damage is equal to 5% of max health
+                    poison_damage = max(1, self.max_health // 20)
+                    self.health -= poison_damage
+                    print(f"The {self.name} takes {poison_damage} poison damage!")
+                
+                # Decrease duration
+                self.active_status_effects[effect] = duration - 1
+            else:
+                effects_to_remove.append(effect)
+        
+        # Remove expired effects
+        for effect in effects_to_remove:
+            del self.active_status_effects[effect]
+
     def is_alive(self):
         return self.health > 0
 
@@ -43,7 +71,7 @@ class Entity:
 class Item:
     def __init__(self, name: str, item_type: ItemType, value: int = 0, 
                  attack_bonus: int = 0, defense_bonus: int = 0, health_bonus: int = 0,
-                 special_effect: str = ""):
+                 special_effect: str = "", status_effects: dict = None):
         self.name = name
         self.type = item_type
         self.value = value
@@ -51,6 +79,7 @@ class Item:
         self.defense_bonus = defense_bonus
         self.health_bonus = health_bonus
         self.special_effect = special_effect  # For special abilities like "gruff" or "turbo"
+        self.status_effects = status_effects or {}  # Dictionary of status effects like {"burn": 3} for 3 turns of burn damage
 
     def __str__(self):
         return self.name
@@ -73,6 +102,8 @@ class Player(Entity):
         self.floors_explored = set()  # Set of floors visited
         self.rooms_explored = set()  # Set of rooms visited
         self.distance_traveled = 0  # Total moves made
+        # Status effects
+        self.active_status_effects: dict = {}  # Dictionary of active status effects
 
     @property
     def total_attack(self):
@@ -136,11 +167,13 @@ class Player(Entity):
 
 class Enemy(Entity):
     def __init__(self, name: str, health: int, attack: int, defense: int, 
-                 exp_reward: int, gold_min: int, gold_max: int, speed: int = 10):
+                 exp_reward: int, gold_min: int, gold_max: int, speed: int = 10,
+                 status_effects_on_hit: dict = None):
         super().__init__(name, health, attack, defense, speed)
         self.exp_reward = exp_reward
         self.gold_min = gold_min
         self.gold_max = gold_max
+        self.status_effects_on_hit = status_effects_on_hit or {}  # Status effects applied when this enemy hits player
 
     def generate_loot(self) -> List[Item]:
         # Basic loot generation
@@ -148,8 +181,23 @@ class Enemy(Entity):
         if random.random() < 0.3:  # 30% chance to drop gold
             gold_amount = random.randint(self.gold_min, self.gold_max)
             loot.append(Item(f"{gold_amount} Gold", ItemType.CONSUMABLE, value=gold_amount))
+        
+        # Chance to drop special quest items based on enemy type
+        if random.random() < 0.1:  # 10% chance to drop a quest trophy
+            trophy_name = f"{self.name} Trophy"
+            trophy = Item(trophy_name, ItemType.CONSUMABLE, value=50)
+            loot.append(trophy)
+        
         return loot
 
+
+class NonPlayerCharacter(Entity):
+    def __init__(self, name: str, health: int = 1, dialogue: str = "", quest: dict = None):
+        super().__init__(name, health, attack=0, defense=0, speed=0)
+        self.dialogue = dialogue
+        self.quest = quest or {}  # Quest format: {"target_item": "item_name", "reward": Item, "description": "quest_text"}
+        self.has_given_quest = False
+        self.has_completed_quest = False
 
 class Room:
     def __init__(self, x: int, y: int, floor: int):
@@ -159,6 +207,7 @@ class Room:
         self.entities: List[Entity] = []
         self.items: List[Item] = []
         self.connections: Dict[Direction, 'Room'] = {}
+        self.npcs: List[NonPlayerCharacter] = []  # Add NPCs to rooms
         self.room_type = "generic"  # Could be "treasure", "monster", "empty", etc.
         self.description = "A standard dungeon room."
         self.has_stairs_down = False
@@ -266,6 +315,46 @@ class Dungeon:
                                 elif rand < 0.4:
                                     room.room_type = "trap"
                                     room.description = "A dangerous-looking room with potential hazards."
+                                elif rand < 0.45:  # 5% chance for NPC with quest
+                                    room.room_type = "npc"
+                                    room.description = "A room with a mysterious stranger."
+                                    
+                                    # Create an NPC with a quest
+                                    npc_dialogues = [
+                                        "Greetings, traveler. I seek a powerful item that was lost in these depths.",
+                                        "Hello adventurer, I have a task for you if you're brave enough.",
+                                        "Welcome, hero. I need someone to retrieve something precious to me.",
+                                        "Oh, a visitor! Perhaps you can assist me with a small matter."
+                                    ]
+                                    
+                                    # Choose a boss monster whose drop is the quest target
+                                    boss_monsters = ["Orc", "Ogre", "Demon", "Dragon", "Ancient Guardian"]
+                                    target_monster = random.choice(boss_monsters)
+                                    target_item = f"{target_monster} Trophy"
+                                    
+                                    # Create a reward
+                                    reward_types = [
+                                        Item("Flame Sword", ItemType.WEAPON, value=100, attack_bonus=15, defense_bonus=2, status_effects={"burn": 3}),
+                                        Item("Frost Helm", ItemType.ARMOR, value=80, attack_bonus=3, defense_bonus=10, health_bonus=20, status_effects={"chill": 2}),
+                                        Item("Lightning Blade", ItemType.WEAPON, value=120, attack_bonus=20, defense_bonus=0, status_effects={"shock": 2}),
+                                        Item("Healing Amulet", ItemType.ARMOR, value=60, attack_bonus=5, defense_bonus=5, health_bonus=50),
+                                        Item("Thunder Hammer", ItemType.WEAPON, value=150, attack_bonus=25, defense_bonus=3, status_effects={"stun": 2})
+                                    ]
+                                    reward = random.choice(reward_types)
+                                    
+                                    quest_description = f"I need you to defeat a {target_monster} and bring me its trophy. In return, I'll give you this {reward.name}."
+                                    
+                                    npc = NonPlayerCharacter(
+                                        name="Wandering Sage",
+                                        health=1,
+                                        dialogue=random.choice(npc_dialogues),
+                                        quest={
+                                            "target_item": target_item,
+                                            "reward": reward,
+                                            "description": quest_description
+                                        }
+                                    )
+                                    room.npcs.append(npc)
                                 else:
                                     room.room_type = "empty"
                                     room.description = "An empty, quiet room."
@@ -518,7 +607,13 @@ class Dungeon:
         gold_max = int(base_gold_max * (1 + floor * 0.25))
         speed = int(base_speed * (1 + floor * 0.2))  # Speed also scales with floor
         
-        return Enemy(enemy_data[0], hp, attack, defense, exp, gold_min, gold_max, speed)
+        # Add status effects on hit for some enemies (15% chance)
+        status_effects_on_hit = {}
+        if random.random() < 0.15:
+            effect_type = random.choice(["burn", "poison", "chill"])
+            status_effects_on_hit[effect_type] = random.randint(2, 3)  # 2-3 turns of effect
+        
+        return Enemy(enemy_data[0], hp, attack, defense, exp, gold_min, gold_max, speed, status_effects_on_hit)
 
     def generate_random_item(self) -> Item:
         item_types = [
@@ -557,7 +652,14 @@ class Dungeon:
         elif "Shielding" in name or "shielding" in name:
             special_effect = "shielding"  # Increases defense
         
-        return Item(name, item_type, value, attack_bonus, defense_bonus, health_bonus, special_effect)
+        # Add status effects randomly
+        status_effects = {}
+        # 5% chance for items to have status effects
+        if random.random() < 0.05 and item_type in [ItemType.WEAPON, ItemType.ARMOR]:
+            status_effect_type = random.choice(["burn", "poison", "chill", "shock", "stun"])
+            status_effects[status_effect_type] = random.randint(2, 4)  # Duration of 2-4 turns
+        
+        return Item(name, item_type, value, attack_bonus, defense_bonus, health_bonus, special_effect, status_effects)
 
 
 class GameEngine:
@@ -571,6 +673,10 @@ class GameEngine:
                 self.current_room = room
                 self.player.position = pos
                 break
+        
+        # High score tracking
+        self.high_score = 0
+        self.load_high_score()
     
     def move_player(self, direction: Direction) -> bool:
         """Attempt to move the player in the given direction."""
@@ -666,6 +772,11 @@ class GameEngine:
         if living_enemies:
             for entity in living_enemies:
                 print(f"A {entity.name} is here!")
+        
+        # Display NPCs in the room
+        if self.current_room.npcs:
+            for npc in self.current_room.npcs:
+                print(f"{npc.name} is here!")
         
         # Display items in the room
         if room_items:
@@ -846,6 +957,37 @@ class GameEngine:
             enemy = alive_enemies[adjusted_index]
             print(f"You attack the {enemy.name}!")
             
+            # Apply status effects before combat
+            # Apply player's status effects
+            self.player.apply_status_effects()
+            if not self.player.is_alive():
+                print("You have been defeated by status effects! Game over.")
+                return False
+            
+            # Apply enemy's status effects
+            enemy.apply_status_effects()
+            if not enemy.is_alive():
+                print(f"The {enemy.name} is defeated by status effects!")
+                
+                # Update scoring for defeating enemy
+                self.player.enemies_defeated += 1
+                # Score based on enemy strength
+                enemy_score_value = enemy.exp_reward + (enemy.max_health // 2) + (enemy.attack * 2)
+                self.player.score += enemy_score_value
+                print(f"You earned {enemy_score_value} points for defeating the {enemy.name}!")
+                
+                # Gain experience and loot
+                self.player.gain_experience(enemy.exp_reward)
+                self.player.gold += random.randint(enemy.gold_min, enemy.gold_max)
+                
+                # Get loot
+                loot = enemy.generate_loot()
+                for item in loot:
+                    self.current_room.items.append(item)
+                    print(f"The {enemy.name} dropped: {item.name}")
+                
+                return True
+            
             # Determine initiative based on speed (with special effects)
             player_speed = self.player.total_speed
             enemy_speed = enemy.speed
@@ -882,6 +1024,16 @@ class GameEngine:
                     damage_taken = self.player.take_damage(enemy.attack)
                     print(f"The {enemy.name} hits you for {damage_taken} damage!")
                     
+                    # Apply any status effects from enemy on hit
+                    if hasattr(enemy, 'status_effects_on_hit') and enemy.status_effects_on_hit:
+                        for effect, duration in enemy.status_effects_on_hit.items():
+                            if effect == "burn":
+                                print(f"The {enemy.name} burns you!")
+                                self.player.active_status_effects['burn'] = duration
+                            elif effect == "poison":
+                                print(f"The {enemy.name} poisons you!")
+                                self.player.active_status_effects['poison'] = duration
+                    
                     if not self.player.is_alive():
                         print("You have been defeated! Game over.")
                         return False
@@ -899,6 +1051,21 @@ class GameEngine:
                 # Player gets to attack back if still alive
                 damage_dealt = enemy.take_damage(self.player.total_attack)
                 print(f"You counterattack and deal {damage_dealt} damage to the {enemy.name}.")
+                
+                # Apply any status effects from player's weapon
+                if self.player.equipped_weapon and self.player.equipped_weapon.status_effects:
+                    for effect, duration in self.player.equipped_weapon.status_effects.items():
+                        if effect == "burn":
+                            print(f"The {self.player.equipped_weapon.name} burns the {enemy.name}!")
+                            # Add burn effect to enemy for next turn
+                            if not hasattr(enemy, 'active_status_effects'):
+                                enemy.active_status_effects = {}
+                            enemy.active_status_effects['burn'] = duration
+                        elif effect == "poison":
+                            print(f"The {self.player.equipped_weapon.name} poisons the {enemy.name}!")
+                            if not hasattr(enemy, 'active_status_effects'):
+                                enemy.active_status_effects = {}
+                            enemy.active_status_effects['poison'] = duration
                 
                 if not enemy.is_alive():
                     print(f"The {enemy.name} is defeated!")
@@ -956,6 +1123,16 @@ class GameEngine:
                         damage_taken = self.player.take_damage(enemy.attack)
                         print(f"The {enemy.name} hits you for {damage_taken} damage!")
                         
+                        # Apply any status effects from enemy on hit
+                        if hasattr(enemy, 'status_effects_on_hit') and enemy.status_effects_on_hit:
+                            for effect, duration in enemy.status_effects_on_hit.items():
+                                if effect == "burn":
+                                    print(f"The {enemy.name} burns you!")
+                                    self.player.active_status_effects['burn'] = duration
+                                elif effect == "poison":
+                                    print(f"The {enemy.name} poisons you!")
+                                    self.player.active_status_effects['poison'] = duration
+                        
                         if not self.player.is_alive():
                             print("You have been defeated! Game over.")
                             return False
@@ -966,6 +1143,16 @@ class GameEngine:
                     damage_taken = self.player.take_damage(enemy.attack)
                     print(f"The {enemy.name} strikes first, hitting you for {damage_taken} damage!")
                     
+                    # Apply any status effects from enemy on hit
+                    if hasattr(enemy, 'status_effects_on_hit') and enemy.status_effects_on_hit:
+                        for effect, duration in enemy.status_effects_on_hit.items():
+                            if effect == "burn":
+                                print(f"The {enemy.name} burns you!")
+                                self.player.active_status_effects['burn'] = duration
+                            elif effect == "poison":
+                                print(f"The {enemy.name} poisons you!")
+                                self.player.active_status_effects['poison'] = duration
+                    
                     if not self.player.is_alive():
                         print("You have been defeated! Game over.")
                         return False
@@ -973,6 +1160,21 @@ class GameEngine:
                     # Player gets to attack back if still alive
                     damage_dealt = enemy.take_damage(self.player.total_attack)
                     print(f"You counterattack and deal {damage_dealt} damage to the {enemy.name}.")
+                    
+                    # Apply any status effects from player's weapon
+                    if self.player.equipped_weapon and self.player.equipped_weapon.status_effects:
+                        for effect, duration in self.player.equipped_weapon.status_effects.items():
+                            if effect == "burn":
+                                print(f"The {self.player.equipped_weapon.name} burns the {enemy.name}!")
+                                # Add burn effect to enemy for next turn
+                                if not hasattr(enemy, 'active_status_effects'):
+                                    enemy.active_status_effects = {}
+                                enemy.active_status_effects['burn'] = duration
+                            elif effect == "poison":
+                                print(f"The {self.player.equipped_weapon.name} poisons the {enemy.name}!")
+                                if not hasattr(enemy, 'active_status_effects'):
+                                    enemy.active_status_effects = {}
+                                enemy.active_status_effects['poison'] = duration
                     
                     if not enemy.is_alive():
                         print(f"The {enemy.name} is defeated!")
@@ -1301,6 +1503,24 @@ class GameEngine:
             # when the GameEngine was created
             return False
 
+    def load_high_score(self):
+        """Load the high score from a file."""
+        try:
+            with open("highscore.txt", "r") as f:
+                self.high_score = int(f.read().strip())
+        except FileNotFoundError:
+            self.high_score = 0
+        except Exception:
+            self.high_score = 0
+
+    def save_high_score(self):
+        """Save the high score to a file."""
+        try:
+            with open("highscore.txt", "w") as f:
+                f.write(str(max(self.high_score, self.player.score)))
+        except Exception as e:
+            print(f"Error saving high score: {e}")
+
 
 def main():
     import sys
@@ -1328,6 +1548,7 @@ def main():
         print("  take <number> - Take item number from room")
         print("  equip <number> - Equip item number from inventory")
         print("  unequip <weapon|armor> - Unequip weapon or armor")
+        print("  talk <number> - Talk to NPC number in room")
         print("  look - Look around the current room")
         print("  inventory - View your inventory")
         print("  stats - View your character stats")
@@ -1341,6 +1562,7 @@ def main():
         print("         python game_engine.py take 1")
         print("         python game_engine.py equip 1")
         print("         python game_engine.py unequip armor")
+        print("         python game_engine.py talk 1")
         print("         python game_engine.py stats")
         
         # If this is a new game (no save was loaded), save the initial state quietly
@@ -1363,6 +1585,7 @@ def main():
             print("  take <number> - Take item number from room")
             print("  equip <number> - Equip item number from inventory")
             print("  unequip <weapon|armor> - Unequip weapon or armor")
+            print("  talk <number> - Talk to NPC number in room")
             print("  look - Look around the current room")
             print("  inventory - View your inventory")
             print("  stats - View your character stats")
@@ -1414,6 +1637,13 @@ def main():
                     game.save_game()  # Auto-save after unequipping an item (quietly)
             else:
                 print("Please specify a valid item type to unequip: 'weapon' or 'armor'.")
+        elif command.startswith("talk "):
+            try:
+                npc_num = int(command[5:])  # Pass the original number (1-based)
+                if game.talk_to_npc(npc_num):
+                    game.save_game()  # Auto-save after talking to NPC (quietly)
+            except ValueError:
+                print("Please specify a valid NPC number to talk to.")
         elif command == "look":
             game.look_around()
         elif command == "inventory":
@@ -1437,8 +1667,29 @@ def main():
     except Exception as e:
         print(f"An error occurred: {e}")
     
-    # If player died, don't save the dead state
-    if game.player.is_alive():
+    # Handle death - delete save but preserve high score
+    if not game.player.is_alive():
+        print("\nGame over! You have died.")
+        print("Your save file has been deleted, but your high score is preserved.")
+        # Preserve high score before deleting save
+        high_score = game.high_score
+        if game.player.score > game.high_score:
+            high_score = game.player.score
+            print(f"New high score: {high_score}!")
+        
+        # Delete the save file
+        try:
+            import os
+            if os.path.exists("savegame.json"):
+                os.remove("savegame.json")
+                print("Save file deleted as per game rules.")
+        except Exception as e:
+            print(f"Error deleting save file: {e}")
+        
+        # Save high score
+        game.high_score = high_score
+        game.save_high_score()
+    elif game.player.is_alive():
         game.save_game()
 
 
