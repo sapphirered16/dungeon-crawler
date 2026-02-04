@@ -503,207 +503,71 @@ class SeededGameEngine:
             "current_floor": self.player.position[2]
         }
 
-    # Monster AI Implementation
     def process_monster_ai(self):
         """Process AI for all monsters in the dungeon."""
-        player_pos = self.player.position
-        
-        # Create a list of all monsters to move to avoid issues with modifying lists during iteration
-        monsters_to_process = []
-        
-        # First, collect all monsters with their current room and position
-        for pos, room in self.dungeon.room_states.items():
-            living_monsters = [entity for entity in room.entities if entity.is_alive() and entity.name != "Player"]
-            for monster in living_monsters:
-                monsters_to_process.append((monster, room, pos))
-        
-        # Now process each monster
-        for monster, room, pos in monsters_to_process:
-            # Only process if the monster is still in this room (hasn't been moved by another monster's movement)
-            if monster in room.entities:
-                self._move_monster_towards_player(monster, room, pos)
-
-    def _move_monster_towards_player(self, monster_entity, current_room, monster_pos):
-        """Move a monster toward the player if in line of sight."""
+        from .classes.enemy import Enemy
         from .classes.character import NonPlayerCharacter
         
-        # Only process actual monsters, not NPCs
-        if isinstance(monster_entity, NonPlayerCharacter):
-            # NPCs don't attack the player, just move them if needed
-            player_pos = self.player.position
+        # Process each room for monster actions
+        for pos, room in self.dungeon.room_states.items():
+            # Create a copy of entities list to iterate over safely
+            entities_copy = room.entities[:]
             
-            # Check if NPC can see player (for potential interaction later)
-            if self._is_in_line_of_sight(monster_pos, player_pos):
-                # Find shortest path to player using simple BFS-like approach
-                visited = set()
-                queue = [monster_pos]
-                visited.add(monster_pos)
-                predecessors = {monster_pos: None}
-                
-                # Search for player position up to a certain depth
-                max_depth = 8  # Don't search too far
-                depth = 0
-                found_path = False
-                
-                while queue and depth < max_depth:
-                    next_queue = []
+            for entity in entities_copy:
+                if not entity.is_alive() or entity.name == "Player":
+                    continue
                     
-                    for pos in queue:
-                        if pos == player_pos:
-                            found_path = True
-                            break
+                # Handle NPCs separately (they don't attack)
+                if isinstance(entity, NonPlayerCharacter):
+                    continue  # NPCs are handled separately in the talk system
+                
+                # Handle enemies with their own AI logic
+                if isinstance(entity, Enemy):
+                    # Let the enemy decide its action
+                    action_result = entity.take_turn(room, self.dungeon, self.player)
+                    
+                    if action_result["moved"] and action_result["new_position"] != pos:
+                        # Move the entity to the new room
+                        old_pos = pos
+                        new_pos = action_result["new_position"]
+                        
+                        # Remove from current room
+                        if entity in room.entities:
+                            room.entities.remove(entity)
+                        
+                        # Add to new room
+                        new_room = self.dungeon.room_states[new_pos]
+                        if entity not in new_room.entities:
+                            new_room.entities.append(entity)
+                        
+                        # Print action description if there is one
+                        if action_result["action_description"]:
+                            print(action_result["action_description"])
+                    
+                    elif action_result["attacked"]:
+                        # Action description already contains the attack info
+                        if action_result["action_description"]:
+                            print(action_result["action_description"])
+                        
+                        # Check if enemy died after combat
+                        if not entity.is_alive():
+                            # Remove defeated enemy from room
+                            if entity in room.entities:
+                                room.entities.remove(entity)
                             
-                        # Check adjacent positions
-                        for next_pos in self._get_adjacent_positions(pos):
-                            if next_pos not in visited:
-                                visited.add(next_pos)
-                                predecessors[next_pos] = pos
-                                next_queue.append(next_pos)
-                                
-                    if found_path:
-                        break
-                        
-                    queue = next_queue
-                    depth += 1
-                
-                # If path found, move NPC one step toward player
-                if found_path and player_pos in predecessors:
-                    # Reconstruct path back to find next step
-                    current = player_pos
-                    path = []
-                    while current is not None:
-                        path.append(current)
-                        current = predecessors.get(current)
-                    
-                    path.reverse()
-                    
-                    # Move NPC to the next position in the path (skip current position)
-                    if len(path) > 1:
-                        next_pos = path[1]  # First step after current position
-                        
-                        # Only move if the next position is different from current
-                        if next_pos != monster_pos:
-                            # Move the NPC to the new room
-                            new_room = self.dungeon.room_states[next_pos]
+                            # Update player stats
+                            self.player.gain_exp(entity.max_health // 2)
+                            self.player.gold += random.randint(5, 20)
+                            self.player.enemies_defeated += 1
+                            self.player.score += entity.max_health
                             
-                            # Remove NPC from current room only if it's still there
-                            # This check is crucial to prevent double-removal
-                            if monster_entity in current_room.entities:
-                                current_room.entities.remove(monster_entity)
-                            
-                            # Add NPC to new room only if it's not already there
-                            if monster_entity not in new_room.entities:
-                                new_room.entities.append(monster_entity)
-                            
-                            return True  # Successfully moved
-            
-            return False  # No movement occurred for NPC
-        
-        # This is an actual monster, not an NPC
-        player_pos = self.player.position
-        
-        # Check if monster is in the same room as the player - if so, attack!
-        if monster_pos == player_pos and monster_entity.is_alive():
-            # Monster is in the same room as the player - attack!
-            if self.player.is_alive():
-                damage_dealt = max(1, monster_entity.attack - self.player.get_total_defense())
-                damage_taken = max(1, self.player.get_total_attack() - monster_entity.defense)
-                
-                print(f"👹 {monster_entity.name} attacks you for {damage_dealt} damage!")
-                self.player.take_damage(damage_dealt)
-                
-                # Monster takes counter-damage from player's equipment/passive abilities
-                if damage_taken > 0:
-                    monster_damage = monster_entity.take_damage(damage_taken)
-                    print(f"You counter with {damage_taken} damage, dealing {monster_damage} to {monster_entity.name}.")
-                
-                if not self.player.is_alive():
-                    print("💀 You have been defeated by the monster!")
-                
-                if not monster_entity.is_alive():
-                    print(f"💀 The {monster_entity.name} has been defeated!")
-                    # Remove defeated monster from room
-                    if monster_entity in current_room.entities:
-                        current_room.entities.remove(monster_entity)
-                    # Update player stats
-                    self.player.gain_exp(monster_entity.max_health // 2)
-                    self.player.gold += random.randint(5, 20)
-                    self.player.enemies_defeated += 1
-                    self.player.score += monster_entity.max_health
-                    # Monster may drop an item
-                    if random.random() < 0.3:  # 30% chance to drop an item
-                        dropped_item = self.dungeon._generate_random_item()
-                        current_room.items.append(dropped_item)
-                        print(f"掉落 The {monster_entity.name} dropped: {dropped_item.name}!")
-                
-                return True  # Monster acted (attacked)
-        
-        # Check if monster can see player (different room)
-        if self._is_in_line_of_sight(monster_pos, player_pos):
-            # Find shortest path to player using simple BFS-like approach
-            visited = set()
-            queue = [monster_pos]
-            visited.add(monster_pos)
-            predecessors = {monster_pos: None}
-            
-            # Search for player position up to a certain depth
-            max_depth = 8  # Don't search too far
-            depth = 0
-            found_path = False
-            
-            while queue and depth < max_depth:
-                next_queue = []
-                
-                for pos in queue:
-                    if pos == player_pos:
-                        found_path = True
-                        break
-                        
-                    # Check adjacent positions
-                    for next_pos in self._get_adjacent_positions(pos):
-                        if next_pos not in visited:
-                            visited.add(next_pos)
-                            predecessors[next_pos] = pos
-                            next_queue.append(next_pos)
-                            
-                if found_path:
-                    break
-                    
-                queue = next_queue
-                depth += 1
-            
-            # If path found, move monster one step toward player
-            if found_path and player_pos in predecessors:
-                # Reconstruct path back to find next step
-                current = player_pos
-                path = []
-                while current is not None:
-                    path.append(current)
-                    current = predecessors.get(current)
-                
-                path.reverse()
-                
-                # Move monster to the next position in the path (skip current position)
-                if len(path) > 1:
-                    next_pos = path[1]  # First step after current position
-                    
-                    # Only move if the next position is different from current
-                    if next_pos != monster_pos:
-                        # Move the monster to the new room
-                        new_room = self.dungeon.room_states[next_pos]
-                        
-                        # Remove monster from current room only if it's still there
-                        # This check is crucial to prevent double-removal
-                        if monster_entity in current_room.entities:
-                            current_room.entities.remove(monster_entity)
-                        
-                        # Add monster to new room only if it's not already there
-                        if monster_entity not in new_room.entities:
-                            new_room.entities.append(monster_entity)
-                        
-                        return True  # Successfully moved
-                    
-        return False  # No movement occurred
+                            # Enemy may drop an item
+                            if random.random() < 0.3:  # 30% chance to drop an item
+                                dropped_item = self.dungeon._generate_random_item()
+                                room.items.append(dropped_item)
+                                print(f"掉落 The {entity.name} dropped: {dropped_item.name}!")
+    
+    # Helper methods removed as they are now handled in the Enemy class
 
     def _is_in_line_of_sight(self, pos1: Tuple[int, int, int], pos2: Tuple[int, int, int]) -> bool:
         """Check if there's a clear line of sight between two positions (same floor)."""

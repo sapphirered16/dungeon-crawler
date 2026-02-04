@@ -306,7 +306,7 @@ class SeededDungeon:
 
     def _generate_random_enemy(self, floor: int):
         """Generate a random enemy based on floor."""
-        from .character import Entity
+        from .enemy import Enemy
         
         # Scale enemy strength based on floor
         enemies = self.data_provider.get_enemies()
@@ -323,7 +323,7 @@ class SeededDungeon:
             attack = enemy_data["attack"] + (floor * 2)
             defense = enemy_data["defense"] + floor
             
-            enemy = Entity(
+            enemy = Enemy(
                 name=enemy_data["name"],
                 health=health,
                 attack=attack,
@@ -333,7 +333,7 @@ class SeededDungeon:
             return enemy
         else:
             # Fallback enemy
-            return Entity("Goblin", 20 + (floor * 5), 5 + floor, 2 + floor)
+            return Enemy("Goblin", 20 + (floor * 5), 5 + floor, 2 + floor)
 
     def _generate_random_npc(self):
         """Generate a random NPC."""
