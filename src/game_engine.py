@@ -77,22 +77,30 @@ class SeededGameEngine:
         else:
             print("\nNo items in this room.")
         
-        # Show creatures in room
-        living_entities = [e for e in self.current_room_state.entities if e.is_alive() and e.name != "Player"]
-        if living_entities:
+        # Show creatures in room (excluding NPCs)
+        from .classes.character import NonPlayerCharacter
+        creatures = []
+        for e in self.current_room_state.entities:
+            if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
+                creatures.append(e)
+        
+        if creatures:
             print("\nCreatures in the room:")
-            for i, entity in enumerate(living_entities, 1):
+            for i, entity in enumerate(creatures, 1):
                 print(f"  {i}. {entity.name} (HP: {entity.health}/{entity.max_health}, Attack: {entity.attack}, Defense: {entity.defense})")
         else:
             print("\nNo creatures in this room.")
         
         # Show NPCs in room
-        npcs = [e for e in self.current_room_state.entities if hasattr(e, 'dialogue')]
+        npcs = []
+        for e in self.current_room_state.entities:
+            if isinstance(e, NonPlayerCharacter) and e.is_alive():
+                npcs.append(e)
+        
         if npcs:
             print("\nNPCs in the room:")
             for i, npc in enumerate(npcs, 1):
-                if npc.is_alive():
-                    print(f"  {i}. {npc.name}")
+                print(f"  {i}. {npc.name}")
         else:
             print("\nNo NPCs in this room.")
         
@@ -110,6 +118,100 @@ class SeededGameEngine:
                 print(f"  Down: Stairs leading down.")
             else:
                 print(f"  {direction.value.capitalize()}: blocked")
+
+    def talk_to_npc(self, npc_index: int) -> bool:
+        """Talk to an NPC in the current room."""
+        from .classes.character import NonPlayerCharacter
+        from .classes.item import Item
+        from .classes.base import ItemType
+        
+        # Get all NPCs in the room
+        npcs = []
+        for e in self.current_room_state.entities:
+            if isinstance(e, NonPlayerCharacter) and e.is_alive():
+                npcs.append(e)
+        
+        if not npcs:
+            print("There are no NPCs here to talk to.")
+            return False
+        
+        # Adjust index since the game displays NPCs starting from 1
+        adjusted_index = npc_index - 1
+        
+        if 0 <= adjusted_index < len(npcs):
+            npc = npcs[adjusted_index]
+            
+            # Get NPC dialogue
+            dialogue = npc.get_dialogue()
+            print(f"{npc.name} says: \"{dialogue}\"")
+            
+            # Check for quests in the NPC data
+            # First, we need to load the NPC's quest data
+            # We'll check if this NPC has quest data in our data provider
+            npc_found_in_data = False
+            for npc_template in self.data_provider.get_npcs():
+                if npc_template["name"] == npc.name:
+                    npc_found_in_data = True
+                    if "quests" in npc_template and npc_template["quests"]:
+                        # Check if player has the required item for any quest
+                        for quest in npc_template["quests"]:
+                            required_item_name = quest["target_item"]
+                            
+                            # Check if player has the required item
+                            has_required_item = False
+                            required_item = None
+                            for item in self.player.inventory:
+                                if item.name == required_item_name:
+                                    has_required_item = True
+                                    required_item = item
+                                    break
+                            
+                            if has_required_item:
+                                # Player has the required item, offer to complete quest
+                                print(f"\\n🎁 {npc.name} recognizes the {required_item_name}!")
+                                print(f"Quest: {quest['name']}")
+                                print(f"Description: {quest['description']}")
+                                
+                                # Give the reward
+                                reward_data = quest["reward"]
+                                reward_item = Item(
+                                    name=reward_data["name"],
+                                    item_type=ItemType(reward_data["type"].lower()),
+                                    value=reward_data["value"],
+                                    description=f"Quest reward: {reward_data['name']}",
+                                    attack_bonus=reward_data.get("attack_bonus", 0),
+                                    defense_bonus=reward_data.get("defense_bonus", 0)
+                                )
+                                
+                                print(f"💰 {npc.name} gives you: {reward_item.name}!")
+                                self.player.take_item(reward_item)
+                                
+                                # Remove the required item from player inventory
+                                self.player.inventory.remove(required_item)
+                                print(f"🔄 {required_item_name} was exchanged for the reward.")
+                                
+                                # Note: In a full implementation, we might want to track completed quests
+                                # to prevent re-completion, but for now we'll just complete it
+                                break
+                            else:
+                                # Player doesn't have the required item, give hint about the quest
+                                print(f"\\n📜 {npc.name} has a quest for you:")
+                                print(f"Quest: {quest['name']}")
+                                print(f"Required: {required_item_name}")
+                                print(f"Reward: {quest['reward']['name']}")
+                                print(f"Description: {quest['description']}")
+                                break
+                    else:
+                        print(f"{npc.name} nods politely.")
+                    break
+            
+            if not npc_found_in_data:
+                print(f"{npc.name} nods politely.")
+            
+            return True
+        else:
+            print("Invalid NPC selection.")
+            return False
 
     def move_player(self, direction: Direction):
         """Move the player in a direction if possible."""
@@ -171,8 +273,15 @@ class SeededGameEngine:
 
     def attack_enemy(self, enemy_index: int) -> bool:
         """Attack an enemy in the current room."""
-        # Filter for living enemies only
-        living_enemies = [e for e in self.current_room_state.entities if e.is_alive() and e.name != "Player"]
+        # Filter for living enemies only (excluding NPCs)
+        from .classes.character import NonPlayerCharacter
+        
+        living_enemies = []
+        for e in self.current_room_state.entities:
+            if (e.is_alive() and 
+                e.name != "Player" and 
+                not isinstance(e, NonPlayerCharacter)):  # Exclude NPCs from combat
+                living_enemies.append(e)
         
         if not living_enemies:
             print("There are no enemies here to attack.")

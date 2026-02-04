@@ -22,6 +22,10 @@ class SeededDungeon:
         # Load room templates
         room_templates = self.data_provider.get_room_templates()
         
+        # Determine number of floors based on room templates
+        # Analyze room templates to determine how many floors are needed
+        num_floors = self._determine_number_of_floors(room_templates)
+        
         # Create a basic layout with a starting room
         start_pos = (12, 12, 0)  # Starting position
         start_room = RoomState(start_pos, "starting")
@@ -29,8 +33,83 @@ class SeededDungeon:
         self.room_states[start_pos] = start_room
         
         # Generate rooms for multiple floors
-        for floor in range(3):  # Generate 3 floors
+        for floor in range(num_floors):  # Generate floors based on room templates
             self._generate_floor(floor, start_pos if floor == 0 else None)
+        
+        # Ensure stairs are properly connected between all floors
+        self._connect_stairs_properly()
+
+    def _determine_number_of_floors(self, room_templates):
+        """Determine number of floors based on room template constraints and content diversity."""
+        # Analyze the room templates and other data sources to determine appropriate number of floors
+        
+        # The room_templates is a dict with 'room_templates' key containing the list of templates
+        actual_templates = room_templates['room_templates']
+        
+        # Check if we have data that suggests floor ranges
+        # For now, we'll use a combination of factors:
+        # 1. Diversity of room types
+        # 2. Thematic variety
+        # 3. Content availability
+        
+        # Count different room types
+        room_types = set(template["type"] for template in actual_templates)
+        
+        # Count different themes
+        all_themes = set()
+        for template in actual_templates:
+            all_themes.update(template["themes"])
+        
+        # Based on the diversity of content, suggest an appropriate number of floors
+        # More diverse content can support more floors with thematic variety
+        content_diversity_score = len(room_types) + len(all_themes)
+        
+        # Calculate suggested floor count based on content diversity
+        if content_diversity_score >= 10:
+            suggested_floors = 7  # High diversity supports more floors
+        elif content_diversity_score >= 7:
+            suggested_floors = 5  # Medium diversity supports moderate floors
+        elif content_diversity_score >= 4:
+            suggested_floors = 3  # Lower diversity suggests fewer floors
+        else:
+            suggested_floors = 3  # Minimum recommended
+        
+        # Additionally, check enemy data for level progression suggestions
+        enemy_types_count = len(self.data_provider.get_enemies())
+        if enemy_types_count > 10:
+            # More enemy types suggest a longer dungeon progression
+            suggested_floors = max(suggested_floors, 5)
+        elif enemy_types_count > 5:
+            suggested_floors = max(suggested_floors, 4)
+        
+        # Limit to reasonable bounds
+        suggested_floors = max(3, min(10, suggested_floors))  # Between 3 and 10 floors
+        
+        return suggested_floors
+    
+    def _connect_stairs_properly(self):
+        """Ensure stairs are properly connected between floors."""
+        # Determine the total number of floors from the generated dungeon
+        all_floors = set(pos[2] for pos in self.room_states.keys())
+        max_floor = max(all_floors) if all_floors else 0
+        
+        # Connect stairs between each consecutive pair of floors
+        for floor in range(max_floor):  # Connect floors 0->1, 1->2, ..., (n-1)->n
+            # Get all rooms on current floor
+            current_floor_rooms = [pos for pos in self.room_states.keys() if pos[2] == floor]
+            next_floor_rooms = [pos for pos in self.room_states.keys() if pos[2] == floor + 1]
+            
+            if current_floor_rooms and next_floor_rooms:
+                # Select a room from current floor to have stairs down
+                from_room_pos = random.choice(current_floor_rooms)
+                # Select a room from next floor to have stairs up
+                to_room_pos = random.choice(next_floor_rooms)
+                
+                # Connect them
+                self.room_states[from_room_pos].has_stairs_down = True
+                self.room_states[from_room_pos].stairs_down_target = to_room_pos
+                self.room_states[to_room_pos].has_stairs_up = True
+                self.room_states[to_room_pos].stairs_up_target = from_room_pos
     
     def _generate_floor(self, floor: int, starting_pos: Tuple[int, int, int] = None):
         """Generate a single floor of the dungeon."""
@@ -120,27 +199,8 @@ class SeededDungeon:
         """Add special features like stairs, locked doors, etc. to a floor."""
         positions = [pos for pos in self.room_states.keys() if pos[2] == floor]
         
-        # Add stairs between floors
-        if floor < 2:  # Only add stairs if not the last floor
-            # Find two random positions on this floor
-            if len(positions) >= 2:
-                from_pos = random.choice(positions)
-                to_pos = random.choice(positions)
-                
-                # Make sure they're different
-                while to_pos == from_pos and len(positions) > 1:
-                    to_pos = random.choice(positions)
-                
-                # Mark as having stairs down
-                self.room_states[from_pos].has_stairs_down = True
-                self.room_states[from_pos].stairs_down_target = (to_pos[0], to_pos[1], floor + 1)
-                
-                # On the next floor, mark corresponding room as having stairs up
-                next_floor_positions = [pos for pos in self.room_states.keys() if pos[2] == floor + 1]
-                if next_floor_positions:
-                    up_pos = random.choice(next_floor_positions)
-                    self.room_states[up_pos].has_stairs_up = True
-                    self.room_states[up_pos].stairs_up_target = from_pos
+        # Note: Stairs between floors are handled in _connect_stairs_properly method
+        # which is called after all floors are generated
         
         # Add locked doors and blocked passages
         for pos in positions:

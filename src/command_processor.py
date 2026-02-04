@@ -26,6 +26,8 @@ class CommandProcessor:
             'inventory': self.inventory_command,
             'i': self.inventory_command,
             'map': self.map_command,
+            'talk': self.talk_command,
+            'speak': self.talk_command,
             'save': self.save_command,
             'load': self.load_command,
             'quit': self.quit_command,
@@ -83,6 +85,7 @@ class CommandProcessor:
         print("  equip <num>       - Equip item number <num>")
         print("  use <num>         - Use consumable item number <num>")
         print("  inventory/i       - Show inventory")
+        print("  talk/speak <num>  - Talk to NPC number <num>")
         print("  map               - Show current floor map")
         print("  save              - Save game")
         print("  load              - Load game")
@@ -90,6 +93,7 @@ class CommandProcessor:
         print("\n💡 Tips:")
         print("  - You can move directly by typing direction names (e.g., 'north')")
         print("  - Items and monsters are numbered in room descriptions")
+        print("  - NPCs are numbered separately in room descriptions")
         print("  - Type 'look' to see what's in the current room")
         return True
 
@@ -248,3 +252,19 @@ class CommandProcessor:
         """Quit the game."""
         print("👋 Thanks for playing! Goodbye!")
         return False  # Return False to indicate game should exit
+
+    def talk_command(self, args: List[str]) -> bool:
+        """Talk to an NPC."""
+        if not args:
+            print("❌ Please specify which NPC to talk to (by number).")
+            return True
+        
+        try:
+            npc_num = int(args[0])
+            success = self.game_engine.talk_to_npc(npc_num)
+            if not success:
+                print("❌ Failed to talk to that NPC.")
+        except ValueError:
+            print(f"❌ Invalid NPC number: {args[0]}.")
+        
+        return True
