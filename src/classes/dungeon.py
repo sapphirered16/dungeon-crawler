@@ -266,12 +266,19 @@ class SeededDungeon:
         npcs = self.data_provider.get_npcs()
         if npcs:
             npc_data = random.choice(npcs)
+            # Handle new NPC structure with quest system
+            if "dialogues" in npc_data and isinstance(npc_data["dialogues"], list):
+                # Use a random dialogue from the dialogues list
+                dialogue = [random.choice(npc_data["dialogues"])] if npc_data["dialogues"] else ["Hello, adventurer."]
+            else:
+                dialogue = npc_data.get("dialogue", ["Hello, adventurer."])
+            
             return NonPlayerCharacter(
                 name=npc_data["name"],
                 health=npc_data["health"],
-                attack=npc_data["attack"],
-                defense=npc_data["defense"],
-                dialogue=npc_data.get("dialogue", [])
+                attack=npc_data.get("attack", 3),  # Default attack value
+                defense=npc_data.get("defense", 1),  # Default defense value
+                dialogue=dialogue
             )
         else:
             # Fallback NPC

@@ -86,19 +86,51 @@ class DataProvider:
         """Load all data files."""
         try:
             with open(os.path.join(self.data_dir, "items.json"), 'r') as f:
-                self.items = json.load(f)
+                item_data = json.load(f)
+                # Flatten the categorized item data into a single list
+                self.items = []
+                for category, items in item_data.items():
+                    for item in items:
+                        # Normalize the type to lowercase to match ItemType enum values
+                        if "type" in item:
+                            item["type"] = item["type"].lower()
+                        self.items.append(item)
         except FileNotFoundError:
             self.items = []
         
         try:
             with open(os.path.join(self.data_dir, "enemies.json"), 'r') as f:
-                self.enemies = json.load(f)
+                enemy_data = json.load(f)
+                # Flatten the categorized enemy data into a single list
+                self.enemies = []
+                for category, enemies in enemy_data.items():
+                    for enemy in enemies:
+                        # Add min_floor based on category
+                        if "themed_enemies" in category:
+                            enemy.setdefault("min_floor", 0)
+                        elif "common_enemies" in category:
+                            enemy.setdefault("min_floor", 0)
+                        elif "mid_level_enemies" in category:
+                            enemy.setdefault("min_floor", 1)
+                        elif "boss_enemies" in category:
+                            enemy.setdefault("min_floor", 2)
+                        else:
+                            enemy.setdefault("min_floor", 0)
+                        self.enemies.append(enemy)
         except FileNotFoundError:
             self.enemies = []
         
         try:
             with open(os.path.join(self.data_dir, "npcs.json"), 'r') as f:
-                self.npcs = json.load(f)
+                npc_data = json.load(f)
+                # Extract NPCs from the structured format
+                self.npcs = []
+                if "npc_types" in npc_data:
+                    for npc in npc_data["npc_types"]:
+                        self.npcs.append(npc)
+                else:
+                    # Fallback to direct loading if structure is different
+                    self.npcs = npc_data if isinstance(npc_data, list) else []
         except FileNotFoundError:
             self.npcs = []
         
