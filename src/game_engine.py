@@ -554,6 +554,9 @@ class SeededGameEngine:
                 
                 # Handle enemies with their own AI logic
                 if isinstance(entity, Enemy):
+                    # Only report movements if enemy is in player's line of sight
+                    is_in_line_of_sight = self._is_in_line_of_sight(room.pos, self.player.position)
+                    
                     # Let the enemy decide its action
                     action_result = entity.take_turn(room, self.dungeon, self.player)
                     
@@ -571,14 +574,14 @@ class SeededGameEngine:
                         if entity not in new_room.entities:
                             new_room.entities.append(entity)
                         
-                        # Print action description if there is one
-                        if action_result["action_description"]:
+                        # Only print action description if enemy is in line of sight of player
+                        if action_result["action_description"] and is_in_line_of_sight:
                             print(action_result["action_description"])
                         # Don't log enemy movements - only log player interactions
                         # self._log_action(f"Enemy {entity.name} moved from {old_pos} to {new_pos}", self.player.position)
                     
                     elif action_result["attacked"]:
-                        # Action description already contains the attack info
+                        # Always print attack actions since they affect the player
                         if action_result["action_description"]:
                             print(action_result["action_description"])
                         
@@ -598,7 +601,9 @@ class SeededGameEngine:
                             if random.random() < 0.3:  # 30% chance to drop an item
                                 dropped_item = self.dungeon._generate_random_item()
                                 room.items.append(dropped_item)
-                                print(f"掉落 The {entity.name} dropped: {dropped_item.name}!")
+                                # Only print drop if player is in same room
+                                if room.pos == self.player.position:
+                                    print(f"掉落 The {entity.name} dropped: {dropped_item.name}!")
     
     # Helper methods removed as they are now handled in the Enemy class
 
@@ -715,3 +720,63 @@ class SeededGameEngine:
         
         print("-" * 60)
         print(f"Total log entries: {len(self.log_actions)}")
+
+    def show_local_map(self):
+        """Show a 5x5 map around the player's current position."""
+        player_x, player_y, player_z = self.player.position
+        
+        # Define the 5x5 grid centered on player
+        min_x, max_x = player_x - 2, player_x + 2
+        min_y, max_y = player_y - 2, player_y + 2
+        
+        print(f"\n📍 LOCAL MAP (5x5) around ({player_x}, {player_y}):")
+        print("  " + " ".join([str(i % 10) for i in range(min_x, max_x + 1)]))
+        
+        for y in range(max_y, min_y - 1, -1):  # Print from top to bottom
+            row = f"{(y % 10)} "
+            for x in range(min_x, max_x + 1):
+                pos = (x, y, player_z)
+                if pos == (player_x, player_y, player_z):
+                    # Player position
+                    row += "@ "
+                elif pos in self.dungeon.room_states:
+                    room = self.dungeon.room_states[pos]
+                    # Use first letter of room type as symbol
+                    if room.room_type == "treasure":
+                        row += "$ "
+                    elif room.room_type == "monster":
+                        row += "M "
+                    elif room.room_type == "trap":
+                        row += "T "
+                    elif room.room_type == "npc":
+                        row += "N "
+                    elif room.room_type == "artifact":
+                        row += "A "
+                    elif room.room_type.startswith("stair"):  # stairs up or down
+                        row += "S "
+                    else:
+                        # Check if it's a hallway (connection to multiple rooms)
+                        connections = len(room.connections)
+                        if connections > 2:
+                            row += ". "
+                        elif connections == 2:
+                            # Likely a hallway
+                            row += "- "
+                        else:
+                            row += ". "
+                else:
+                    # Empty space
+                    row += "  "
+            print(row)
+        
+        # Show legend
+        print("\n🗺️  Legend:")
+        print("  @ = Player")
+        print("  . = Empty Room")
+        print("  - = Hallway")
+        print("  $ = Treasure Room")
+        print("  M = Monster Room")
+        print("  T = Trap Room")
+        print("  N = NPC Room")
+        print("  A = Artifact Room")
+        print("  S = Staircase Room")

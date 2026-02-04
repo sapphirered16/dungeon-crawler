@@ -33,6 +33,16 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - See room types and connections clearly displayed
 - Helpful for debugging and planning
 
+### 📍 Local Map Feature
+- Show 5x5 map around player: `local` or `lm` command
+- Provides immediate spatial awareness
+- Shows nearby room types and points of interest
+
+### 🤖 Intelligent Enemy AI
+- Selective movement reporting: Only see enemy movements when in player's line of sight
+- Enemies patrol and hunt intelligently
+- Line-of-sight detection for realistic AI behavior
+
 ### 🔧 External Data System
 - **Separation of Content and Code**: Game data stored in JSON files in the `data/` directory
 - **Easy Customization**: Modify items, enemies, rooms, and NPCs without changing code

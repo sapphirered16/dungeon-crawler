@@ -26,6 +26,8 @@ class CommandProcessor:
             'inventory': self.inventory_command,
             'i': self.inventory_command,
             'map': self.map_command,
+            'local': self.local_map_command,
+            'lm': self.local_map_command,
             'talk': self.talk_command,
             'speak': self.talk_command,
             'save': self.save_command,
@@ -82,7 +84,7 @@ class CommandProcessor:
         print("  help/h/?          - Show this help message")
         print("  stats             - Show player statistics")
         print("  look/l            - Look around the current room")
-        print("  go/move <dir>     - Move in a direction (north/south/east/west/up/down)")
+        print("  go/move <dir>     - Move in a direction (n/s/e/w/u/d)")
         print("  attack <num>      - Attack monster number <num>")
         print("  take/get <num>    - Take item number <num>")
         print("  equip <num>       - Equip item number <num>")
@@ -90,18 +92,17 @@ class CommandProcessor:
         print("  inventory/i       - Show inventory")
         print("  talk/speak <num>  - Talk to NPC number <num>")
         print("  map               - Show current floor map")
+        print("  local/lm          - Show 5x5 local map around player")
         print("  save              - Save game")
         print("  load              - Load game")
         print("  clear             - Clear save and log files")
         print("  log/history       - View game log history (optional: <num> lines)")
         print("  quit/q/exit       - Quit game")
         print("\n💡 Tips:")
-        print("  - You can move directly by typing direction names (e.g., 'north')")
-        print("  - Items and monsters are numbered in room descriptions")
-        print("  - NPCs are numbered separately in room descriptions")
-        print("  - Type 'look' to see what's in the current room")
-        print("  - Use 'log' to review your adventure history")
-        print("  - Use 'clear' to start fresh (with confirmation)")
+        print("  - Move directly with direction names: n/s/e/w/u/d")
+        print("  - Items/monsters/NPCs are numbered in room descriptions")
+        print("  - Use 'local' or 'lm' for 5x5 map view")
+        print("  - Use 'log' to review adventure history")
         return True
 
     def stats_command(self, args: List[str]) -> bool:
@@ -112,6 +113,8 @@ class CommandProcessor:
     def look_command(self, args: List[str]) -> bool:
         """Look around the current room."""
         self.game_engine.look_around()
+        # Show a brief local map indicator
+        print("\n📍 Local area: Use 'local' command for 5x5 map view")
         return True
 
     def go_command(self, args: List[str]) -> bool:
@@ -303,4 +306,9 @@ class CommandProcessor:
                 return True
         
         self.game_engine.view_log_history(lines)
+        return True
+
+    def local_map_command(self, args: List[str]) -> bool:
+        """Show a 5x5 map around the player."""
+        self.game_engine.show_local_map()
         return True
