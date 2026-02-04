@@ -22,7 +22,13 @@ The game is turn-based and played through command-line arguments. Each action yo
 - `load` - Load a saved game
 
 ## Combat
-Combat is turn-based. When you attack an enemy, you deal damage based on your attack stat minus the enemy's defense. The enemy then counterattacks. Combat continues until either you or the enemy is defeated. Enemies become progressively stronger on deeper dungeon levels.
+Combat is turn-based. When you attack an enemy, you deal damage based on your attack stat minus the enemy's defense. Combat order is determined by initiative, which is based on your speed stat compared to the enemy's speed. If you have higher speed, you attack first; if the enemy has higher speed, it attacks first. If speeds are equal, combat order is randomized. The enemy then counterattacks if it survives your initial attack. Combat continues until either you or the enemy is defeated. Enemies become progressively stronger on deeper dungeon levels.
+
+Some weapons and armor have special effects:
+- Gruff weapons increase your damage output
+- Shielding armor increases your defense
+- Turbo weapons increase your initiative speed
+- Light armor increases your movement speed
 
 ## Equipment
 You can equip weapons and armor to increase your attack and defense stats. You can only have one weapon and one armor equipped at a time.

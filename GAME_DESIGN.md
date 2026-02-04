@@ -14,11 +14,16 @@ Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. T
 
 ### Combat
 - Turn-based combat system
-- Player attacks enemy, then enemy counterattacks
+- Initiative system based on speed stat determines combat order
+- If player has higher speed than enemy, player attacks first
+- If enemy has higher speed, enemy attacks first
+- If speeds are equal, combat order is randomized
 - Damage calculated as attacker's attack minus defender's defense (minimum 1 damage)
 - Player and enemies have health points
 - Experience and leveling system
 - Enemies become significantly stronger on deeper floors
+- Special effects: Gruff weapons increase damage, Shielding armor increases defense
+- Turbo weapons and Light armor increase initiative/speed
 
 ### Equipment
 - Weapon and armor systems
@@ -26,6 +31,9 @@ Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. T
 - Player can equip/unequip items
 - Limited inventory space (10 items maximum)
 - Special items: keys for locked doors and triggers for blocked passages
+- Special effects: Gruff weapons increase damage, Shielding armor increases defense
+- Speed-enhancing items: Turbo weapons and Light armor increase initiative/speed
+- Item stacking for consumable items (KEY, TRIGGER, CONSUMABLE)
 
 ### Progression
 - Multiple dungeon floors (5 floors total)
@@ -51,6 +59,8 @@ Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. T
 - Blocked passages requiring trigger items to activate
 - Each floor has multiple branching pathways
 - Ultimate Artifact of Power placed on the deepest floor
+- Enemies generated with speed stats that scale with dungeon depth
+- Special effect items (Gruff weapons, Shielding armor, Turbo items, etc.) scattered throughout dungeon
 
 ## Technical Implementation
 

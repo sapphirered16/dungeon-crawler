@@ -13,6 +13,11 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - Structured dungeon generation with rooms and hallways
 - Ultimate goal: Find the Artifact of Power at the bottom of the dungeon to win the game
 - Multiple branching pathways encourage exploration before reaching the final goal
+- Special effects for weapons and armor (gruff weapons increase damage, shielding armor increases defense)
+- Initiative system based on speed stat to determine combat order
+- Strategic combat with tactical depth
+- Locked doors and blocked passages that require special items to pass
+- Item stacking for consumable items
 
 ## How to Play
 - Run the game executable to start a new game
