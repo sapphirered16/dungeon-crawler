@@ -6,9 +6,10 @@ Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. T
 ## Core Mechanics
 
 ### Movement
-- Player can move in four directions: north, south, east, west
+- Player can move in six directions: north, south, east, west, up, down
 - Each movement is a discrete action
 - The game maintains a coordinate system for the dungeon across multiple floors
+- Stairs connect floors and allow vertical movement
 - Structured dungeon layout with rooms and hallways instead of open grid
 
 ### Combat
@@ -26,7 +27,8 @@ Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. T
 - Limited inventory space (10 items maximum)
 
 ### Progression
-- Multiple dungeon floors (3 floors by default)
+- Multiple dungeon floors (5 floors total)
+- Stairs connect floors and enable vertical movement
 - Increasing difficulty as player descends
 - Character advancement through experience
 - Treasure collection

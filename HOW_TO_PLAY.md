@@ -7,7 +7,7 @@ Explore the multi-level dungeon, defeat increasingly difficult enemies, collect 
 The game is turn-based and played through command-line arguments. Each action you take consumes one turn. The dungeon consists of multiple floors connected by staircases, with rooms and hallways forming branching pathways to explore.
 
 ## Commands
-- `move <direction>` - Move in a direction (north, south, east, west)
+- `move <direction>` - Move in a direction (north, south, east, west, up, down)
 - `attack <enemy_number>` - Attack an enemy in the current room (enemies are numbered)
 - `take <item_number>` - Take an item from the current room (items are numbered)
 - `equip <item_number>` - Equip an item from your inventory (items are numbered)

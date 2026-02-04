@@ -131,6 +131,10 @@ class Room:
         self.connections: Dict[Direction, 'Room'] = {}
         self.room_type = "generic"  # Could be "treasure", "monster", "empty", etc.
         self.description = "A standard dungeon room."
+        self.has_stairs_down = False
+        self.has_stairs_up = False
+        self.stairs_down_target = None  # Target room when going down
+        self.stairs_up_target = None    # Target room when going up
 
     def connect(self, direction: Direction, room: 'Room'):
         self.connections[direction] = room
@@ -271,7 +275,8 @@ class Dungeon:
                 if neighbor_pos in self.rooms:  # Only connect if the neighbor exists
                     room.connect(direction, self.rooms[neighbor_pos])
         
-        # Add stairs between floors (as special directional connections)
+        # Add stairs between floors (using special room flags)
+        # Ensure at least one staircase exists between each pair of floors
         for floor in range(self.floors - 1):  # Connect each floor to the one below it
             # Find a room on the current floor that is accessible (has connections)
             current_floor_rooms_with_connections = []
@@ -286,16 +291,23 @@ class Dungeon:
                     next_floor_rooms_with_connections.append(pos)
             
             if current_floor_rooms_with_connections and next_floor_rooms_with_connections:
-                # Pick a connected room from each floor to connect with stairs
-                current_room_pos = random.choice(current_floor_rooms_with_connections)
-                next_room_pos = random.choice(next_floor_rooms_with_connections)
+                # Pick a connected room from each floor to place stairs
+                # Make sure to include rooms that might be accessible from start
+                current_room_pos = current_floor_rooms_with_connections[0]  # Use first accessible room
+                next_room_pos = next_floor_rooms_with_connections[0]  # Use first accessible room on next floor
                 
                 current_room = self.rooms[current_room_pos]
                 next_room = self.rooms[next_room_pos]
                 
-                # Create special directional connections for stairs
-                current_room.connections[Direction.DOWN] = next_room
-                next_room.connections[Direction.UP] = current_room
+                # Mark rooms as having stairs and set targets
+                current_room.has_stairs_down = True
+                current_room.stairs_down_target = next_room  # Going down leads to next floor room
+                next_room.has_stairs_up = True
+                next_room.stairs_up_target = current_room   # Going up leads back to current floor room
+                
+                # Add visual indicators that these are stair locations
+                current_room.description = "A room with stairs leading down to the next level."
+                next_room.description = "A room with stairs leading up from the level below."
 
     def create_corridor(self, x1, y1, x2, y2, floor):
         """Create an L-shaped corridor between two points"""
@@ -425,11 +437,47 @@ class GameEngine:
     
     def move_player(self, direction: Direction) -> bool:
         """Attempt to move the player in the given direction."""
-        if direction not in self.current_room.connections:
+        # Handle stair movement specially
+        if direction == Direction.DOWN:
+            if not self.current_room.has_stairs_down:
+                # Check regular connections
+                if direction in self.current_room.connections:
+                    new_room = self.current_room.connections[direction]
+                else:
+                    print("You cannot go that way.")
+                    return False
+            elif not self.current_room.stairs_down_target:
+                # Check regular connections
+                if direction in self.current_room.connections:
+                    new_room = self.current_room.connections[direction]
+                else:
+                    print("You cannot go that way.")
+                    return False
+            else:
+                new_room = self.current_room.stairs_down_target
+        elif direction == Direction.UP:
+            if not self.current_room.has_stairs_up:
+                # Check regular connections
+                if direction in self.current_room.connections:
+                    new_room = self.current_room.connections[direction]
+                else:
+                    print("You cannot go that way.")
+                    return False
+            elif not self.current_room.stairs_up_target:
+                # Check regular connections
+                if direction in self.current_room.connections:
+                    new_room = self.current_room.connections[direction]
+                else:
+                    print("You cannot go that way.")
+                    return False
+            else:
+                new_room = self.current_room.stairs_up_target
+        elif direction in self.current_room.connections:
+            new_room = self.current_room.connections[direction]
+        else:
             print("You cannot go that way.")
             return False
         
-        new_room = self.current_room.connections[direction]
         self.current_room = new_room
         old_position = self.player.position
         self.player.position = (new_room.x, new_room.y, new_room.floor)
@@ -491,7 +539,12 @@ class GameEngine:
         # Show adjacent room information
         print("\nAdjacent areas:")
         for direction in Direction:
-            if direction in self.current_room.connections:
+            # Check if this is a stair direction
+            if direction == Direction.DOWN and self.current_room.has_stairs_down and self.current_room.stairs_down_target:
+                print(f"  {direction.value.capitalize()}: stairs down to next floor - Stairs to lower level")
+            elif direction == Direction.UP and self.current_room.has_stairs_up and self.current_room.stairs_up_target:
+                print(f"  {direction.value.capitalize()}: stairs up to previous floor - Stairs to upper level")
+            elif direction in self.current_room.connections:
                 adj_room = self.current_room.connections[direction]
                 
                 # Generate dynamic description for adjacent room based on its contents
@@ -761,6 +814,10 @@ class GameEngine:
                 "floor": room.floor,
                 "room_type": room.room_type,
                 "description": room.description,
+                "has_stairs_down": room.has_stairs_down,
+                "has_stairs_up": room.has_stairs_up,
+                "stairs_down_target_coords": [room.stairs_down_target.x, room.stairs_down_target.y, room.stairs_down_target.floor] if room.stairs_down_target else None,
+                "stairs_up_target_coords": [room.stairs_up_target.x, room.stairs_up_target.y, room.stairs_up_target.floor] if room.stairs_up_target else None,
                 "connections": {dir.value: [target_room.x, target_room.y, target_room.floor] 
                                for dir, target_room in room.connections.items()},
                 "entities": [],
@@ -853,6 +910,11 @@ class GameEngine:
                 room = Room(x, y, floor)
                 room.room_type = room_data["room_type"]
                 room.description = room_data["description"]
+                # Restore stair properties
+                room.has_stairs_down = room_data.get("has_stairs_down", False)
+                room.has_stairs_up = room_data.get("has_stairs_up", False)
+                room.stairs_down_target = None  # Will be set after all rooms are loaded
+                room.stairs_up_target = None   # Will be set after all rooms are loaded
                 
                 # Recreate entities
                 for entity_data in room_data["entities"]:
@@ -900,6 +962,25 @@ class GameEngine:
                     if target_room:
                         direction = Direction(direction_str)
                         room.connect(direction, target_room)
+            
+            # Now restore stair targets after all rooms exist
+            for pos_str, room in temp_rooms.items():
+                room_data = dungeon_data["rooms"][pos_str]
+                
+                # Restore stair targets
+                if room_data.get("stairs_down_target_coords"):
+                    target_coords = room_data["stairs_down_target_coords"]
+                    target_pos = tuple(target_coords)
+                    target_room = self.dungeon.rooms.get(target_pos)
+                    if target_room:
+                        room.stairs_down_target = target_room
+                
+                if room_data.get("stairs_up_target_coords"):
+                    target_coords = room_data["stairs_up_target_coords"]
+                    target_pos = tuple(target_coords)
+                    target_room = self.dungeon.rooms.get(target_pos)
+                    if target_room:
+                        room.stairs_up_target = target_room
             
             # Reconstruct player first
             player_data = game_state["player"]
