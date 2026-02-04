@@ -93,33 +93,26 @@ class DungeonVisualizer:
                     room_info = self.RoomInfo(x, y, room_width, room_height, floor)
                     rooms_info.append(room_info)
                     
-                    # Create the main room area (not individual cells)
-                    # Each room is now a single unit with a larger area
-                    pos = (room_info.center_x, room_info.center_y, floor)  # Use center as main room position
-                    
-                    # Set room type for the whole room
-                    rand = random.random()
-                    if rand < 0.1:
-                        room_type = RoomType.TREASURE
-                    elif rand < 0.3:
-                        room_type = RoomType.MONSTER
-                    elif rand < 0.4:
-                        room_type = RoomType.TRAP
-                    elif rand < 0.45:  # 5% chance for NPC
-                        room_type = RoomType.NPC
-                    else:
-                        room_type = RoomType.EMPTY
-                    
-                    self.rooms[pos] = room_type
-                    self.connections[pos] = RoomConnection()
-                    
-                    # Mark the entire room area in the grid for visualization
-                    for rx in range(room_info.x, room_info.x + room_info.width):
-                        for ry in range(room_info.y, room_info.y + room_info.height):
-                            grid_pos = (rx, ry, floor)
-                            if grid_pos != pos:  # Don't overwrite the main room position
-                                self.rooms[grid_pos] = RoomType.HALLWAY
-                                self.connections[grid_pos] = RoomConnection()
+                    # Create the entire room area with consistent properties
+                    for rx in range(x, x + room_width):
+                        for ry in range(y, y + room_height):
+                            pos = (rx, ry, floor)
+                            
+                            # Set room type for the whole room
+                            rand = random.random()
+                            if rand < 0.1:
+                                room_type = RoomType.TREASURE
+                            elif rand < 0.3:
+                                room_type = RoomType.MONSTER
+                            elif rand < 0.4:
+                                room_type = RoomType.TRAP
+                            elif rand < 0.45:  # 5% chance for NPC
+                                room_type = RoomType.NPC
+                            else:
+                                room_type = RoomType.EMPTY
+                            
+                            self.rooms[pos] = room_type
+                            self.connections[pos] = RoomConnection()
             
             # Connect rooms with hallways
             if len(rooms_info) > 1:
