@@ -1,0 +1,89 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Game saves
+savegame.json
+*.sav
+
+# Backups
+*backup*
+*.bak
+*.tmp
+
+# Configuration (if any sensitive configs)
+*.config.bak
+
+# Compiled assets
+*.pyc
+*.pyo
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Distribution / packaging
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage.xml
+
+# Local config
+.env
+.env.local
+.env.*.local
+
+# Temporary files
+*.tmp
+*.temp
+.DS_Store
+*.lock
+
+# Large files that might be generated
+*.zip
+*.tar.gz
+*.rar

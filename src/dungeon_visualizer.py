@@ -26,6 +26,7 @@ class RoomType(Enum):
     NPC = "npc"
     ARTIFACT = "artifact"
     HALLWAY = "hallway"
+    STAIRCASE = "staircase"
 
 
 class RoomConnection:
@@ -56,18 +57,104 @@ class DungeonVisualizer:
         # Set the random seed to ensure reproducible generation
         random.seed(self.seed)
         
-        # Store room layouts for generation
-        room_layouts = {}
+        # Define room templates with specific types and characteristics
+        room_templates = {
+            "starting": {"width_range": (4, 6), "height_range": (4, 6), "min_count": 1, "max_count": 1},
+            "treasure": {"width_range": (4, 7), "height_range": (4, 7), "min_count": 1, "max_count": 3},
+            "monster": {"width_range": (5, 8), "height_range": (4, 6), "min_count": 2, "max_count": 4},
+            "trap": {"width_range": (3, 5), "height_range": (3, 5), "min_count": 1, "max_count": 3},
+            "npc": {"width_range": (4, 6), "height_range": (4, 6), "min_count": 0, "max_count": 2},
+            "empty": {"width_range": (4, 8), "height_range": (4, 8), "min_count": 2, "max_count": 5},
+            "staircase": {"width_range": (3, 4), "height_range": (3, 4), "min_count": 1, "max_count": 1}  # Per floor connection
+        }
         
         for floor in range(self.floors):
             # Create rooms with spacing
             rooms_info = []
-            num_rooms = random.randint(8, 15)  # Number of rooms for this floor
             
-            for _ in range(num_rooms):
-                # Random room size (larger rooms)
-                room_width = random.randint(4, 8)
-                room_height = random.randint(4, 8)
+            # First, place required room types (starting room, staircase room)
+            required_rooms = []
+            
+            # Place starting room on first floor only
+            if floor == 0:
+                start_width = random.randint(*room_templates["starting"]["width_range"])
+                start_height = random.randint(*room_templates["starting"]["height_range"])
+                start_x = self.width // 2 - start_width // 2
+                start_y = self.height // 2 - start_height // 2
+                required_rooms.append(("starting", start_x, start_y, start_width, start_height))
+            
+            # Place staircase room (for connecting floors)
+            if floor < self.floors - 1:  # Not on the last floor
+                stair_width = random.randint(*room_templates["staircase"]["width_range"])
+                stair_height = random.randint(*room_templates["staircase"]["height_range"])
+                stair_x = random.randint(2, self.width - stair_width - 2)
+                stair_y = random.randint(2, self.height - stair_height - 2)
+                required_rooms.append(("staircase", stair_x, stair_y, stair_width, stair_height))
+            
+            # Add required rooms to the list
+            for room_type, x, y, width, height in required_rooms:
+                room_info = self.RoomInfo(x, y, width, height, floor)
+                rooms_info.append((room_info, room_type))
+                
+                # Create the room area with specific type
+                for rx in range(x, x + width):
+                    for ry in range(y, y + height):
+                        pos = (rx, ry, floor)
+                        
+                        # Set room type based on template
+                        if room_type == "starting":
+                            room_type_enum = RoomType.EMPTY  # Starting area is safe
+                        elif room_type in ["staircase", "staircase_up", "staircase_down"]:
+                            room_type_enum = RoomType.STAIRCASE  # Staircase is marked as staircase in visualization
+                        elif room_type == "treasure":
+                            room_type_enum = RoomType.TREASURE
+                        elif room_type == "monster":
+                            room_type_enum = RoomType.MONSTER
+                        elif room_type == "trap":
+                            room_type_enum = RoomType.TRAP
+                        elif room_type == "npc":
+                            room_type_enum = RoomType.NPC
+                        else:  # empty
+                            room_type_enum = RoomType.EMPTY
+                        
+                        self.rooms[pos] = room_type_enum
+                        self.connections[pos] = RoomConnection()
+            
+            # Now place additional rooms based on templates
+            room_counts = {rtype: 0 for rtype in room_templates.keys()}
+            
+            # Count already placed required rooms
+            for _, rtype in rooms_info:
+                if rtype in room_counts:
+                    room_counts[rtype] += 1
+            
+            # Place additional rooms up to the maximum count for each type
+            total_attempts = 0
+            max_total_rooms = random.randint(8, 15)
+            
+            while len(rooms_info) < max_total_rooms and total_attempts < 100:
+                total_attempts += 1
+                
+                # Select a room type to place based on remaining quota
+                available_types = []
+                for rtype, limits in room_templates.items():
+                    if room_counts.get(rtype, 0) < limits["max_count"]:
+                        # Add the type multiple times to weight the probability
+                        for _ in range(max(1, limits["max_count"] - room_counts.get(rtype, 0))):
+                            available_types.append(rtype)
+                
+                if not available_types:
+                    break  # No more room types to place
+                
+                room_type = random.choice(available_types)
+                
+                # Skip starting and staircase rooms as they're already handled
+                if room_type in ["starting", "staircase"]:
+                    continue
+                
+                # Get dimensions for this room type
+                room_width = random.randint(*room_templates[room_type]["width_range"])
+                room_height = random.randint(*room_templates[room_type]["height_range"])
                 
                 # Random position (ensuring it fits in the grid with spacing)
                 # Add spacing buffer to prevent rooms from being too close
@@ -77,7 +164,8 @@ class DungeonVisualizer:
                 
                 # Check for overlap with existing rooms (with spacing)
                 overlaps = False
-                for existing_room in rooms_info:
+                for existing_room_info, _ in rooms_info:
+                    existing_room = existing_room_info
                     # Check for overlap with spacing buffer
                     min_dist_x = existing_room.x - room_width - spacing_buffer
                     max_dist_x = existing_room.x + existing_room.width + spacing_buffer
@@ -91,47 +179,85 @@ class DungeonVisualizer:
                 
                 if not overlaps:
                     room_info = self.RoomInfo(x, y, room_width, room_height, floor)
-                    rooms_info.append(room_info)
+                    rooms_info.append((room_info, room_type))
+                    room_counts[room_type] += 1
                     
-                    # Create the entire room area with consistent properties
+                    # Create the room area with specific type
                     for rx in range(x, x + room_width):
                         for ry in range(y, y + room_height):
                             pos = (rx, ry, floor)
                             
-                            # Set room type for the whole room
-                            rand = random.random()
-                            if rand < 0.1:
-                                room_type = RoomType.TREASURE
-                            elif rand < 0.3:
-                                room_type = RoomType.MONSTER
-                            elif rand < 0.4:
-                                room_type = RoomType.TRAP
-                            elif rand < 0.45:  # 5% chance for NPC
-                                room_type = RoomType.NPC
-                            else:
-                                room_type = RoomType.EMPTY
+                            # Set room type based on template
+                            if room_type == "treasure":
+                                room_type_enum = RoomType.TREASURE
+                            elif room_type == "monster":
+                                room_type_enum = RoomType.MONSTER
+                            elif room_type == "trap":
+                                room_type_enum = RoomType.TRAP
+                            elif room_type == "npc":
+                                room_type_enum = RoomType.NPC
+                            else:  # empty
+                                room_type_enum = RoomType.EMPTY
                             
-                            self.rooms[pos] = room_type
+                            self.rooms[pos] = room_type_enum
                             self.connections[pos] = RoomConnection()
             
-            # Connect rooms with hallways
+            # Connect rooms with hallways (this creates the narrow connections between rooms)
             if len(rooms_info) > 1:
-                # Create hallways connecting rooms in sequence
+                # Create hallways connecting rooms in sequence to ensure all are connected
                 for i in range(len(rooms_info) - 1):
-                    room1 = rooms_info[i]
-                    room2 = rooms_info[i + 1]
+                    room1_info, _ = rooms_info[i]
+                    room2_info, _ = rooms_info[i + 1]
                     
                     # Create L-shaped corridor between room centers
-                    self._create_corridor(room1.center_x, room1.center_y, 
-                                       room2.center_x, room2.center_y, floor)
+                    self._create_corridor(room1_info.center_x, room1_info.center_y, 
+                                       room2_info.center_x, room2_info.center_y, floor)
                 
                 # Ensure good connectivity by adding extra connections
                 for i in range(len(rooms_info)):
                     # Connect to a random other room to ensure all rooms are reachable
                     j = random.randint(0, len(rooms_info) - 1)
                     if i != j and random.random() < 0.3:  # 30% chance of extra connection
-                        self._create_corridor(rooms_info[i].center_x, rooms_info[i].center_y,
-                                           rooms_info[j].center_x, rooms_info[j].center_y, floor)
+                        room_i_info, _ = rooms_info[i]
+                        room_j_info, _ = rooms_info[j]
+                        self._create_corridor(room_i_info.center_x, room_i_info.center_y,
+                                           room_j_info.center_x, room_j_info.center_y, floor)
+            
+            # Place the ultimate artifact on the deepest floor
+            if floor == self.floors - 1:  # Last floor (deepest)
+                # Find a random treasure room in this floor to place the artifact
+                treasure_rooms = [(x, y, z) for (x, y, z), room_type in self.rooms.items() 
+                                if z == floor and room_type == RoomType.TREASURE]
+                if treasure_rooms:
+                    artifact_pos = random.choice(treasure_rooms)
+                    self.rooms[artifact_pos] = RoomType.ARTIFACT
+                else:
+                    # If no treasure room found, place in any room on the last floor
+                    floor_rooms = [(x, y, z) for x, y, z in self.rooms.keys() if z == floor]
+                    if floor_rooms:
+                        artifact_pos = random.choice(floor_rooms)
+                        self.rooms[artifact_pos] = RoomType.ARTIFACT
+            
+            # Connect rooms with hallways
+            if len(rooms_info) > 1:
+                # Create hallways connecting rooms in sequence
+                for i in range(len(rooms_info) - 1):
+                    room1_info, _ = rooms_info[i]
+                    room2_info, _ = rooms_info[i + 1]
+                    
+                    # Create L-shaped corridor between room centers
+                    self._create_corridor(room1_info.center_x, room1_info.center_y, 
+                                       room2_info.center_x, room2_info.center_y, floor)
+                
+                # Ensure good connectivity by adding extra connections
+                for i in range(len(rooms_info)):
+                    # Connect to a random other room to ensure all rooms are reachable
+                    j = random.randint(0, len(rooms_info) - 1)
+                    if i != j and random.random() < 0.3:  # 30% chance of extra connection
+                        room_i_info, _ = rooms_info[i]
+                        room_j_info, _ = rooms_info[j]
+                        self._create_corridor(room_i_info.center_x, room_i_info.center_y,
+                                           room_j_info.center_x, room_j_info.center_y, floor)
             
             # Place the ultimate artifact on the deepest floor
             if floor == self.floors - 1:  # Last floor (deepest)
@@ -144,30 +270,29 @@ class DungeonVisualizer:
         # With the new room structure, rooms are connected via hallways created earlier,
         # not through adjacent grid positions. The hallway creation already established
         # connections between rooms, so we don't need this automatic grid-based connection.
-        # Rooms exist as single units in the grid (their center position) and are connected
-        # via the hallway system created earlier.
+        # Rooms exist as areas in the grid and are connected via the hallway system created earlier.
         
         # Add stairs between floors (using special room flags)
         # Ensure at least one staircase exists between each pair of floors
         for floor in range(self.floors - 1):  # Connect each floor to the one below it
-            # Find a room on the current floor that is accessible (has connections)
-            current_floor_rooms = []
-            next_floor_rooms = []
+            # Find staircase rooms on the current and next floor
+            current_floor_staircase_rooms = []
+            next_floor_staircase_rooms = []
             
-            for pos, room_connection in self.connections.items():
-                # Since rooms are not connected in a grid pattern, we need to find rooms that have hallways
-                # For simplicity, we'll connect any two rooms on different floors
-                if pos[2] == floor:
-                    current_floor_rooms.append(pos)
+            for pos, room_type in self.rooms.items():
+                if pos[2] == floor and room_type == RoomType.HALLWAY:  # Staircase rooms are marked as hallways
+                    # Look for hallway areas that are likely staircase locations
+                    # (typically smaller areas that serve as connectors)
+                    current_floor_staircase_rooms.append(pos)
             
-            for pos, room_connection in self.connections.items():
-                if pos[2] == floor + 1:
-                    next_floor_rooms.append(pos)
+            for pos, room_type in self.rooms.items():
+                if pos[2] == floor + 1 and room_type == RoomType.HALLWAY:
+                    next_floor_staircase_rooms.append(pos)
             
-            if current_floor_rooms and next_floor_rooms:
+            if current_floor_staircase_rooms and next_floor_staircase_rooms:
                 # Pick a room from each floor to place stairs
-                current_room_pos = current_floor_rooms[0]  # Use first room
-                next_room_pos = next_floor_rooms[0]  # Use first room on next floor
+                current_room_pos = current_floor_staircase_rooms[0]  # Use first staircase room
+                next_room_pos = next_floor_staircase_rooms[0]  # Use first staircase room on next floor
                 
                 current_room_connection = self.connections[current_room_pos]
                 next_room_connection = self.connections[next_room_pos]
@@ -302,7 +427,8 @@ class DungeonVisualizer:
             RoomType.MONSTER: 'M',
             RoomType.TRAP: 'T',
             RoomType.NPC: 'N',
-            RoomType.ARTIFACT: 'A'
+            RoomType.ARTIFACT: 'A',
+            RoomType.STAIRCASE: 'S'
         }
         return symbols.get(room_type, '?')
     
