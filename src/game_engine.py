@@ -353,6 +353,19 @@ class SeededGameEngine:
             item = self.current_room_state.items[adjusted_index]
             print(f"You take the {item.name}.")
             self.player.take_item(item)
+            
+            # Check if this is an artifact and if it's the final win condition
+            if item.item_type.value == "artifact":
+                print("🎉 CONGRATULATIONS! You have found the ultimate artifact!")
+                print("✨ Your journey through the dungeon has ended in triumph!")
+                print("🏆 You have achieved victory!")
+                self.player.victory = True  # Mark player as having won
+                print(f"\\n📊 FINAL SCORE: {self.player.score}")
+                print(f"⚔️  ENEMIES DEFEATED: {self.player.enemies_defeated}")
+                print(f"💎 TREASURES COLLECTED: {self.player.treasures_collected}")
+                print("\\n🙏 Thanks for playing the dungeon crawler!")
+                return True  # Return early to indicate game completion
+            
             self.current_room_state.items.remove(item)
             # Process monster AI after taking an item (noise might attract attention)
             self.process_monster_ai()
@@ -475,7 +488,7 @@ class SeededGameEngine:
 
     def is_game_over(self) -> bool:
         """Check if the game is over."""
-        return not self.player.is_alive()
+        return not self.player.is_alive() or self.player.victory
 
     def get_game_status(self) -> Dict[str, Any]:
         """Get the current game status."""

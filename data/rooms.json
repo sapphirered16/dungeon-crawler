@@ -57,6 +57,20 @@
       "rarity_weight": 0.05
     },
     {
+      "type": "artifact",
+      "themes": ["GENERIC", "MAGICAL", "CAVERN"],
+      "descriptions": [
+        "A sacred chamber holding ancient artifacts.",
+        "A hallowed room containing powerful relics.",
+        "A shrine where legendary artifacts rest.",
+        "An altar surrounded by mystical artifacts.",
+        "A sanctum where the ultimate treasure awaits."
+      ],
+      "possible_items": ["Ancient Relic", "Crystal of Power", "Orb of Destiny"],
+      "possible_enemies": ["Ancient Guardian", "Ghost Knight"],
+      "rarity_weight": 0.02
+    },
+    {
       "type": "empty",
       "themes": ["GENERIC", "CASTLE", "CAVERN", "FOREST", "UNDERWATER", "MAGICAL"],
       "descriptions": [

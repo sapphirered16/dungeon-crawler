@@ -46,6 +46,7 @@ class Player(Entity):
         self.equipped_armor = None
         self.inventory = []
         self.position = (0, 0, 0)  # x, y, z (floor)
+        self.victory = False  # Track if player has won the game
 
     def gain_exp(self, amount: int):
         """Gain experience points and level up if enough exp."""

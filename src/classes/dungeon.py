@@ -110,6 +110,22 @@ class SeededDungeon:
                 self.room_states[from_room_pos].stairs_down_target = to_room_pos
                 self.room_states[to_room_pos].has_stairs_up = True
                 self.room_states[to_room_pos].stairs_up_target = from_room_pos
+        
+        # Ensure there's a special artifact room on the lowest floor as the win condition
+        lowest_floor_rooms = [pos for pos in self.room_states.keys() if pos[2] == max_floor]
+        if lowest_floor_rooms:
+            # Select a room on the lowest floor to be the special artifact room
+            artifact_room_pos = random.choice(lowest_floor_rooms)
+            artifact_room = self.room_states[artifact_room_pos]
+            
+            # Change this room to be an artifact room if it isn't already
+            artifact_room.room_type = "artifact"
+            artifact_room.description = "The ultimate treasure chamber. The final resting place of a powerful artifact."
+            
+            # Clear any existing items and ensure it has a proper artifact
+            artifact_room.items.clear()
+            artifact = self._generate_artifact()
+            artifact_room.add_item(artifact)
     
     def _generate_floor(self, floor: int, starting_pos: Tuple[int, int, int] = None):
         """Generate a single floor of the dungeon."""
