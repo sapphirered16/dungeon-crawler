@@ -377,7 +377,7 @@ class ImprovedDungeonGenerator:
                     self.rooms[pos] = room
 
     def _add_floor_connections(self):
-        """Add stairs between floors"""
+        """Add stairs between floors, placing them in more challenging locations"""
         for floor in range(self.floors - 1):  # Connect each floor to the one below it
             # Find a room on the current floor that is accessible
             current_floor_rooms_with_connections = []
@@ -392,8 +392,29 @@ class ImprovedDungeonGenerator:
                     next_floor_rooms_with_connections.append(pos)
             
             if current_floor_rooms_with_connections and next_floor_rooms_with_connections:
-                current_room_pos = current_floor_rooms_with_connections[0]
-                next_room_pos = next_floor_rooms_with_connections[0]
+                # Instead of using the first room (which might be near the start), 
+                # select a room that's deeper in the dungeon by choosing from the middle/later half
+                # Sort rooms by their position to simulate depth (using Manhattan distance from origin)
+                sorted_rooms = sorted(current_floor_rooms_with_connections, 
+                                    key=lambda pos: abs(pos[0]) + abs(pos[1]))
+                
+                # Select a room from the latter half of the sorted list (deeper in dungeon)
+                if len(sorted_rooms) > 1:
+                    # Choose from the last third of rooms to ensure it's not near the start
+                    start_idx = max(0, len(sorted_rooms) - max(1, len(sorted_rooms) // 3))
+                    current_room_pos = random.choice(sorted_rooms[start_idx:])
+                else:
+                    current_room_pos = current_floor_rooms_with_connections[0]
+                
+                # For the next floor, place the stairs up in a non-starting area as well
+                sorted_next_rooms = sorted(next_floor_rooms_with_connections, 
+                                        key=lambda pos: abs(pos[0]) + abs(pos[1]))
+                
+                if len(sorted_next_rooms) > 1:
+                    start_idx = max(0, len(sorted_next_rooms) - max(1, len(sorted_next_rooms) // 3))
+                    next_room_pos = random.choice(sorted_next_rooms[start_idx:])
+                else:
+                    next_room_pos = next_floor_rooms_with_connections[0]
                 
                 current_room = self.rooms[current_room_pos]
                 next_room = self.rooms[next_room_pos]

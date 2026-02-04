@@ -1,0 +1,170 @@
+{
+  "room_templates": [
+    {
+      "type": "treasure",
+      "themes": ["GENERIC", "CASTLE", "CAVERN", "MAGICAL"],
+      "descriptions": [
+        "A treasure room filled with gleaming objects.",
+        "A vault with precious items scattered about.",
+        "A chamber where riches have been accumulated.",
+        "A room overflowing with gold and jewels.",
+        "A treasury with valuable artifacts."
+      ],
+      "possible_items": ["Gold Coin", "Health Potion", "Greater Health Potion", "Iron Sword", "Steel Sword", "Leather Armor", "Chain Mail", "Iron Key", "Silver Key", "Golden Key"],
+      "possible_enemies": ["Goblin", "Skeleton", "Zombie"],
+      "rarity_weight": 0.1
+    },
+    {
+      "type": "monster",
+      "themes": ["GENERIC", "CASTLE", "CAVERN", "MAGICAL"],
+      "descriptions": [
+        "A room with hostile creatures lurks ahead.",
+        "Dangerous enemies inhabit this area.",
+        "Creatures await to challenge the intruder.",
+        "Hostile beings guard this territory.",
+        "Aggressive monsters patrol this room."
+      ],
+      "possible_items": ["Health Potion", "Mana Potion"],
+      "possible_enemies": ["Goblin", "Skeleton", "Zombie", "Spider", "Orc", "Ogre"],
+      "rarity_weight": 0.2
+    },
+    {
+      "type": "trap",
+      "themes": ["GENERIC", "CASTLE", "CAVERN"],
+      "descriptions": [
+        "A dangerous-looking room with potential hazards.",
+        "Hidden dangers lie in wait.",
+        "Mechanical traps threaten the unwary.",
+        "Pressure plates and trip wires are visible.",
+        "Ancient defenses protect this area."
+      ],
+      "possible_items": ["Iron Key", "Power Rune", "Power Crystal"],
+      "possible_enemies": [],
+      "rarity_weight": 0.1
+    },
+    {
+      "type": "npc",
+      "themes": ["GENERIC", "CASTLE", "MAGICAL"],
+      "descriptions": [
+        "A room with a mysterious stranger.",
+        "A wise sage awaits travelers.",
+        "An NPC offers assistance or challenges.",
+        "A character with important information.",
+        "A quest-giver stands in the center of the room."
+      ],
+      "possible_items": [],
+      "possible_enemies": [],
+      "rarity_weight": 0.05
+    },
+    {
+      "type": "empty",
+      "themes": ["GENERIC", "CASTLE", "CAVERN", "FOREST", "UNDERWATER", "MAGICAL"],
+      "descriptions": [
+        "An empty, quiet room.",
+        "A vacant chamber with no notable features.",
+        "A bare room that serves as a passage.",
+        "Silence fills this unremarkable space.",
+        "A simple room with no immediate threats or treasures."
+      ],
+      "possible_items": ["Health Potion"],
+      "possible_enemies": [],
+      "rarity_weight": 0.55
+    },
+    {
+      "type": "hallway",
+      "themes": ["GENERIC", "CASTLE", "CAVERN"],
+      "descriptions": [
+        "A narrow hallway.",
+        "A corridor connecting distant rooms.",
+        "A passageway with rough walls.",
+        "A walkway with flickering lights.",
+        "A tunnel through the rock."
+      ],
+      "possible_items": [],
+      "possible_enemies": ["Goblin", "Spider"],
+      "rarity_weight": 1.0
+    }
+  ],
+  "themed_rooms": {
+    "CAVERN": {
+      "descriptions": [
+        "A dark cavern with water dripping from stalactites.",
+        "Rough stone walls surround this underground chamber.",
+        "Echoes bounce off the cave walls.",
+        "Ancient markings are etched into the rocky surface.",
+        "The air is cool and damp."
+      ],
+      "unique_features": [
+        "Underground lake",
+        "Crystal formations",
+        "Ancient cave paintings",
+        "Underground river",
+        "Deep chasm"
+      ]
+    },
+    "CASTLE": {
+      "descriptions": [
+        "Stone walls with banners hanging from the ceiling.",
+        "Torchlight flickers against the ancient stones.",
+        "Footsteps echo in the stone corridor.",
+        "Dust covers the cobblestone floor.",
+        "Arrow slits let in dim light from outside."
+      ],
+      "unique_features": [
+        "Drawbridge mechanism",
+        "Portcullis gate",
+        "Armory",
+        "Banquet hall",
+        "Guard tower window"
+      ]
+    },
+    "FOREST": {
+      "descriptions": [
+        "Sunlight filters through a canopy of leaves.",
+        "Moss grows on fallen logs and rocks.",
+        "Birds chirp in the distance.",
+        "Fresh earth scent fills the air.",
+        "Vines and roots twist through the space."
+      ],
+      "unique_features": [
+        "Ancient tree",
+        "Clearing",
+        "Stream",
+        "Woodland shrine",
+        "Natural bridge"
+      ]
+    },
+    "UNDERWATER": {
+      "descriptions": [
+        "Crystalline formations glow softly underwater.",
+        "Fish swim past the magical bubble.",
+        "Water flows gently through this chamber.",
+        "Seaweed sways with the current.",
+        "Pearlescent shells decorate the walls."
+      ],
+      "unique_features": [
+        "Air pocket",
+        "Submerged ruins",
+        "Bioluminescent flora",
+        "Underwater garden",
+        "Coral reef"
+      ]
+    },
+    "MAGICAL": {
+      "descriptions": [
+        "Shimmering runes float in the air.",
+        "Crystals pulse with magical energy.",
+        "The laws of physics seem different here.",
+        "Spells linger in the atmosphere.",
+        "Magical energies swirl around you."
+      ],
+      "unique_features": [
+        "Portal",
+        "Enchanted fountain",
+        "Floating platform",
+        "Magic circle",
+        "Arcane laboratory"
+      ]
+    }
+  }
+}

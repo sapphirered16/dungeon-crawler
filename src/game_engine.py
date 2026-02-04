@@ -666,13 +666,21 @@ class GameEngine:
     def __init__(self):
         self.player = Player()
         self.dungeon = Dungeon()
-        self.current_room = self.dungeon.get_room(0, 0, 0)  # Start at entrance
-        if not self.current_room:
-            # Find first available room if (0,0,0) wasn't generated
+        self.current_room = self.dungeon.get_room(0, 0, 0)  # Try to start at entrance
+        if not self.current_room or self.current_room.has_stairs_down:
+            # Find a suitable starting room if (0,0,0) wasn't generated or has stairs
             for pos, room in self.dungeon.rooms.items():
-                self.current_room = room
-                self.player.position = pos
-                break
+                # Look for a room without stairs down to prevent immediate progression
+                if not room.has_stairs_down:
+                    self.current_room = room
+                    self.player.position = pos
+                    break
+            else:
+                # If no room without stairs is found, just use the first available
+                for pos, room in self.dungeon.rooms.items():
+                    self.current_room = room
+                    self.player.position = pos
+                    break
         
         # High score tracking
         self.high_score = 0
@@ -1245,6 +1253,58 @@ class GameEngine:
             return True
         else:
             print("Invalid item selection.")
+            return False
+    
+    def talk_to_npc(self, npc_index: int) -> bool:
+        """Talk to an NPC in the current room."""
+        # Adjust npc_index since the game displays NPCs starting from 1
+        adjusted_index = npc_index - 1
+        
+        if 0 <= adjusted_index < len(self.current_room.npcs):
+            npc = self.current_room.npcs[adjusted_index]
+            
+            print(f"\n{npc.name}: {npc.dialogue}")
+            
+            # If NPC has a quest and hasn't given it yet
+            if npc.quest and not npc.has_given_quest:
+                print(f"\nQuest: {npc.quest['name']}")
+                print(f"Description: {npc.quest['description']}")
+                
+                # Ask if player wants to accept
+                accept = input("Accept quest? (yes/no): ").lower().strip()
+                if accept in ['yes', 'y']:
+                    npc.has_given_quest = True
+                    print("Quest accepted!")
+                    print(f"Goal: Bring {npc.quest['target_item']}")
+                    print(f"Reward: {npc.quest['reward'].name}")
+                else:
+                    print("Maybe next time.")
+            
+            # Check if NPC has a completed quest
+            elif npc.quest and npc.has_given_quest and not npc.has_completed_quest:
+                # Check if player has the required item
+                target_item_name = npc.quest['target_item']
+                if target_item_name in [item.name for item in self.player.inventory]:
+                    print(f"\nYou have brought the {target_item_name}!")
+                    print(f"NPC gives you: {npc.quest['reward'].name}")
+                    
+                    # Give the reward
+                    self.player.inventory.append(npc.quest['reward'])
+                    
+                    # Remove the required item from inventory
+                    for i, item in enumerate(self.player.inventory):
+                        if item.name == target_item_name:
+                            del self.player.inventory[i]
+                            break
+                    
+                    npc.has_completed_quest = True
+                    print("Quest completed!")
+                else:
+                    print(f"\nYou still need to find: {target_item_name}")
+            
+            return True
+        else:
+            print("Invalid NPC selection.")
             return False
     
     def rest(self):

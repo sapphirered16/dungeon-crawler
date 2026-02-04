@@ -1,0 +1,218 @@
+{
+  "npc_types": [
+    {
+      "name": "Wandering Sage",
+      "health": 1,
+      "dialogues": [
+        "Greetings, traveler. I seek a powerful item that was lost in these depths.",
+        "Hello adventurer, I have a task for you if you're brave enough.",
+        "Welcome, hero. I need someone to retrieve something precious to me.",
+        "Oh, a visitor! Perhaps you can assist me with a small matter.",
+        "Adventurer, I sense great potential in you. Will you hear my request?",
+        "Ahh, a fellow explorer! I have knowledge that might interest you.",
+        "Young champion, I've been waiting for someone capable to arrive.",
+        "Traveler, you appear to have the skills I require for a quest."
+      ],
+      "quests": [
+        {
+          "name": "Retrieve the Lost Trophy",
+          "target_item": "Dragon Trophy",
+          "reward": {
+            "name": "Flame Sword",
+            "type": "WEAPON",
+            "value": 100,
+            "attack_bonus": 15,
+            "defense_bonus": 2,
+            "health_bonus": 0,
+            "special_effect": "gruff",
+            "status_effects": {"burn": 3}
+          },
+          "description": "I need you to defeat a Dragon and bring me its trophy. In return, I'll give you this Flame Sword."
+        },
+        {
+          "name": "Recover the Ancient Artifact",
+          "target_item": "Ogre Trophy",
+          "reward": {
+            "name": "Frost Helm",
+            "type": "ARMOR",
+            "value": 80,
+            "attack_bonus": 3,
+            "defense_bonus": 10,
+            "health_bonus": 20,
+            "special_effect": "shielding",
+            "status_effects": {"chill": 2}
+          },
+          "description": "Defeat an Ogre and bring me its trophy. I'll reward you with this Frost Helm."
+        },
+        {
+          "name": "Collect Rare Materials",
+          "target_item": "Demon Trophy",
+          "reward": {
+            "name": "Lightning Blade",
+            "type": "WEAPON",
+            "value": 120,
+            "attack_bonus": 20,
+            "defense_bonus": 0,
+            "health_bonus": 0,
+            "special_effect": "turbo",
+            "status_effects": {"shock": 2}
+          },
+          "description": "Bring me proof of defeating a Demon, and I'll give you this Lightning Blade."
+        },
+        {
+          "name": "Prove Your Worth",
+          "target_item": "Ancient Guardian Trophy",
+          "reward": {
+            "name": "Healing Amulet",
+            "type": "ARMOR",
+            "value": 60,
+            "attack_bonus": 5,
+            "defense_bonus": 5,
+            "health_bonus": 50,
+            "special_effect": "",
+            "status_effects": {}
+          },
+          "description": "Only by defeating an Ancient Guardian can you earn this Healing Amulet."
+        }
+      ]
+    },
+    {
+      "name": "Lost Merchant",
+      "health": 1,
+      "dialogues": [
+        "Oh thank goodness! Another soul! Would you be interested in trading?",
+        "Friend, I seem to have misplaced my wares. Could you assist me?",
+        "Traveler, I have rare goods to trade if you have the coin.",
+        "Adventurer, I carry items that might aid your journey.",
+        "Welcome, friend. I offer unique provisions for those brave enough to venture deeper.",
+        "A customer! I have many exotic items from distant lands.",
+        "Hail, explorer! Need supplies for your journey?",
+        "Good to see a friendly face. Interested in quality goods?"
+      ],
+      "quests": [
+        {
+          "name": "Trade Valuable Items",
+          "target_item": "Golden Key",
+          "reward": {
+            "name": "Greater Health Potion",
+            "type": "CONSUMABLE",
+            "value": 25,
+            "attack_bonus": 0,
+            "defense_bonus": 0,
+            "health_bonus": 60,
+            "special_effect": "greater_healing",
+            "status_effects": {}
+          },
+          "description": "I'll trade you this Greater Health Potion for that Golden Key you have."
+        },
+        {
+          "name": "Special Order",
+          "target_item": "Enchanted Crystal",
+          "reward": {
+            "name": "Power Elixir",
+            "type": "CONSUMABLE",
+            "value": 30,
+            "attack_bonus": 5,
+            "defense_bonus": 5,
+            "health_bonus": 20,
+            "special_effect": "temporary_boost",
+            "status_effects": {}
+          },
+          "description": "That Enchanted Crystal would complement my collection perfectly. I can offer this Power Elixir in return."
+        }
+      ]
+    },
+    {
+      "name": "Trapped Scholar",
+      "health": 1,
+      "dialogues": [
+        "Please, you must help me! I've been trapped here for days!",
+        "Adventurer, I possess knowledge that could aid your quest.",
+        "A friend! I've discovered secrets about this place that might interest you.",
+        "Traveler, I've been studying these ruins. Would you listen to my findings?",
+        "Thank the stars! Someone who might help me escape this place.",
+        "Fellow seeker of truth! I've uncovered mysteries about this dungeon.",
+        "Explorer, I have maps and information about the deeper levels.",
+        "At last, one who might assist me in my research!"
+      ],
+      "quests": [
+        {
+          "name": "Rescue Mission",
+          "target_item": "Iron Key",
+          "reward": {
+            "name": "Magic Staff",
+            "type": "WEAPON",
+            "value": 40,
+            "attack_bonus": 12,
+            "defense_bonus": 0,
+            "health_bonus": 0,
+            "special_effect": "",
+            "status_effects": {"burn": 2}
+          },
+          "description": "I need an Iron Key to unlock these bindings. In gratitude, I offer this Magic Staff."
+        },
+        {
+          "name": "Information Exchange",
+          "target_item": "Mana Potion",
+          "reward": {
+            "name": "Robe",
+            "type": "ARMOR",
+            "value": 15,
+            "attack_bonus": 0,
+            "defense_bonus": 3,
+            "health_bonus": 25,
+            "special_effect": "",
+            "status_effects": {}
+          },
+          "description": "That Mana Potion would help my studies. Allow me to give you this Robe in return."
+        }
+      ]
+    },
+    {
+      "name": "Friendly Ghost",
+      "health": 1,
+      "dialogues": [
+        "Do not fear, traveler. I mean you no harm.",
+        "Welcome, living one. It's been ages since I've spoken to the living.",
+        "A warm soul! How refreshing in this cold place.",
+        "Kind spirit, would you help an old soul find peace?",
+        "Greeting, mortal. I have wisdom to share with those who listen.",
+        "Peace be with you, adventurer. I am bound to this place but not to silence.",
+        "Welcome, friend. Though I am but a shade, I have much to offer.",
+        "A living visitor! I have watched over this place for many years."
+      ],
+      "quests": [
+        {
+          "name": "Spiritual Aid",
+          "target_item": "Ghost Trophy",
+          "reward": {
+            "name": "Dagger",
+            "type": "WEAPON",
+            "value": 15,
+            "attack_bonus": 7,
+            "defense_bonus": 0,
+            "health_bonus": 0,
+            "special_effect": "turbo",
+            "status_effects": {}
+          },
+          "description": "Bring me proof of defeating a fellow spirit, and I'll guide you to this Dagger."
+        },
+        {
+          "name": "Restoration",
+          "target_item": "Holy Symbol",
+          "reward": {
+            "name": "Chain Mail",
+            "type": "ARMOR",
+            "value": 40,
+            "attack_bonus": 0,
+            "defense_bonus": 10,
+            "health_bonus": 20,
+            "special_effect": "",
+            "status_effects": {}
+          },
+          "description": "If you have a Holy Symbol, I can reveal the location of Chain Mail."
+        }
+      ]
+    }
+  ]
+}

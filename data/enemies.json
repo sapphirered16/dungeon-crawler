@@ -1,0 +1,351 @@
+{
+  "common_enemies": [
+    {
+      "name": "Goblin",
+      "health": 20,
+      "attack": 5,
+      "defense": 1,
+      "speed": 12,
+      "exp_reward": 20,
+      "gold_min": 1,
+      "gold_max": 5,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Rusty Sword",
+          "chance": 0.1
+        },
+        {
+          "item_name": "Health Potion",
+          "chance": 0.2
+        }
+      ]
+    },
+    {
+      "name": "Skeleton",
+      "health": 30,
+      "attack": 7,
+      "defense": 2,
+      "speed": 10,
+      "exp_reward": 30,
+      "gold_min": 2,
+      "gold_max": 6,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Iron Sword",
+          "chance": 0.05
+        },
+        {
+          "item_name": "Iron Key",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "name": "Zombie",
+      "health": 25,
+      "attack": 6,
+      "defense": 1,
+      "speed": 6,
+      "exp_reward": 25,
+      "gold_min": 1,
+      "gold_max": 4,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Health Potion",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "name": "Spider",
+      "health": 15,
+      "attack": 6,
+      "defense": 0,
+      "speed": 14,
+      "exp_reward": 15,
+      "gold_min": 1,
+      "gold_max": 3,
+      "status_effects_on_hit": {
+        "poison": 2
+      },
+      "drops": [
+        {
+          "item_name": "Dagger",
+          "chance": 0.08
+        }
+      ]
+    }
+  ],
+  "mid_level_enemies": [
+    {
+      "name": "Orc",
+      "health": 35,
+      "attack": 8,
+      "defense": 3,
+      "speed": 8,
+      "exp_reward": 35,
+      "gold_min": 3,
+      "gold_max": 8,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Iron Sword",
+          "chance": 0.15
+        },
+        {
+          "item_name": "Leather Armor",
+          "chance": 0.1
+        }
+      ]
+    },
+    {
+      "name": "Ogre",
+      "health": 50,
+      "attack": 12,
+      "defense": 5,
+      "speed": 7,
+      "exp_reward": 50,
+      "gold_min": 5,
+      "gold_max": 12,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Chain Mail",
+          "chance": 0.12
+        },
+        {
+          "item_name": "Steel Sword",
+          "chance": 0.1
+        }
+      ]
+    }
+  ],
+  "boss_enemies": [
+    {
+      "name": "Demon",
+      "health": 75,
+      "attack": 15,
+      "defense": 8,
+      "speed": 11,
+      "exp_reward": 75,
+      "gold_min": 8,
+      "gold_max": 18,
+      "status_effects_on_hit": {
+        "burn": 2
+      },
+      "drops": [
+        {
+          "item_name": "Flame Sword",
+          "chance": 0.2
+        },
+        {
+          "item_name": "Greater Health Potion",
+          "chance": 0.3
+        }
+      ]
+    },
+    {
+      "name": "Dragon",
+      "health": 120,
+      "attack": 20,
+      "defense": 12,
+      "speed": 9,
+      "exp_reward": 120,
+      "gold_min": 12,
+      "gold_max": 25,
+      "status_effects_on_hit": {
+        "burn": 3
+      },
+      "drops": [
+        {
+          "item_name": "Lightning Blade",
+          "chance": 0.25
+        },
+        {
+          "item_name": "Plate Armor",
+          "chance": 0.15
+        }
+      ]
+    },
+    {
+      "name": "Ancient Guardian",
+      "health": 150,
+      "attack": 25,
+      "defense": 15,
+      "speed": 5,
+      "exp_reward": 150,
+      "gold_min": 15,
+      "gold_max": 30,
+      "status_effects_on_hit": {
+        "stun": 2
+      },
+      "drops": [
+        {
+          "item_name": "Thunder Hammer",
+          "chance": 0.3
+        },
+        {
+          "item_name": "Golden Key",
+          "chance": 0.2
+        }
+      ]
+    }
+  ],
+  "themed_enemies": [
+    {
+      "name": "Cave Bat",
+      "health": 15,
+      "attack": 6,
+      "defense": 1,
+      "speed": 14,
+      "exp_reward": 15,
+      "gold_min": 1,
+      "gold_max": 3,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Glowing Mushroom",
+          "chance": 0.2
+        }
+      ],
+      "theme": "CAVERN"
+    },
+    {
+      "name": "Rock Golem",
+      "health": 40,
+      "attack": 10,
+      "defense": 8,
+      "speed": 7,
+      "exp_reward": 40,
+      "gold_min": 3,
+      "gold_max": 7,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Cave Pearl",
+          "chance": 0.25
+        }
+      ],
+      "theme": "CAVERN"
+    },
+    {
+      "name": "Cave Troll",
+      "health": 35,
+      "attack": 12,
+      "defense": 5,
+      "speed": 6,
+      "exp_reward": 35,
+      "gold_min": 2,
+      "gold_max": 6,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Stone Club",
+          "chance": 0.15
+        }
+      ],
+      "theme": "CAVERN"
+    },
+    {
+      "name": "Shadow Wraith",
+      "health": 25,
+      "attack": 8,
+      "defense": 2,
+      "speed": 8,
+      "exp_reward": 25,
+      "gold_min": 2,
+      "gold_max": 5,
+      "status_effects_on_hit": {
+        "chill": 2
+      },
+      "drops": [
+        {
+          "item_name": "Enchanted Crystal",
+          "chance": 0.2
+        }
+      ],
+      "theme": "MAGICAL"
+    },
+    {
+      "name": "Magical Construct",
+      "health": 30,
+      "attack": 9,
+      "defense": 6,
+      "speed": 10,
+      "exp_reward": 30,
+      "gold_min": 3,
+      "gold_max": 6,
+      "status_effects_on_hit": {
+        "stun": 1
+      },
+      "drops": [
+        {
+          "item_name": "Wizard's Robe",
+          "chance": 0.15
+        }
+      ],
+      "theme": "MAGICAL"
+    },
+    {
+      "name": "Arcane Elemental",
+      "health": 35,
+      "attack": 11,
+      "defense": 4,
+      "speed": 11,
+      "exp_reward": 35,
+      "gold_min": 4,
+      "gold_max": 8,
+      "status_effects_on_hit": {
+        "burn": 2
+      },
+      "drops": [
+        {
+          "item_name": "Spell Scroll",
+          "chance": 0.25
+        }
+      ],
+      "theme": "MAGICAL"
+    },
+    {
+      "name": "Skeleton Warrior",
+      "health": 20,
+      "attack": 7,
+      "defense": 3,
+      "speed": 10,
+      "exp_reward": 20,
+      "gold_min": 1,
+      "gold_max": 4,
+      "status_effects_on_hit": {},
+      "drops": [
+        {
+          "item_name": "Iron Sword",
+          "chance": 0.1
+        }
+      ],
+      "theme": "CASTLE"
+    },
+    {
+      "name": "Ghost Knight",
+      "health": 30,
+      "attack": 10,
+      "defense": 4,
+      "speed": 8,
+      "exp_reward": 30,
+      "gold_min": 2,
+      "gold_max": 6,
+      "status_effects_on_hit": {
+        "chill": 1
+      },
+      "drops": [
+        {
+          "item_name": "Health Potion",
+          "chance": 0.2
+        }
+      ],
+      "theme": "CASTLE"
+    }
+  ]
+}

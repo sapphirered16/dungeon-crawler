@@ -1,0 +1,262 @@
+{
+  "weapons": [
+    {
+      "name": "Rusty Sword",
+      "type": "WEAPON",
+      "value": 10,
+      "attack_bonus": 5,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Iron Sword",
+      "type": "WEAPON",
+      "value": 25,
+      "attack_bonus": 10,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Steel Sword",
+      "type": "WEAPON",
+      "value": 50,
+      "attack_bonus": 18,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "gruff",
+      "status_effects": {}
+    },
+    {
+      "name": "Magic Staff",
+      "type": "WEAPON",
+      "value": 40,
+      "attack_bonus": 12,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {"burn": 2}
+    },
+    {
+      "name": "Dagger",
+      "type": "WEAPON",
+      "value": 15,
+      "attack_bonus": 7,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "turbo",
+      "status_effects": {}
+    },
+    {
+      "name": "Flame Sword",
+      "type": "WEAPON",
+      "value": 100,
+      "attack_bonus": 15,
+      "defense_bonus": 2,
+      "health_bonus": 0,
+      "special_effect": "gruff",
+      "status_effects": {"burn": 3}
+    },
+    {
+      "name": "Lightning Blade",
+      "type": "WEAPON",
+      "value": 120,
+      "attack_bonus": 20,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "turbo",
+      "status_effects": {"shock": 2}
+    },
+    {
+      "name": "Thunder Hammer",
+      "type": "WEAPON",
+      "value": 150,
+      "attack_bonus": 25,
+      "defense_bonus": 3,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {"stun": 2}
+    }
+  ],
+  "armor": [
+    {
+      "name": "Leather Armor",
+      "type": "ARMOR",
+      "value": 20,
+      "attack_bonus": 0,
+      "defense_bonus": 5,
+      "health_bonus": 10,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Chain Mail",
+      "type": "ARMOR",
+      "value": 40,
+      "attack_bonus": 0,
+      "defense_bonus": 10,
+      "health_bonus": 20,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Plate Armor",
+      "type": "ARMOR",
+      "value": 80,
+      "attack_bonus": 0,
+      "defense_bonus": 18,
+      "health_bonus": 35,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Robe",
+      "type": "ARMOR",
+      "value": 15,
+      "attack_bonus": 0,
+      "defense_bonus": 3,
+      "health_bonus": 25,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Frost Helm",
+      "type": "ARMOR",
+      "value": 80,
+      "attack_bonus": 3,
+      "defense_bonus": 10,
+      "health_bonus": 20,
+      "special_effect": "shielding",
+      "status_effects": {"chill": 2}
+    },
+    {
+      "name": "Healing Amulet",
+      "type": "ARMOR",
+      "value": 60,
+      "attack_bonus": 5,
+      "defense_bonus": 5,
+      "health_bonus": 50,
+      "special_effect": "",
+      "status_effects": {}
+    }
+  ],
+  "consumables": [
+    {
+      "name": "Health Potion",
+      "type": "CONSUMABLE",
+      "value": 10,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 30,
+      "special_effect": "healing",
+      "status_effects": {}
+    },
+    {
+      "name": "Greater Health Potion",
+      "type": "CONSUMABLE",
+      "value": 25,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 60,
+      "special_effect": "greater_healing",
+      "status_effects": {}
+    },
+    {
+      "name": "Mana Potion",
+      "type": "CONSUMABLE",
+      "value": 15,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "mana_restoration",
+      "status_effects": {}
+    },
+    {
+      "name": "Power Elixir",
+      "type": "CONSUMABLE",
+      "value": 30,
+      "attack_bonus": 5,
+      "defense_bonus": 5,
+      "health_bonus": 20,
+      "special_effect": "temporary_boost",
+      "status_effects": {}
+    }
+  ],
+  "keys": [
+    {
+      "name": "Iron Key",
+      "type": "KEY",
+      "value": 10,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Silver Key",
+      "type": "KEY",
+      "value": 15,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Golden Key",
+      "type": "KEY",
+      "value": 25,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Ancient Key",
+      "type": "KEY",
+      "value": 50,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "ancient_power",
+      "status_effects": {}
+    }
+  ],
+  "triggers": [
+    {
+      "name": "Power Rune",
+      "type": "TRIGGER",
+      "value": 5,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Power Crystal",
+      "type": "TRIGGER",
+      "value": 5,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    },
+    {
+      "name": "Power Stone",
+      "type": "TRIGGER",
+      "value": 5,
+      "attack_bonus": 0,
+      "defense_bonus": 0,
+      "health_bonus": 0,
+      "special_effect": "",
+      "status_effects": {}
+    }
+  ]
+}
