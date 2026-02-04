@@ -446,6 +446,447 @@ class SeededDungeon:
 
                             self.room_states[pos] = room_state
 
+            # Connect rooms with hallways and establish directional connections
+            if len(rooms_info) > 1:
+                # Create hallways connecting rooms in sequence to ensure all are connected
+                for i in range(len(rooms_info) - 1):
+                    room1_info, _ = rooms_info[i]
+                    room2_info, _ = rooms_info[i + 1]
+
+                    # Create L-shaped corridor between room centers
+                    self._create_corridor(room1_info.center_x, room1_info.center_y, 
+                                       room2_info.center_x, room2_info.center_y, floor)
+
+                    # Establish directional connections between the rooms
+                    # Find a hallway cell that connects these two rooms
+                    # First, find all hallway cells between these rooms
+                    hallway_points = self._find_hallway_between_rooms(room1_info, room2_info, floor)
+                    
+                    # Connect the rooms via hallway points
+                    for rx in range(room1_info.x, room1_info.x + room1_info.width):
+                        for ry in range(room1_info.y, room1_info.y + room1_info.height):
+                            pos1 = (rx, ry, floor)
+                            if pos1 in self.room_states:
+                                # Connect to hallway points near room2
+                                for h_x, h_y in hallway_points:
+                                    # If hallway point is adjacent to room1 area
+                                    if abs(h_x - rx) <= 1 and abs(h_y - ry) <= 1 and (h_x != rx or h_y != ry):
+                                        # Determine direction from room1 point to hallway
+                                        dx, dy = h_x - rx, h_y - ry
+                                        direction = None
+                                        if dx == 1: direction = Direction.EAST
+                                        elif dx == -1: direction = Direction.WEST
+                                        elif dy == 1: direction = Direction.SOUTH
+                                        elif dy == -1: direction = Direction.NORTH
+                                        
+                                        if direction:
+                                            hallway_pos = (h_x, h_y, floor)
+                                            self.room_states[pos1].connections[direction] = hallway_pos
+                                            
+                    for rx in range(room2_info.x, room2_info.x + room2_info.width):
+                        for ry in range(room2_info.y, room2_info.y + room2_info.height):
+                            pos2 = (rx, ry, floor)
+                            if pos2 in self.room_states:
+                                # Connect to hallway points near room1
+                                for h_x, h_y in hallway_points:
+                                    # If hallway point is adjacent to room2 area
+                                    if abs(h_x - rx) <= 1 and abs(h_y - ry) <= 1 and (h_x != rx or h_y != ry):
+                                        # Determine direction from hallway to room2 point
+                                        dx, dy = rx - h_x, ry - h_y
+                                        direction = None
+                                        if dx == 1: direction = Direction.EAST
+                                        elif dx == -1: direction = Direction.WEST
+                                        elif dy == 1: direction = Direction.SOUTH
+                                        elif dy == -1: direction = Direction.NORTH
+                                        
+                                        if direction:
+                                            hallway_pos = (h_x, h_y, floor)
+                                            self.room_states[pos2].connections[direction] = hallway_pos
+
+                # Ensure good connectivity by adding extra connections
+                for i in range(len(rooms_info)):
+                    # Connect to a random other room to ensure all rooms are reachable
+                    j = random.randint(0, len(rooms_info) - 1)
+                    if i != j and random.random() < 0.3:  # 30% chance of extra connection
+                        room_i_info, _ = rooms_info[i]
+                        room_j_info, _ = rooms_info[j]
+                        
+                        # Create corridor between rooms
+                        self._create_corridor(room_i_info.center_x, room_i_info.center_y,
+                                           room_j_info.center_x, room_j_info.center_y, floor)
+                        
+                        # Establish connections between these rooms too
+                        hallway_points = self._find_hallway_between_rooms(room_i_info, room_j_info, floor)
+                        
+                        for rx in range(room_i_info.x, room_i_info.x + room_i_info.width):
+                            for ry in range(room_i_info.y, room_i_info.y + room_i_info.height):
+                                pos_i = (rx, ry, floor)
+                                if pos_i in self.room_states:
+                                    for h_x, h_y in hallway_points:
+                                        if abs(h_x - rx) <= 1 and abs(h_y - ry) <= 1 and (h_x != rx or h_y != ry):
+                                            dx, dy = h_x - rx, h_y - ry
+                                            direction = None
+                                            if dx == 1: direction = Direction.EAST
+                                            elif dx == -1: direction = Direction.WEST
+                                            elif dy == 1: direction = Direction.SOUTH
+                                            elif dy == -1: direction = Direction.NORTH
+                                            
+                                            if direction:
+                                                hallway_pos = (h_x, h_y, floor)
+                                                self.room_states[pos_i].connections[direction] = hallway_pos
+                                                
+                        for rx in range(room_j_info.x, room_j_info.x + room_j_info.width):
+                            for ry in range(room_j_info.y, room_j_info.y + room_j_info.height):
+                                pos_j = (rx, ry, floor)
+                                if pos_j in self.room_states:
+                                    for h_x, h_y in hallway_points:
+                                        if abs(h_x - rx) <= 1 and abs(h_y - ry) <= 1 and (h_x != rx or h_y != ry):
+                                            dx, dy = rx - h_x, ry - h_y
+                                            direction = None
+                                            if dx == 1: direction = Direction.EAST
+                                            elif dx == -1: direction = Direction.WEST
+                                            elif dy == 1: direction = Direction.SOUTH
+                                            elif dy == -1: direction = Direction.NORTH
+                                            
+                                            if direction:
+                                                hallway_pos = (h_x, h_y, floor)
+                                                self.room_states[pos_j].connections[direction] = hallway_pos
+
+    def _find_hallway_between_rooms(self, room1_info, room2_info, floor):
+        """Helper method to find hallway points between two rooms"""
+        # For now, just return the center points as a simplified approach
+        # In a more sophisticated implementation, we'd trace the actual corridor
+        points = []
+        
+        # Add center points and adjacent points as potential hallway connections
+        center1 = (room1_info.center_x, room1_info.center_y)
+        center2 = (room2_info.center_x, room2_info.center_y)
+        
+        # Add center of room 1
+        points.append(center1)
+        # Add center of room 2  
+        points.append(center2)
+        
+        # Add a few points along the path for L-shaped corridors
+        # Horizontal segment
+        for x in range(min(center1[0], center2[0]), max(center1[0], center2[0]) + 1):
+            points.append((x, center1[1]))
+        # Vertical segment
+        for y in range(min(center1[1], center2[1]), max(center1[1], center2[1]) + 1):
+            points.append((center2[0], y))
+            
+        return list(set(points))  # Remove duplicates
+
+    def _generate_base_structure(self):
+        """Generate the base dungeon structure based on the seed"""
+        # Set the random seed to ensure reproducible generation
+        random.seed(self.seed)
+
+        # Define room templates with specific types and characteristics
+        room_templates = {
+            "starting": {"width_range": (4, 6), "height_range": (4, 6), "min_count": 1, "max_count": 1, "allowed_floors": [0]},
+            "treasure": {"width_range": (4, 7), "height_range": (4, 7), "min_count": 1, "max_count": 3, "allowed_floors": "all"},
+            "monster": {"width_range": (5, 8), "height_range": (4, 6), "min_count": 2, "max_count": 4, "allowed_floors": "all"},
+            "trap": {"width_range": (3, 5), "height_range": (3, 5), "min_count": 1, "max_count": 3, "allowed_floors": "all"},
+            "npc": {"width_range": (4, 6), "height_range": (4, 6), "min_count": 0, "max_count": 2, "allowed_floors": "all"},
+            "empty": {"width_range": (4, 8), "height_range": (4, 8), "min_count": 2, "max_count": 5, "allowed_floors": "all"},
+            "staircase_up": {"width_range": (3, 4), "height_range": (3, 4), "min_count": 1, "max_count": 1, "allowed_floors": "upper"},  # Floors > 0
+            "staircase_down": {"width_range": (3, 4), "height_range": (3, 4), "min_count": 1, "max_count": 1, "allowed_floors": "non_last"}  # Not last floor
+        }
+
+        for floor in range(self.floors):
+            # Create rooms with spacing
+            rooms_info = []
+
+            # First, place required room types for this specific floor
+            required_rooms = []
+
+            # Place starting room only on floor 0
+            if floor == 0:
+                start_width = random.randint(*room_templates["starting"]["width_range"])
+                start_height = random.randint(*room_templates["starting"]["height_range"])
+                start_x = self.width // 2 - start_width // 2
+                start_y = self.height // 2 - start_height // 2
+                required_rooms.append(("starting", start_x, start_y, start_width, start_height))
+
+            # Place staircase down room on all floors except the last floor
+            if floor < self.floors - 1:
+                stair_width = random.randint(*room_templates["staircase_down"]["width_range"])
+                stair_height = random.randint(*room_templates["staircase_down"]["height_range"])
+                stair_x = random.randint(2, self.width - stair_width - 2)
+                stair_y = random.randint(2, self.height - stair_height - 2)
+                required_rooms.append(("staircase_down", stair_x, stair_y, stair_width, stair_height))
+
+            # Place staircase up room on all floors except the first floor
+            if floor > 0:
+                stair_width = random.randint(*room_templates["staircase_up"]["width_range"])
+                stair_height = random.randint(*room_templates["staircase_up"]["height_range"])
+                # Place it away from the center to distinguish from other stairs
+                stair_x = random.randint(2, self.width - stair_width - 2)
+                stair_y = random.randint(2, self.height - stair_height - 2)
+                # Make sure it's not overlapping with the down stairs if they exist on this floor
+                required_rooms.append(("staircase_up", stair_x, stair_y, stair_width, stair_height))
+
+            # Add required rooms to the list
+            for room_type, x, y, width, height in required_rooms:
+                room_info = self.RoomInfo(x, y, width, height, floor)
+                rooms_info.append((room_info, room_type))
+
+                # Create the room area with specific type
+                for rx in range(x, x + width):
+                    for ry in range(y, y + height):
+                        pos = (rx, ry, floor)
+                        room_state = RoomState(pos)
+
+                        # Set room type based on template
+                        if room_type == "starting":
+                            room_state.room_type = "empty"  # Starting area is safe
+                            room_state.description = "The entrance to the dungeon. A safe starting area."
+                            # Add a starter item
+                            room_state.items.append(self._generate_random_item())
+                        elif room_type == "staircase_up":
+                            room_state.room_type = "staircase_up"
+                            room_state.description = "A room with stairs leading up from the level below."
+                        elif room_type == "staircase_down":
+                            room_state.room_type = "staircase_down"
+                            room_state.description = "A room with stairs leading down to the next level."
+                        elif room_type == "treasure":
+                            room_state.room_type = "treasure"
+                            room_state.description = "A treasure room filled with gleaming objects."
+                            # Add multiple treasures
+                            num_treasures = random.randint(1, 3)
+                            for _ in range(num_treasures):
+                                room_state.items.append(self._generate_random_item())
+                        elif room_type == "monster":
+                            room_state.room_type = "monster"
+                            room_state.description = "A room with hostile creatures lurks ahead."
+                            # Add multiple enemies
+                            num_enemies = random.randint(1, 2)
+                            for _ in range(num_enemies):
+                                room_state.entities.append(self._generate_random_enemy(floor))
+                        elif room_type == "trap":
+                            room_state.room_type = "trap"
+                            room_state.description = "A dangerous-looking room with potential hazards."
+                        elif room_type == "npc":
+                            room_state.room_type = "npc"
+                            room_state.description = "A room with a mysterious stranger."
+
+                            # Create an NPC with a quest
+                            if (rx, ry) == (x, y):  # Only add NPC to one tile in the room to avoid duplicates
+                                npc_dialogues = [
+                                    "Greetings, traveler. I seek a powerful item that was lost in these depths.",
+                                    "Hello adventurer, I have a task for you if you're brave enough.",
+                                    "Welcome, hero. I need someone to retrieve something precious to me.",
+                                    "Oh, a visitor! Perhaps you can assist me with a small matter."
+                                ]
+
+                                # Choose a boss monster whose drop is the quest target
+                                boss_monsters = ["Orc", "Ogre", "Demon", "Dragon", "Ancient Guardian"]
+                                target_monster = random.choice(boss_monsters)
+                                target_item = f"{target_monster} Trophy"
+
+                                # Create a reward
+                                reward_types = [
+                                    Item("Flame Sword", ItemType.WEAPON, value=100, attack_bonus=15, defense_bonus=2, status_effects={"burn": 3}),
+                                    Item("Frost Helm", ItemType.ARMOR, value=80, attack_bonus=3, defense_bonus=10, health_bonus=20, status_effects={"chill": 2}),
+                                    Item("Lightning Blade", ItemType.WEAPON, value=120, attack_bonus=20, defense_bonus=0, status_effects={"shock": 2}),
+                                    Item("Healing Amulet", ItemType.ARMOR, value=60, attack_bonus=5, defense_bonus=5, health_bonus=50),
+                                    Item("Thunder Hammer", ItemType.WEAPON, value=150, attack_bonus=25, defense_bonus=3, status_effects={"stun": 2})
+                                ]
+                                reward = random.choice(reward_types)
+
+                                quest_description = f"I need you to defeat a {target_monster} on floor {floor + 1} and bring me its trophy. In return, I'll give you this {reward.name}."
+
+                                npc = NonPlayerCharacter(
+                                    name="Wandering Sage" if floor < 2 else "Ancient Keeper",
+                                    health=1,
+                                    dialogue=random.choice(npc_dialogues),
+                                    quest={
+                                        "target_item": target_item,
+                                        "reward": reward,
+                                        "description": quest_description
+                                    }
+                                )
+                                room_state.npcs.append(npc)
+                        else:  # empty
+                            room_state.room_type = "empty"
+                            room_state.description = "An empty, quiet room."
+
+                        # Add some extra items to treasure and empty rooms
+                        if room_state.room_type in ["treasure", "empty"] and room_type != "starting":
+                            if random.random() < 0.3:  # 30% chance to add extra item
+                                room_state.items.append(self._generate_random_item())
+
+                        self.room_states[pos] = room_state
+
+            # Now place additional rooms based on templates, respecting floor constraints
+            room_counts = {rtype: 0 for rtype in room_templates.keys()}
+
+            # Count already placed required rooms
+            for _, rtype in rooms_info:
+                if rtype in room_counts:
+                    room_counts[rtype] += 1
+
+            # Place additional rooms up to the maximum count for each type, respecting floor constraints
+            total_attempts = 0
+            max_total_rooms = random.randint(8, 15)
+
+            while len(rooms_info) < max_total_rooms and total_attempts < 100:
+                total_attempts += 1
+
+                # Select a room type to place based on remaining quota and floor constraints
+                available_types = []
+                for rtype, limits in room_templates.items():
+                    # Check if this room type is allowed on this floor
+                    allowed_on_floor = False
+                    if limits["allowed_floors"] == "all":
+                        allowed_on_floor = True
+                    elif limits["allowed_floors"] == "upper" and floor > 0:
+                        allowed_on_floor = True
+                    elif limits["allowed_floors"] == "non_last" and floor < self.floors - 1:
+                        allowed_on_floor = True
+                    elif isinstance(limits["allowed_floors"], list) and floor in limits["allowed_floors"]:
+                        allowed_on_floor = True
+                    
+                    # Check if we haven't reached the max count for this type
+                    if room_counts.get(rtype, 0) < limits["max_count"] and allowed_on_floor:
+                        # Add the type multiple times to weight the probability
+                        for _ in range(max(1, limits["max_count"] - room_counts.get(rtype, 0))):
+                            available_types.append(rtype)
+
+                if not available_types:
+                    break  # No more room types to place
+
+                room_type = random.choice(available_types)
+
+                # Skip already-handled special rooms (starting, stairs) as they're already placed
+                if room_type in ["starting", "staircase_up", "staircase_down"]:
+                    continue
+
+                # Get dimensions for this room type
+                room_width = random.randint(*room_templates[room_type]["width_range"])
+                room_height = random.randint(*room_templates[room_type]["height_range"])
+
+                # Random position (ensuring it fits in the grid with spacing)
+                # Add spacing buffer to prevent rooms from being too close
+                spacing_buffer = 3  # Minimum space between rooms
+                x = random.randint(spacing_buffer, self.width - room_width - spacing_buffer)
+                y = random.randint(spacing_buffer, self.height - room_height - spacing_buffer)
+
+                # Check for overlap with existing rooms (with spacing)
+                overlaps = False
+                for existing_room_info, _ in rooms_info:
+                    existing_room = existing_room_info
+                    # Check for overlap with spacing buffer
+                    min_dist_x = existing_room.x - room_width - spacing_buffer
+                    max_dist_x = existing_room.x + existing_room.width + spacing_buffer
+                    min_dist_y = existing_room.y - room_height - spacing_buffer
+                    max_dist_y = existing_room.y + existing_room.height + spacing_buffer
+
+                    if not (x > max_dist_x or x + room_width < min_dist_x or 
+                           y > max_dist_y or y + room_height < min_dist_y):
+                        overlaps = True
+                        break
+
+                if not overlaps:
+                    room_info = self.RoomInfo(x, y, room_width, room_height, floor)
+                    rooms_info.append((room_info, room_type))
+                    room_counts[room_type] += 1
+
+                    # Create the room area with specific type
+                    for rx in range(x, x + room_width):
+                        for ry in range(y, y + room_height):
+                            pos = (rx, ry, floor)
+                            room_state = RoomState(pos)
+
+                            # Set room type based on template
+                            if room_type == "treasure":
+                                room_state.room_type = "treasure"
+                                room_state.description = "A treasure room filled with gleaming objects."
+                                # Add multiple treasures
+                                num_treasures = random.randint(1, 3)
+                                for _ in range(num_treasures):
+                                    room_state.items.append(self._generate_random_item())
+                            elif room_type == "monster":
+                                room_state.room_type = "monster"
+                                room_state.description = "A room with hostile creatures lurks ahead."
+                                # Add multiple enemies
+                                num_enemies = random.randint(1, 2)
+                                for _ in range(num_enemies):
+                                    room_state.entities.append(self._generate_random_enemy(floor))
+                            elif room_type == "trap":
+                                room_state.room_type = "trap"
+                                room_state.description = "A dangerous-looking room with potential hazards."
+                            elif room_type == "npc":
+                                room_state.room_type = "npc"
+                                room_state.description = "A room with a mysterious stranger."
+
+                                # Create an NPC with a quest
+                                if (rx, ry) == (x, y):  # Only add NPC to one tile in the room to avoid duplicates
+                                    # Customize NPC dialog based on floor depth for more immersive experience
+                                    floor_specific_dialogs = {
+                                        0: [
+                                            "Greetings, traveler. The surface world feels distant already.",
+                                            "Hello adventurer, I seek a powerful item that was lost in these depths.",
+                                            "Welcome, hero. I need someone to retrieve something precious to me."
+                                        ],
+                                        1: [
+                                            "You're descending deeper. Be wary of what lies ahead.",
+                                            "Another soul dares to venture where few return.",
+                                            "The deeper you go, the more dangerous it becomes."
+                                        ],
+                                        2: [
+                                            "So deep already? You must be truly brave.",
+                                            "Few make it this far. What brings you to these depths?",
+                                            "The ancient guardian of this level won't let you pass easily."
+                                        ]
+                                    }
+                                    
+                                    dialogs = floor_specific_dialogs.get(floor, [
+                                        "Oh, a visitor! Perhaps you can assist me with a small matter.",
+                                        "Adventurer, I have a task for you if you're brave enough.",
+                                        "Welcome, hero. I need someone to retrieve something precious to me."
+                                    ])
+
+                                    # Choose a boss monster whose drop is the quest target
+                                    boss_monsters = ["Orc", "Ogre", "Demon", "Dragon", "Ancient Guardian"]
+                                    target_monster = random.choice(boss_monsters)
+                                    target_item = f"{target_monster} Trophy"
+
+                                    # Create a reward
+                                    reward_types = [
+                                        Item("Flame Sword", ItemType.WEAPON, value=100, attack_bonus=15, defense_bonus=2, status_effects={"burn": 3}),
+                                        Item("Frost Helm", ItemType.ARMOR, value=80, attack_bonus=3, defense_bonus=10, health_bonus=20, status_effects={"chill": 2}),
+                                        Item("Lightning Blade", ItemType.WEAPON, value=120, attack_bonus=20, defense_bonus=0, status_effects={"shock": 2}),
+                                        Item("Healing Amulet", ItemType.ARMOR, value=60, attack_bonus=5, defense_bonus=5, health_bonus=50),
+                                        Item("Thunder Hammer", ItemType.WEAPON, value=150, attack_bonus=25, defense_bonus=3, status_effects={"stun": 2})
+                                    ]
+                                    reward = random.choice(reward_types)
+
+                                    quest_description = f"I need you to defeat a {target_monster} on floor {floor + 1} and bring me its trophy. In return, I'll give you this {reward.name}."
+
+                                    npc = NonPlayerCharacter(
+                                        name="Wandering Sage" if floor < 2 else "Ancient Keeper",
+                                        health=1,
+                                        dialogue=random.choice(dialogs),
+                                        quest={
+                                            "target_item": target_item,
+                                            "reward": reward,
+                                            "description": quest_description
+                                        }
+                                    )
+                                    room_state.npcs.append(npc)
+                            else:  # empty
+                                room_state.room_type = "empty"
+                                room_state.description = "An empty, quiet room."
+
+                            # Add some extra items to treasure and empty rooms
+                            if room_state.room_type in ["treasure", "empty"]:
+                                if random.random() < 0.3:  # 30% chance to add extra item
+                                    room_state.items.append(self._generate_random_item())
+
+                            self.room_states[pos] = room_state
+
             # Connect rooms with hallways (this creates the narrow connections between rooms)
             if len(rooms_info) > 1:
                 # Create hallways connecting rooms in sequence to ensure all are connected
@@ -490,6 +931,184 @@ class SeededDungeon:
                         artifact_room.items.append(Item("Artifact of Power", ItemType.CONSUMABLE, value=1000, 
                                                       attack_bonus=50, defense_bonus=50, health_bonus=100))
 
+        # After creating all rooms and hallways, establish connections between adjacent cells
+        # This is a simplified approach: connect adjacent cells that are both in the dungeon
+        for x in range(self.width):
+            for y in range(self.height):
+                for floor in range(self.floors):
+                    pos = (x, y, floor)
+                    if pos in self.room_states:
+                        current_room = self.room_states[pos]
+                        
+                        # Check adjacent positions
+                        adjacent_offsets = [
+                            (Direction.NORTH, 0, -1),
+                            (Direction.SOUTH, 0, 1),
+                            (Direction.EAST, 1, 0),
+                            (Direction.WEST, -1, 0)
+                        ]
+                        
+                        for direction, dx, dy in adjacent_offsets:
+                            adj_pos = (x + dx, y + dy, floor)
+                            if adj_pos in self.room_states:
+                                current_room.connections[direction] = adj_pos
+
+        # Add stairs between floors (using special room flags)
+        # Ensure at least one staircase exists between each pair of floors
+        # But make sure stairs are not in the starting room area
+        for floor in range(self.floors - 1):  # Connect each floor to the one below it
+            # Find rooms on the current floor that are not the starting room area
+            # We'll avoid placing stairs near the starting area
+            start_area_positions = set()
+            # Define start area as rooms on floor 0 that are not staircase rooms
+            for pos, room_state in self.room_states.items():
+                if pos[2] == 0 and room_state.room_type == "empty":  # Likely the starting room area
+                    start_area_positions.add(pos)
+
+            current_floor_rooms = [(x, y, z) for (x, y, z), room_state in self.room_states.items() 
+                                 if z == floor and (x, y, z) not in start_area_positions and room_state.room_type not in ["staircase_up", "staircase_down"]]
+            next_floor_rooms = [(x, y, z) for (x, y, z), room_state in self.room_states.items() 
+                              if z == floor + 1 and room_state.room_type not in ["staircase_up", "staircase_down"]]
+
+            if current_floor_rooms and next_floor_rooms:
+                # Pick a random room from each floor to place stairs (avoiding start area)
+                current_room_pos = random.choice(current_floor_rooms)
+                next_room_pos = random.choice(next_floor_rooms)
+
+                current_room_state = self.room_states[current_room_pos]
+                next_room_state = self.room_states[next_room_pos]
+
+                # Mark rooms as having stairs and set targets
+                current_room_state.has_stairs_down = True
+                current_room_state.stairs_down_target = next_room_pos  # Going down leads to next floor room
+                next_room_state.has_stairs_up = True
+                next_room_state.stairs_up_target = current_room_pos   # Going up leads back to current floor room
+
+                # Update descriptions to reflect the connection
+                if current_room_state.room_type != "staircase_down":
+                    current_room_state.description = "A room with stairs leading down to the next level."
+                if next_room_state.room_type != "staircase_up":
+                    next_room_state.description = "A room with stairs leading up from the level below."
+
+        # Add locked doors and blocked passages for puzzle elements
+        # These should be placed in hallways to create meaningful barriers between areas
+        hallway_rooms = [room_state for room_state in self.room_states.values() 
+                        if getattr(room_state, 'room_type', '') == 'hallway' and len(room_state.connections) > 0]
+
+        # If we don't have enough hallway rooms, include some other connection points
+        if len(hallway_rooms) < 3:  # Need at least a few hallways for this to make sense
+            all_accessible_rooms = [room_state for room_state in self.room_states.values() if len(room_state.connections) > 0]
+        else:
+            all_accessible_rooms = hallway_rooms
+
+        # Add some locked doors (about 10% of accessible rooms, but prefer hallways)
+        num_locked_doors = max(1, len(all_accessible_rooms) // 10)
+        selected_rooms_for_doors = random.sample(all_accessible_rooms, min(num_locked_doors, len(all_accessible_rooms)))
+
+        # Keep track of placed keys to ensure accessibility
+        placed_keys = set()
+
+        for room_state in selected_rooms_for_doors:
+            # Find a direction that has a connection but isn't stairs
+            available_directions = []
+            for direction, connected_pos in room_state.connections.items():
+                # Don't lock stair directions
+                if not ((direction == Direction.UP and room_state.has_stairs_up) or 
+                       (direction == Direction.DOWN and room_state.has_stairs_down)):
+                    available_directions.append(direction)
+
+            if available_directions:
+                direction_to_lock = random.choice(available_directions)
+                # Add locked door - require a specific key type
+                key_types = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key", "Crystal Key"]
+                key_required = random.choice(key_types)
+                room_state.locked_doors[direction_to_lock] = key_required
+
+                # Add the corresponding key to a room that comes before this one in dungeon progression
+                # We'll place keys on earlier floors or in earlier areas of the same floor
+                key_rooms = []
+                
+                # Look for rooms on the same floor with lower coordinates (more central/earlier areas)
+                current_pos = list(room_state.position) if hasattr(room_state, 'position') else list(next(k for k,v in self.room_states.items() if v == room_state))
+                current_floor = current_pos[2]
+                
+                # Find rooms on the same floor that are "earlier" (closer to starting area)
+                for other_room in self.room_states.values():
+                    if (other_room != room_state and 
+                        other_room.room_type not in ["staircase_up", "staircase_down"] and  # Don't put keys in stair rooms
+                        other_room.room_type != "hallway"):  # Don't put keys in hallways
+                        # Check if this room is on the same or earlier floor
+                        other_pos = list(other_room.position) if hasattr(other_room, 'position') else list(next(k for k,v in self.room_states.items() if v == other_room))
+                        if other_pos[2] <= current_floor:
+                            key_rooms.append(other_room)
+                
+                # If no suitable rooms found, fall back to any non-staircase rooms
+                if not key_rooms:
+                    for other_room in self.room_states.values():
+                        if (other_room != room_state and 
+                            other_room.room_type not in ["staircase_up", "staircase_down"] and
+                            other_room.room_type != "hallway"):  # Still avoid hallways for keys
+                            key_rooms.append(other_room)
+                
+                if key_rooms:
+                    key_room = random.choice(key_rooms)
+                    key_item = Item(name=key_required, item_type=ItemType.KEY, value=10)
+                    key_room.items.append(key_item)
+                    placed_keys.add(key_required)
+
+        # Add some blocked passages (about 5% of accessible rooms, but prefer hallways)
+        num_blocked_passages = max(1, len(all_accessible_rooms) // 20)
+        # Select from remaining rooms that don't already have locked doors
+        remaining_rooms = [room_state for room_state in selected_rooms_for_doors if len(room_state.locked_doors) == 0]
+        if len(remaining_rooms) < num_blocked_passages:
+            # Add more rooms if needed
+            additional_rooms = [room_state for room_state in all_accessible_rooms if room_state not in selected_rooms_for_doors]
+            num_additional_needed = num_blocked_passages - len(remaining_rooms)
+            if num_additional_needed > 0 and len(additional_rooms) > 0:
+                num_to_select = min(num_additional_needed, len(additional_rooms))
+                additional_selected = random.sample(additional_rooms, num_to_select)
+                remaining_rooms.extend(additional_selected)
+        # Handle case where there aren't enough rooms
+        elif len(remaining_rooms) == 0:
+            remaining_rooms = all_accessible_rooms
+
+        selected_rooms_for_passages = random.sample(remaining_rooms, min(num_blocked_passages, len(remaining_rooms)))
+
+        for room_state in selected_rooms_for_passages:
+            room_state.blocked_passages[Direction(random.choice(["north", "south", "east", "west"]))] = random.choice(["Rune", "Powder", "Crystal", "Stone", "Charm", "Sundial", "Sunday"])
+            
+            # Add the item needed to clear the blocked passage to an earlier area
+            # Similar logic to keys above
+            trigger_items = {
+                "Rune": "Power Rune",
+                "Powder": "Magic Powder", 
+                "Crystal": "Power Crystal",
+                "Stone": "Power Stone",
+                "Charm": "Power Charm",
+                "Sundial": "Power Sundial",
+                "Sunday": "Sunday"
+            }
+            trigger_needed = random.choice(["Rune", "Powder", "Crystal", "Stone", "Charm", "Sundial", "Sunday"])
+            item_needed = trigger_items[trigger_needed]
+            
+            # Find a suitable room for the trigger item (similar to key placement)
+            trigger_rooms = []
+            current_pos = list(room_state.position) if hasattr(room_state, 'position') else list(next(k for k,v in self.room_states.items() if v == room_state))
+            current_floor = current_pos[2]
+            
+            for other_room in self.room_states.values():
+                if (other_room != room_state and 
+                    other_room.room_type not in ["staircase_up", "staircase_down"] and
+                    other_room.room_type != "hallway"):  # Don't put trigger items in hallways
+                    other_pos = list(other_room.position) if hasattr(other_room, 'position') else list(next(k for k,v in self.room_states.items() if v == other_room))
+                    if other_pos[2] <= current_floor:
+                        trigger_rooms.append(other_room)
+            
+            if trigger_rooms:
+                trigger_room = random.choice(trigger_rooms)
+                trigger_item = Item(name=item_needed, item_type=ItemType.TRIGGER, value=5)
+                trigger_room.items.append(trigger_item)
+
         # With the new room structure, rooms are connected via hallways created earlier,
         # not through adjacent grid positions. The hallway creation already established
         # connections between rooms, so we don't need this automatic grid-based connection.
@@ -532,10 +1151,40 @@ class SeededDungeon:
                 if next_room_state.room_type != "staircase_up":
                     next_room_state.description = "A room with stairs leading up from the level below."
 
-        # Add locked doors and blocked passages for puzzle elements
-        all_accessible_rooms = [room_state for room_state in self.room_states.values() if len(room_state.connections) > 0]
+        # After creating all rooms and hallways, establish connections between adjacent cells
+        # This is a simplified approach: connect adjacent cells that are both in the dungeon
+        for x in range(self.width):
+            for y in range(self.height):
+                for floor in range(self.floors):
+                    pos = (x, y, floor)
+                    if pos in self.room_states:
+                        current_room = self.room_states[pos]
+                        
+                        # Check adjacent positions
+                        adjacent_offsets = [
+                            (Direction.NORTH, 0, -1),
+                            (Direction.SOUTH, 0, 1),
+                            (Direction.EAST, 1, 0),
+                            (Direction.WEST, -1, 0)
+                        ]
+                        
+                        for direction, dx, dy in adjacent_offsets:
+                            adj_pos = (x + dx, y + dy, floor)
+                            if adj_pos in self.room_states:
+                                current_room.connections[direction] = adj_pos
 
-        # Add some locked doors (about 10% of accessible rooms)
+        # Add locked doors and blocked passages for puzzle elements
+        # These should be placed in hallways to create meaningful barriers between areas
+        hallway_rooms = [room_state for room_state in self.room_states.values() 
+                        if getattr(room_state, 'room_type', '') == 'hallway' and len(room_state.connections) > 0]
+
+        # If we don't have enough hallway rooms, include some other connection points
+        if len(hallway_rooms) < 3:  # Need at least a few hallways for this to make sense
+            all_accessible_rooms = [room_state for room_state in self.room_states.values() if len(room_state.connections) > 0]
+        else:
+            all_accessible_rooms = hallway_rooms
+
+        # Add some locked doors (about 10% of accessible rooms, but prefer hallways)
         num_locked_doors = max(1, len(all_accessible_rooms) // 10)
         selected_rooms_for_doors = random.sample(all_accessible_rooms, min(num_locked_doors, len(all_accessible_rooms)))
 
@@ -558,16 +1207,39 @@ class SeededDungeon:
                 key_required = random.choice(key_types)
                 room_state.locked_doors[direction_to_lock] = key_required
 
-                # Add the corresponding key to some other room in the dungeon
-                # Find a random room that's not the same room
-                other_rooms = [r for r in all_accessible_rooms if r != room_state]
-                if other_rooms:
-                    key_room = random.choice(other_rooms)
+                # Add the corresponding key to a room that comes before this one in dungeon progression
+                # We'll place keys on earlier floors or in earlier areas of the same floor
+                key_rooms = []
+                
+                # Look for rooms on the same floor with lower coordinates (more central/earlier areas)
+                current_pos = list(room_state.position) if hasattr(room_state, 'position') else list(next(k for k,v in self.room_states.items() if v == room_state))
+                current_floor = current_pos[2]
+                
+                # Find rooms on the same floor that are "earlier" (closer to starting area)
+                for other_room in self.room_states.values():
+                    if (other_room != room_state and 
+                        other_room.room_type not in ["staircase_up", "staircase_down"] and  # Don't put keys in stair rooms
+                        other_room.room_type != "hallway"):  # Don't put keys in hallways
+                        # Check if this room is on the same or earlier floor
+                        other_pos = list(other_room.position) if hasattr(other_room, 'position') else list(next(k for k,v in self.room_states.items() if v == other_room))
+                        if other_pos[2] <= current_floor:
+                            key_rooms.append(other_room)
+                
+                # If no suitable rooms found, fall back to any non-staircase rooms
+                if not key_rooms:
+                    for other_room in self.room_states.values():
+                        if (other_room != room_state and 
+                            other_room.room_type not in ["staircase_up", "staircase_down"] and
+                            other_room.room_type != "hallway"):  # Still avoid hallways for keys
+                            key_rooms.append(other_room)
+                
+                if key_rooms:
+                    key_room = random.choice(key_rooms)
                     key_item = Item(name=key_required, item_type=ItemType.KEY, value=10)
                     key_room.items.append(key_item)
                     placed_keys.add(key_required)
 
-        # Add some blocked passages (about 5% of accessible rooms)
+        # Add some blocked passages (about 5% of accessible rooms, but prefer hallways)
         num_blocked_passages = max(1, len(all_accessible_rooms) // 20)
         # Select from remaining rooms that don't already have locked doors
         remaining_rooms = [room_state for room_state in selected_rooms_for_doors if len(room_state.locked_doors) == 0]
@@ -587,6 +1259,38 @@ class SeededDungeon:
 
         for room_state in selected_rooms_for_passages:
             room_state.blocked_passages[Direction(random.choice(["north", "south", "east", "west"]))] = random.choice(["Rune", "Powder", "Crystal", "Stone", "Charm", "Sundial", "Sunday"])
+            
+            # Add the item needed to clear the blocked passage to an earlier area
+            # Similar logic to keys above
+            trigger_items = {
+                "Rune": "Power Rune",
+                "Powder": "Magic Powder", 
+                "Crystal": "Power Crystal",
+                "Stone": "Power Stone",
+                "Charm": "Power Charm",
+                "Sundial": "Power Sundial",
+                "Sunday": "Sunday"
+            }
+            trigger_needed = random.choice(["Rune", "Powder", "Crystal", "Stone", "Charm", "Sundial", "Sunday"])
+            item_needed = trigger_items[trigger_needed]
+            
+            # Find a suitable room for the trigger item (similar to key placement)
+            trigger_rooms = []
+            current_pos = list(room_state.position) if hasattr(room_state, 'position') else list(next(k for k,v in self.room_states.items() if v == room_state))
+            current_floor = current_pos[2]
+            
+            for other_room in self.room_states.values():
+                if (other_room != room_state and 
+                    other_room.room_type not in ["staircase_up", "staircase_down"] and
+                    other_room.room_type != "hallway"):  # Don't put trigger items in hallways
+                    other_pos = list(other_room.position) if hasattr(other_room, 'position') else list(next(k for k,v in self.room_states.items() if v == other_room))
+                    if other_pos[2] <= current_floor:
+                        trigger_rooms.append(other_room)
+            
+            if trigger_rooms:
+                trigger_room = random.choice(trigger_rooms)
+                trigger_item = Item(name=item_needed, item_type=ItemType.TRIGGER, value=5)
+                trigger_room.items.append(trigger_item)
 
     def _create_corridor(self, x1, y1, x2, y2, floor):
         """Create an L-shaped corridor between two points"""
@@ -839,28 +1543,30 @@ class SeededGameEngine:
         """Move the player in a direction if possible."""
         if direction in self.current_room_state.locked_doors:
             key_name = self.current_room_state.locked_doors[direction]
-            print(f"This way is locked. You need a {key_name} to proceed.")
+            print(f"🔒 This way is locked by a magical barrier. You need a {key_name} to proceed.")
             # Check if player has the key
             for item in self.player.inventory:
                 if item.name == key_name and item.item_type == ItemType.KEY:
-                    print(f"You use the {key_name} to unlock the door!")
+                    print(f"✨ You use the {key_name} to unlock the magical barrier!")
                     del self.current_room_state.locked_doors[direction]
                     break
             else:
-                print(f"You don't have the required key: {key_name}")
+                print(f"🔑 You don't have the required key: {key_name}")
+                print(f"💡 Hint: Look for {key_name}s in earlier areas of the dungeon.")
                 return False
 
         if direction in self.current_room_state.blocked_passages:
             trigger_name = self.current_room_state.blocked_passages[direction]
-            print(f"This way is blocked. You need a {trigger_name} to clear the passage.")
+            print(f"🚧 This way is blocked by ancient magic. You need a {trigger_name} to proceed.")
             # Check if player has the trigger item
             for item in self.player.inventory:
                 if item.name == trigger_name:
-                    print(f"You use the {trigger_name} to clear the passage!")
+                    print(f"✨ You use the {trigger_name} to dispel the magical blockage!")
                     del self.current_room_state.blocked_passages[direction]
                     break
             else:
-                print(f"You don't have the required item: {trigger_name}")
+                print(f"🔮 You don't have the required item: {trigger_name}")
+                print(f"💡 Hint: Search for {trigger_name}s in rooms before reaching this area.")
                 return False
 
         # Handle special directions (stairs)
@@ -869,14 +1575,14 @@ class SeededGameEngine:
             if target_pos:
                 self.current_room_state = self.dungeon.room_states[target_pos]
                 self.player.travel_to(target_pos)
-                print("You climb up the stairs...")
+                print("⬆️  You climb up the stairs...")
                 return True
         elif direction == Direction.DOWN and self.current_room_state.has_stairs_down:
             target_pos = self.current_room_state.stairs_down_target
             if target_pos:
                 self.current_room_state = self.dungeon.room_states[target_pos]
                 self.player.travel_to(target_pos)
-                print("You descend down the stairs...")
+                print("⬇️  You descend down the stairs...")
                 return True
         elif direction in self.current_room_state.connections:
             new_pos = self.current_room_state.connections[direction]
@@ -884,7 +1590,7 @@ class SeededGameEngine:
             self.player.travel_to(new_pos)
             return True
         
-        print(f"You cannot move {direction.value}.")
+        print(f"❌ You cannot move {direction.value}.")
         return False
 
     def look_around(self):
@@ -921,9 +1627,9 @@ class SeededGameEngine:
         for direction in Direction:
             # Check if this is a stair direction
             if direction == Direction.DOWN and getattr(self.current_room_state, 'has_stairs_down', False) and getattr(self.current_room_state, 'stairs_down_target', None):
-                print(f"  {direction.value.capitalize()}: stairs down to next floor - Stairs to lower level")
+                print(f"  📥 {direction.value.capitalize()}: stairs down to next floor")
             elif direction == Direction.UP and getattr(self.current_room_state, 'has_stairs_up', False) and getattr(self.current_room_state, 'stairs_up_target', None):
-                print(f"  {direction.value.capitalize()}: stairs up to previous floor - Stairs to upper level")
+                print(f"  📤 {direction.value.capitalize()}: stairs up to previous floor")
             elif hasattr(self.current_room_state, 'connections') and direction in self.current_room_state.connections:
                 adj_pos = self.current_room_state.connections[direction]
                 adj_room_state = self.dungeon.room_states[adj_pos]
@@ -941,18 +1647,22 @@ class SeededGameEngine:
                     adj_desc = "A treasure room filled with gleaming objects."
                 elif getattr(adj_room_state, 'room_type', '') == "trap":
                     adj_desc = "A dangerous-looking room with potential hazards."
+                elif getattr(adj_room_state, 'room_type', '') == "artifact":
+                    adj_desc = "A mystical chamber with a legendary artifact!"
+                elif getattr(adj_room_state, 'room_type', '') == "npc":
+                    adj_desc = "A room with a mysterious stranger."
                 else:
                     adj_desc = "An empty, quiet room."
                 
                 print(f"  {direction.value.capitalize()}: {adj_desc}")
             elif direction in self.current_room_state.locked_doors:
                 key_needed = self.current_room_state.locked_doors[direction]
-                print(f"  {direction.value.capitalize()}: LOCKED (Need {key_needed})")
+                print(f"  🔒 {direction.value.capitalize()}: MAGICAL BARRIER (Need {key_needed})")
             elif direction in self.current_room_state.blocked_passages:
                 trigger_needed = self.current_room_state.blocked_passages[direction]
-                print(f"  {direction.value.capitalize()}: BLOCKED (Need {trigger_needed})")
+                print(f"  🚧 {direction.value.capitalize()}: MAGIC BLOCKED (Need {trigger_needed})")
             else:
-                print(f"  {direction.value.capitalize()}: blocked")
+                print(f"  ❌ {direction.value.capitalize()}: blocked")
 
     def attack_enemy(self, enemy_index: int) -> bool:
         """Attack an enemy in the current room."""
@@ -1094,7 +1804,7 @@ class SeededGameEngine:
 
     def show_stats(self):
         """Show player's stats."""
-        print("\n--- Hero's Stats ---")
+        print("\n--- 🦸 Hero's Stats ---")
         print(f"Level: {self.player.level}")
         print(f"HP: {self.player.health}/{self.player.max_health + self.player.get_total_health_bonus()}")
         print(f"Attack: {self.player.get_total_attack()}")
@@ -1113,6 +1823,24 @@ class SeededGameEngine:
         armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"
         print(f"Weapon: {weapon_name} equipped")
         print(f"Armor: {armor_name} equipped")
+        
+        # Additional helpful information
+        if self.player.position[2] == self.dungeon.floors - 1:
+            print(f"🎯 You are on the deepest floor! Look for the Artifact of Power.")
+        else:
+            print(f"🧭 Explore deeper to find stairs leading down.")
+        
+        # Show number of keys in inventory
+        keys_in_inv = [item for item in self.player.inventory if item.item_type == ItemType.KEY]
+        if keys_in_inv:
+            key_names = [key.name for key in keys_in_inv]
+            print(f"🔑 Keys in inventory: {', '.join(key_names)}")
+        
+        # Show number of trigger items in inventory
+        triggers_in_inv = [item for item in self.player.inventory if item.item_type == ItemType.TRIGGER]
+        if triggers_in_inv:
+            trigger_names = [trigger.name for trigger in triggers_in_inv]
+            print(f"🔮 Magical items: {', '.join(trigger_names)}")
 
     def rest(self):
         """Rest to recover health."""
@@ -1273,6 +2001,80 @@ class SeededGameEngine:
             print(f"Error loading game: {e}")
             return False
 
+    def visualize_floor(self, floor_num=None):
+        """Visualize the current floor of the dungeon."""
+        if floor_num is None:
+            # Get current floor from player position
+            current_floor = self.player.position[2]
+        else:
+            current_floor = floor_num
+        
+        print(f"\n--- FLOOR {current_floor + 1} VISUALIZATION (Seed: {self.dungeon.seed}) ---")
+        
+        # Create a grid representation of the floor
+        grid = [[' ' for _ in range(self.dungeon.width)] for _ in range(self.dungeon.height)]
+        
+        # Mark rooms and special features on the grid
+        for (x, y, f), room_state in self.dungeon.room_states.items():
+            if f == current_floor:
+                # Determine symbol based on room properties
+                symbol = self._get_symbol_for_room_state(room_state, x, y, current_floor)
+                if 0 <= x < self.dungeon.width and 0 <= y < self.dungeon.height:
+                    grid[y][x] = symbol
+        
+        # Print the grid
+        for row in grid:
+            print(''.join(row))
+        
+        # Print legend
+        print("\nLegend:")
+        print("  . = Empty Room")
+        print("  - = Hallway")
+        print("  $ = Treasure Room")
+        print("  M = Monster Room")
+        print("  T = Trap Room")
+        print("  N = NPC Room")
+        print("  A = Artifact Room")
+        print("  S = Staircase Room")
+        print("  @ = Player Position")
+        print("  # = Locked Door")
+        print("  % = Blocked Passage")
+
+    def _get_symbol_for_room_state(self, room_state, x, y, floor):
+        """Get a symbol for a room state."""
+        # Check if this position is the player's position
+        if self.player.position == (x, y, floor):
+            return '@'  # Player position
+        
+        # Check for locked doors and blocked passages first (these are special features that override room type)
+        if len(room_state.locked_doors) > 0:
+            return '#'  # Locked door (takes precedence over room type)
+        elif len(room_state.blocked_passages) > 0:
+            return '%'  # Blocked passage (takes precedence over room type)
+        
+        # Check for stairs next (also special features)
+        if getattr(room_state, 'has_stairs_up', False) or getattr(room_state, 'has_stairs_down', False):
+            return 'S'  # Staircase room (takes precedence over basic room types)
+        
+        # Check for special room types
+        if room_state.room_type == "artifact":
+            return 'A'
+        elif room_state.room_type == "treasure":
+            return '$'
+        elif room_state.room_type == "monster":
+            return 'M'
+        elif room_state.room_type == "trap":
+            return 'T'
+        elif room_state.room_type == "npc":
+            return 'N'
+        elif room_state.room_type == "hallway":
+            return '-'  # Only show as hallway if no obstacles
+        elif room_state.room_type == "staircase_up" or room_state.room_type == "staircase_down":
+            return 'S'  # Staircase room
+        else:
+            # Default room symbol
+            return '.'
+
 
 def main():
     import sys
@@ -1303,6 +2105,9 @@ def main():
         print("  look - Look around the current room")
         print("  inventory - View your inventory")
         print("  stats - View your character stats")
+        print("  map - Visualize the current floor of the dungeon")
+        print("  map <number> - Visualize a specific floor of the dungeon")
+        print("  help/hints - Show helpful tips and hints")
         print("  rest - Rest to recover health")
         print("  save - Save the game")
         print("  load - Load a saved game")
@@ -1335,6 +2140,31 @@ def main():
         print("Game saved!")
     elif command == "load":
         game.load_game()
+    elif command == "help" or command == "hints":
+        print("\n📖 HELP & HINTS:")
+        print("• Explore all directions to find items, enemies, and stairs")
+        print("• Look for keys (🔑) to unlock magical barriers (🔒)")
+        print("• Find trigger items (🔮) to clear magical blocks (🚧)")
+        print("• Equip weapons and armor to improve your stats")
+        print("• Defeat enemies to gain experience and treasures")
+        print("• Talk to NPCs to get quests and rewards")
+        print("• Navigate deeper floors to find better treasures")
+        print("• Your goal: Reach the deepest floor and find the Artifact of Power!")
+        print("• Use 'map' to visualize the current floor layout")
+        print("• Use 'stats' to check your progress and inventory")
+    elif command == "map" or command.startswith("map "):
+        # Handle map command - can be just 'map' for current floor or 'map <floor>' for specific floor
+        if command == "map":
+            # Visualize current floor
+            game.visualize_floor()
+        else:
+            # Extract floor number from command like "map 1"
+            try:
+                floor_arg = command.split()[1]
+                floor_num = int(floor_arg) - 1  # Convert to 0-based indexing
+                game.visualize_floor(floor_num)
+            except (ValueError, IndexError):
+                print("Invalid floor number. Use 'map' for current floor or 'map <number>' for specific floor.")
     elif command.startswith("move "):
         direction_str = command[5:]
         try:

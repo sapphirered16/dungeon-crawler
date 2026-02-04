@@ -8,7 +8,7 @@ import time
 import shlex
 sys.path.insert(0, '.')  # Add current directory to path
 
-from game_engine import GameEngine, Direction
+from seeded_game_engine import SeededGameEngine as GameEngine, Direction
 
 
 class BatchProcessor:

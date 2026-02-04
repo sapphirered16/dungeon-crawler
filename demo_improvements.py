@@ -50,7 +50,25 @@ def run_demo():
     except Exception as e:
         print(f"   ❌ Error testing dungeon generator: {e}")
     
-    print("\n3. 📚 DOCUMENTATION")
+    print("\n3. 🗺️  MAP VISUALIZATION")
+    print("   Added in-game map visualization command to see dungeon layout")
+    
+    # Test the map visualization
+    try:
+        result = subprocess.run([
+            sys.executable, "src/seeded_game_engine.py", "map"
+        ], capture_output=True, text=True, timeout=5)
+        
+        if result.returncode == 0 and "--- FLOOR" in result.stdout:
+            print("   ✅ Map visualization integrated into game engine")
+        else:
+            print("   ❌ Map visualization may have issues")
+    except subprocess.TimeoutExpired:
+        print("   ⏱️  Map visualization test timed out")
+    except Exception as e:
+        print(f"   ❌ Error testing map visualization: {e}")
+    
+    print("\n4. 📚 DOCUMENTATION")
     print("   Added BATCH_COMMANDS.md with usage instructions")
     
     if os.path.exists("BATCH_COMMANDS.md"):
@@ -58,13 +76,13 @@ def run_demo():
     else:
         print("   ❌ Batch command documentation missing")
     
-    print("\n4. 🎮 ORIGINAL GAME FUNCTIONALITY")
+    print("\n5. 🎮 ORIGINAL GAME FUNCTIONALITY")
     print("   All original features remain intact:")
     
     # Test original functionality
     try:
         result = subprocess.run([
-            sys.executable, "src/game_engine.py", "stats"
+            sys.executable, "src/seeded_game_engine.py", "stats"
         ], capture_output=True, text=True, timeout=5)
         
         if result.returncode == 0 and "--- Hero's Stats ---" in result.stdout:
@@ -82,6 +100,7 @@ def run_demo():
     print("• Created documentation for new features") 
     print("• Preserved all original game functionality")
     print("• Added enhanced dungeon generation system")
+    print("• Integrated map visualization into game engine")
     print("• Maintained backward compatibility")
     print("=" * 50)
 

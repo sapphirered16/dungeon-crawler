@@ -4,23 +4,17 @@ The main source files for the dungeon crawler game.
 
 ## Core Modules
 
-### game_engine.py
-Contains the main game loop and command parser.
+### seeded_game_engine.py
+Contains the main game loop, command parser, and seed-based dungeon generation.
 
-### world_generator.py
-Implements procedural dungeon generation algorithms.
+### batch_processor.py
+Handles batch command execution for automated sequences.
 
-### combat_system.py
-Handles turn-based combat mechanics.
+### data_loader.py
+Manages loading game data from external JSON files.
 
-### player_controller.py
-Manages player state, inventory, and progression.
+### dungeon_visualizer.py
+Provides visualization tools for dungeon layouts based on seeds.
 
-### entity.py
-Defines base classes for player, enemies, and items.
-
-### room.py
-Represents dungeon rooms and their contents.
-
-### save_manager.py
-Handles saving and loading game states.
+### improved_dungeon_generator.py
+Implements enhanced procedural dungeon generation with thematic variety.
