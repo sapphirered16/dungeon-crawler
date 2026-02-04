@@ -12,6 +12,8 @@ The game is turn-based and played through command-line arguments. Each action yo
 - `take <item_number>` - Take an item from the current room (items are numbered)
 - `equip <item_number>` - Equip an item from your inventory (items are numbered)
 - `unequip <weapon|armor>` - Unequip weapon or armor
+- `use <item_number>` - Use an item from your inventory (for keys, triggers, etc.)
+- `drop <item_number>` - Drop an item from your inventory to the current room
 - `look` - Look around the current room
 - `inventory` - View your inventory
 - `stats` - View your character stats

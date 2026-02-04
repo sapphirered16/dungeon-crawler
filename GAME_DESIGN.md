@@ -25,6 +25,7 @@ Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. T
 - Equipment provides attack and defense bonuses
 - Player can equip/unequip items
 - Limited inventory space (10 items maximum)
+- Special items: keys for locked doors and triggers for blocked passages
 
 ### Progression
 - Multiple dungeon floors (5 floors total)
@@ -46,6 +47,8 @@ Terminal Dungeon Crawler is a nethack-inspired game that runs in the terminal. T
 - Structured layout with rectangular rooms of varying sizes
 - Hallways connecting rooms using L-shaped corridors
 - Blocked areas preventing movement through walls
+- Locked doors requiring specific keys to open
+- Blocked passages requiring trigger items to activate
 - Each floor has multiple branching pathways
 - Ultimate Artifact of Power placed on the deepest floor
 

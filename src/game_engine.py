@@ -19,15 +19,17 @@ class ItemType(Enum):
     ARMOR = "armor"
     CONSUMABLE = "consumable"
     KEY = "key"
+    TRIGGER = "trigger"
 
 
 class Entity:
-    def __init__(self, name: str, health: int, attack: int, defense: int):
+    def __init__(self, name: str, health: int, attack: int, defense: int, speed: int = 10):
         self.name = name
         self.max_health = health
         self.health = health
         self.attack = attack
         self.defense = defense
+        self.speed = speed  # For initiative determination
 
     def take_damage(self, damage: int):
         actual_damage = max(1, damage - self.defense)  # Minimum 1 damage
@@ -40,13 +42,15 @@ class Entity:
 
 class Item:
     def __init__(self, name: str, item_type: ItemType, value: int = 0, 
-                 attack_bonus: int = 0, defense_bonus: int = 0, health_bonus: int = 0):
+                 attack_bonus: int = 0, defense_bonus: int = 0, health_bonus: int = 0,
+                 special_effect: str = ""):
         self.name = name
         self.type = item_type
         self.value = value
         self.attack_bonus = attack_bonus
         self.defense_bonus = defense_bonus
         self.health_bonus = health_bonus
+        self.special_effect = special_effect  # For special abilities like "gruff" or "turbo"
 
     def __str__(self):
         return self.name
@@ -73,18 +77,44 @@ class Player(Entity):
     @property
     def total_attack(self):
         bonus = self.equipped_weapon.attack_bonus if self.equipped_weapon else 0
-        return self.attack + bonus
+        total = self.attack + bonus
+        
+        # Apply special weapon effects
+        if self.equipped_weapon and self.equipped_weapon.special_effect:
+            if "gruff" in self.equipped_weapon.special_effect.lower() or "gruff" in self.equipped_weapon.name.lower():
+                total = int(total * 1.2)  # 20% damage boost for gruff weapons
+        return total
 
     @property
     def total_defense(self):
         bonus = self.equipped_armor.defense_bonus if self.equipped_armor else 0
-        return self.defense + bonus
+        total = self.defense + bonus
+        
+        # Apply special armor effects
+        if self.equipped_armor and self.equipped_armor.special_effect:
+            if "shielding" in self.equipped_armor.special_effect.lower() or "shielding" in self.equipped_armor.name.lower():
+                total = int(total * 1.15)  # 15% defense boost for shielding armor
+        return total
 
     @property
     def total_max_health(self):
         bonus = (self.equipped_armor.health_bonus if self.equipped_armor else 0) + \
                 sum(item.health_bonus for item in self.inventory if item != self.equipped_armor)
         return self.max_health + bonus
+
+    @property
+    def total_speed(self):
+        """Calculate total speed including equipped item effects."""
+        total = self.speed
+        
+        # Apply special item effects that affect speed
+        if self.equipped_weapon and self.equipped_weapon.special_effect:
+            if "turbo" in self.equipped_weapon.special_effect.lower() or "turbo" in self.equipped_weapon.name.lower():
+                total += 5  # Turbo weapons increase initiative
+        if self.equipped_armor and self.equipped_armor.special_effect:
+            if "light" in self.equipped_armor.special_effect.lower() or "light" in self.equipped_armor.name.lower():
+                total += 3  # Light armor increases speed
+        return total
 
     def gain_experience(self, exp: int):
         self.experience += exp
@@ -106,8 +136,8 @@ class Player(Entity):
 
 class Enemy(Entity):
     def __init__(self, name: str, health: int, attack: int, defense: int, 
-                 exp_reward: int, gold_min: int, gold_max: int):
-        super().__init__(name, health, attack, defense)
+                 exp_reward: int, gold_min: int, gold_max: int, speed: int = 10):
+        super().__init__(name, health, attack, defense, speed)
         self.exp_reward = exp_reward
         self.gold_min = gold_min
         self.gold_max = gold_max
@@ -135,6 +165,12 @@ class Room:
         self.has_stairs_up = False
         self.stairs_down_target = None  # Target room when going down
         self.stairs_up_target = None    # Target room when going up
+        # For locked doors and blocked passages
+        self.locked_doors: Dict[Direction, str] = {}  # Direction -> key name needed
+        self.blocked_passages: Dict[Direction, str] = {}  # Direction -> trigger item needed
+        # Track permanently unlocked doors and activated passages
+        self.unlocked_doors: set = set()
+        self.activated_passages: set = set()
 
     def connect(self, direction: Direction, room: 'Room'):
         self.connections[direction] = room
@@ -309,6 +345,89 @@ class Dungeon:
                 current_room.description = "A room with stairs leading down to the next level."
                 next_room.description = "A room with stairs leading up from the level below."
 
+        # Add locked doors and blocked passages for puzzle elements
+        all_accessible_rooms = [room for room in self.rooms.values() if len(room.connections) > 0]
+        
+        # Add some locked doors (about 10% of accessible rooms)
+        num_locked_doors = max(1, len(all_accessible_rooms) // 10)
+        selected_rooms_for_doors = random.sample(all_accessible_rooms, min(num_locked_doors, len(all_accessible_rooms)))
+        
+        # Keep track of placed keys to ensure accessibility
+        placed_keys = set()
+        
+        for room in selected_rooms_for_doors:
+            # Find a direction that has a connection but isn't stairs
+            available_directions = []
+            for direction, connected_room in room.connections.items():
+                # Don't lock stair directions
+                if not ((direction == Direction.UP and room.has_stairs_up) or 
+                       (direction == Direction.DOWN and room.has_stairs_down)):
+                    available_directions.append(direction)
+            
+            if available_directions:
+                direction_to_lock = random.choice(available_directions)
+                # Add locked door - require a specific key type
+                key_types = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key", "Crystal Key"]
+                key_required = random.choice(key_types)
+                room.locked_doors[direction_to_lock] = key_required
+                
+                # Add the corresponding key to some other room in the dungeon
+                # Find a random room that's not the same room
+                other_rooms = [r for r in all_accessible_rooms if r != room]
+                if other_rooms:
+                    key_room = random.choice(other_rooms)
+                    key_item = Item(name=key_required, item_type=ItemType.KEY, value=10)
+                    key_room.items.append(key_item)
+                    placed_keys.add(key_required)
+
+        # Add some blocked passages (about 5% of accessible rooms)
+        num_blocked_passages = max(1, len(all_accessible_rooms) // 20)
+        # Select from remaining rooms that don't already have locked doors
+        remaining_rooms = [room for room in selected_rooms_for_doors if len(room.locked_doors) == 0]
+        if len(remaining_rooms) < num_blocked_passages:
+            # Add more rooms if needed
+            additional_rooms = [room for room in all_accessible_rooms if room not in selected_rooms_for_doors]
+            num_additional_needed = num_blocked_passages - len(remaining_rooms)
+            if num_additional_needed > 0 and len(additional_rooms) > 0:
+                num_to_select = min(num_additional_needed, len(additional_rooms))
+                additional_selected = random.sample(additional_rooms, num_to_select)
+                remaining_rooms.extend(additional_selected)
+        
+        selected_rooms_for_passages = random.sample(remaining_rooms, min(num_blocked_passages, len(remaining_rooms)))
+        
+        # Keep track of placed trigger items
+        placed_triggers = set()
+        
+        for room in selected_rooms_for_passages:
+            # Find a direction that has a connection
+            available_directions = [d for d in room.connections.keys() 
+                                  if not ((d == Direction.UP and room.has_stairs_up) or 
+                                         (d == Direction.DOWN and room.has_stairs_down))]
+            
+            if available_directions:
+                direction_to_block = random.choice(available_directions)
+                # Add blocked passage - require a specific trigger item
+                trigger_types = ["Rune", "Powder", "Crystal", "Stone", "Charm", "Sundial", "Sunday"]
+                trigger_required = random.choice(trigger_types)
+                if trigger_required == "Sunday":
+                    # Special case for Sunday
+                    trigger_name = "Sunday"
+                else:
+                    trigger_name = f"Power {trigger_required}"
+                room.blocked_passages[direction_to_block] = trigger_name
+                
+                # Add the corresponding trigger item to some other room in the dungeon
+                other_rooms = [r for r in all_accessible_rooms if r != room]
+                if other_rooms:
+                    trigger_room = random.choice(other_rooms)
+                    # For "Sunday", use a special trigger item; others use TRIGGER type
+                    if trigger_required == "Sunday":
+                        trigger_item = Item(name=trigger_name, item_type=ItemType.TRIGGER, value=5)
+                    else:
+                        trigger_item = Item(name=trigger_name, item_type=ItemType.TRIGGER, value=5)
+                    trigger_room.items.append(trigger_item)
+                    placed_triggers.add(trigger_name)
+
     def create_corridor(self, x1, y1, x2, y2, floor):
         """Create an L-shaped corridor between two points"""
         # Horizontal first, then vertical
@@ -362,43 +481,44 @@ class Dungeon:
         if floor <= 0:  # Floor 1 (0-indexed)
             # Shallow floors - basic enemies
             enemy_types = [
-                ("Goblin", 20, 5, 1, 20, 1, 5),
-                ("Skeleton", 30, 7, 2, 30, 2, 6),
-                ("Zombie", 25, 6, 1, 25, 1, 4),
-                ("Spider", 15, 6, 0, 15, 1, 3),
+                ("Goblin", 20, 5, 1, 20, 1, 5, 12),  # Fast goblins
+                ("Skeleton", 30, 7, 2, 30, 2, 6, 10), # Average speed skeletons
+                ("Zombie", 25, 6, 1, 25, 1, 4, 6),   # Slow zombies
+                ("Spider", 15, 6, 0, 15, 1, 3, 14),   # Fast spiders
             ]
         elif floor <= 1:  # Floor 2 (0-indexed)
             # Mid floors - moderate enemies
             enemy_types = [
-                ("Goblin", 20, 5, 1, 20, 1, 5),
-                ("Orc", 35, 8, 3, 35, 3, 8),
-                ("Skeleton", 30, 7, 2, 30, 2, 6),
-                ("Zombie", 25, 6, 1, 25, 1, 4),
-                ("Ogre", 50, 12, 5, 50, 5, 12),
+                ("Goblin", 20, 5, 1, 20, 1, 5, 12),  # Fast goblins
+                ("Orc", 35, 8, 3, 35, 3, 8, 8),     # Slower orcs
+                ("Skeleton", 30, 7, 2, 30, 2, 6, 10), # Average speed skeletons
+                ("Zombie", 25, 6, 1, 25, 1, 4, 6),   # Slow zombies
+                ("Ogre", 50, 12, 5, 50, 5, 12, 7),   # Slow but strong ogres
             ]
         else:  # Floor 3 and deeper (0-indexed)
             # Deep floors - powerful enemies
             enemy_types = [
-                ("Orc", 35, 8, 3, 35, 3, 8),
-                ("Ogre", 50, 12, 5, 50, 5, 12),
-                ("Demon", 75, 15, 8, 75, 8, 18),
-                ("Dragon", 120, 20, 12, 120, 12, 25),
-                ("Ancient Guardian", 150, 25, 15, 150, 15, 30),
+                ("Orc", 35, 8, 3, 35, 3, 8, 8),
+                ("Ogre", 50, 12, 5, 50, 5, 12, 7),
+                ("Demon", 75, 15, 8, 75, 8, 18, 11),  # Fast demons
+                ("Dragon", 120, 20, 12, 120, 12, 25, 9), # Powerful but slower dragons
+                ("Ancient Guardian", 150, 25, 15, 150, 15, 30, 5), # Very slow but powerful guardians
             ]
         
         # Select enemy from appropriate tier
         enemy_data = random.choice(enemy_types)
         
         # Scale stats based on floor with increased difficulty curve
-        base_hp, base_attack, base_defense, base_exp, base_gold_min, base_gold_max = enemy_data[1], enemy_data[2], enemy_data[3], enemy_data[4], enemy_data[5], enemy_data[6]
+        base_hp, base_attack, base_defense, base_exp, base_gold_min, base_gold_max, base_speed = enemy_data[1], enemy_data[2], enemy_data[3], enemy_data[4], enemy_data[5], enemy_data[6], enemy_data[7] if len(enemy_data) > 7 else 10
         hp = int(base_hp * (1 + floor * 0.4))  # Increased scaling factor
         attack = int(base_attack * (1 + floor * 0.35))  # Increased scaling factor
         defense = int(base_defense * (1 + floor * 0.35))  # Increased scaling factor
         exp = int(base_exp * (1 + floor * 0.3))
         gold_min = int(base_gold_min * (1 + floor * 0.25))
         gold_max = int(base_gold_max * (1 + floor * 0.25))
+        speed = int(base_speed * (1 + floor * 0.2))  # Speed also scales with floor
         
-        return Enemy(enemy_data[0], hp, attack, defense, exp, gold_min, gold_max)
+        return Enemy(enemy_data[0], hp, attack, defense, exp, gold_min, gold_max, speed)
 
     def generate_random_item(self) -> Item:
         item_types = [
@@ -420,7 +540,24 @@ class Dungeon:
             ("Greater Health Potion", ItemType.CONSUMABLE, 25, 0, 0, 60),
         ]
         
-        return Item(*random.choice(item_types))
+        # Randomly select an item type
+        item_data = random.choice(item_types)
+        
+        # Add special effects randomly
+        name, item_type, value, attack_bonus, defense_bonus, health_bonus = item_data
+        
+        # Add special effects based on item name
+        special_effect = ""
+        if "Gruff" in name or "gruff" in name:
+            special_effect = "gruff"  # Increases damage
+        elif "Turbo" in name or "turbo" in name:
+            special_effect = "turbo"  # Increases initiative
+        elif "Light" in name or "light" in name:
+            special_effect = "light"  # Increases speed
+        elif "Shielding" in name or "shielding" in name:
+            special_effect = "shielding"  # Increases defense
+        
+        return Item(name, item_type, value, attack_bonus, defense_bonus, health_bonus, special_effect)
 
 
 class GameEngine:
@@ -709,41 +846,157 @@ class GameEngine:
             enemy = alive_enemies[adjusted_index]
             print(f"You attack the {enemy.name}!")
             
-            # Player attacks enemy
-            damage_dealt = enemy.take_damage(self.player.total_attack)
-            print(f"You deal {damage_dealt} damage to the {enemy.name}.")
+            # Determine initiative based on speed (with special effects)
+            player_speed = self.player.total_speed
+            enemy_speed = enemy.speed
             
-            if not enemy.is_alive():
-                print(f"The {enemy.name} is defeated!")
+            # Calculate who attacks first based on speed
+            if player_speed > enemy_speed:
+                # Player goes first
+                damage_dealt = enemy.take_damage(self.player.total_attack)
+                print(f"You deal {damage_dealt} damage to the {enemy.name}.")
                 
-                # Update scoring for defeating enemy
-                self.player.enemies_defeated += 1
-                # Score based on enemy strength
-                enemy_score_value = enemy.exp_reward + (enemy.max_health // 2) + (enemy.attack * 2)
-                self.player.score += enemy_score_value
-                print(f"You earned {enemy_score_value} points for defeating the {enemy.name}!")
-                
-                # Gain experience and loot
-                self.player.gain_experience(enemy.exp_reward)
-                self.player.gold += random.randint(enemy.gold_min, enemy.gold_max)
-                
-                # Get loot
-                loot = enemy.generate_loot()
-                for item in loot:
-                    self.current_room.items.append(item)
-                    print(f"The {enemy.name} dropped: {item.name}")
-                
-                return True
-            else:
-                # Enemy counterattacks
+                if not enemy.is_alive():
+                    print(f"The {enemy.name} is defeated!")
+                    
+                    # Update scoring for defeating enemy
+                    self.player.enemies_defeated += 1
+                    # Score based on enemy strength
+                    enemy_score_value = enemy.exp_reward + (enemy.max_health // 2) + (enemy.attack * 2)
+                    self.player.score += enemy_score_value
+                    print(f"You earned {enemy_score_value} points for defeating the {enemy.name}!")
+                    
+                    # Gain experience and loot
+                    self.player.gain_experience(enemy.exp_reward)
+                    self.player.gold += random.randint(enemy.gold_min, enemy.gold_max)
+                    
+                    # Get loot
+                    loot = enemy.generate_loot()
+                    for item in loot:
+                        self.current_room.items.append(item)
+                        print(f"The {enemy.name} dropped: {item.name}")
+                    
+                    return True
+                else:
+                    # Enemy counterattacks
+                    damage_taken = self.player.take_damage(enemy.attack)
+                    print(f"The {enemy.name} hits you for {damage_taken} damage!")
+                    
+                    if not self.player.is_alive():
+                        print("You have been defeated! Game over.")
+                        return False
+                    
+                    return True
+            elif enemy_speed > player_speed:
+                # Enemy goes first (speed advantage)
                 damage_taken = self.player.take_damage(enemy.attack)
-                print(f"The {enemy.name} hits you for {damage_taken} damage!")
+                print(f"The {enemy.name} strikes first, hitting you for {damage_taken} damage!")
                 
                 if not self.player.is_alive():
                     print("You have been defeated! Game over.")
                     return False
                 
-                return True
+                # Player gets to attack back if still alive
+                damage_dealt = enemy.take_damage(self.player.total_attack)
+                print(f"You counterattack and deal {damage_dealt} damage to the {enemy.name}.")
+                
+                if not enemy.is_alive():
+                    print(f"The {enemy.name} is defeated!")
+                    
+                    # Update scoring for defeating enemy
+                    self.player.enemies_defeated += 1
+                    # Score based on enemy strength
+                    enemy_score_value = enemy.exp_reward + (enemy.max_health // 2) + (enemy.attack * 2)
+                    self.player.score += enemy_score_value
+                    print(f"You earned {enemy_score_value} points for defeating the {enemy.name}!")
+                    
+                    # Gain experience and loot
+                    self.player.gain_experience(enemy.exp_reward)
+                    self.player.gold += random.randint(enemy.gold_min, enemy.gold_max)
+                    
+                    # Get loot
+                    loot = enemy.generate_loot()
+                    for item in loot:
+                        self.current_room.items.append(item)
+                        print(f"The {enemy.name} dropped: {item.name}")
+                    
+                    return True
+                else:
+                    return True
+            else:
+                # Equal speeds - random initiative
+                if random.choice([True, False]):
+                    # Player goes first
+                    damage_dealt = enemy.take_damage(self.player.total_attack)
+                    print(f"You deal {damage_dealt} damage to the {enemy.name}.")
+                    
+                    if not enemy.is_alive():
+                        print(f"The {enemy.name} is defeated!")
+                        
+                        # Update scoring for defeating enemy
+                        self.player.enemies_defeated += 1
+                        # Score based on enemy strength
+                        enemy_score_value = enemy.exp_reward + (enemy.max_health // 2) + (enemy.attack * 2)
+                        self.player.score += enemy_score_value
+                        print(f"You earned {enemy_score_value} points for defeating the {enemy.name}!")
+                        
+                        # Gain experience and loot
+                        self.player.gain_experience(enemy.exp_reward)
+                        self.player.gold += random.randint(enemy.gold_min, enemy.gold_max)
+                        
+                        # Get loot
+                        loot = enemy.generate_loot()
+                        for item in loot:
+                            self.current_room.items.append(item)
+                            print(f"The {enemy.name} dropped: {item.name}")
+                        
+                        return True
+                    else:
+                        # Enemy counterattacks
+                        damage_taken = self.player.take_damage(enemy.attack)
+                        print(f"The {enemy.name} hits you for {damage_taken} damage!")
+                        
+                        if not self.player.is_alive():
+                            print("You have been defeated! Game over.")
+                            return False
+                        
+                        return True
+                else:
+                    # Enemy goes first
+                    damage_taken = self.player.take_damage(enemy.attack)
+                    print(f"The {enemy.name} strikes first, hitting you for {damage_taken} damage!")
+                    
+                    if not self.player.is_alive():
+                        print("You have been defeated! Game over.")
+                        return False
+                    
+                    # Player gets to attack back if still alive
+                    damage_dealt = enemy.take_damage(self.player.total_attack)
+                    print(f"You counterattack and deal {damage_dealt} damage to the {enemy.name}.")
+                    
+                    if not enemy.is_alive():
+                        print(f"The {enemy.name} is defeated!")
+                        
+                        # Update scoring for defeating enemy
+                        self.player.enemies_defeated += 1
+                        # Score based on enemy strength
+                        enemy_score_value = enemy.exp_reward + (enemy.max_health // 2) + (enemy.attack * 2)
+                        self.player.score += enemy_score_value
+                        print(f"You earned {enemy_score_value} points for defeating the {enemy.name}!")
+                        
+                        # Gain experience and loot
+                        self.player.gain_experience(enemy.exp_reward)
+                        self.player.gold += random.randint(enemy.gold_min, enemy.gold_max)
+                        
+                        # Get loot
+                        loot = enemy.generate_loot()
+                        for item in loot:
+                            self.current_room.items.append(item)
+                            print(f"The {enemy.name} dropped: {item.name}")
+                        
+                        return True
+                    else:
+                        return True
         else:
             print("Invalid enemy selection.")
             return False
