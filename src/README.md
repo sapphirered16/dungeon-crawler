@@ -15,6 +15,3 @@ Manages loading game data from external JSON files.
 
 ### dungeon_visualizer.py
 Provides visualization tools for dungeon layouts based on seeds.
-
-### improved_dungeon_generator.py
-Implements enhanced procedural dungeon generation with thematic variety.

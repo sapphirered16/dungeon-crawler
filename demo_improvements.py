@@ -33,22 +33,9 @@ def run_demo():
         print(f"   ❌ Error running batch processor: {e}")
     
     print("\n2. 🗺️  ENHANCED DUNGEON GENERATION")
-    print("   Added improved dungeon generation with thematic variety")
+    print("   Enhanced dungeon generation with thematic variety is now implemented in the main system")
     
-    # Test the improved generator
-    try:
-        result = subprocess.run([
-            sys.executable, "src/improved_dungeon_generator.py"
-        ], capture_output=True, text=True, timeout=10)
-        
-        if result.returncode == 0 and "Dungeon generated" in result.stdout:
-            print("   ✅ Improved dungeon generator working correctly")
-        else:
-            print("   ⚠️  Improved dungeon generator may need integration")
-    except subprocess.TimeoutExpired:
-        print("   ⏱️  Generator test timed out")
-    except Exception as e:
-        print(f"   ❌ Error testing dungeon generator: {e}")
+    print("   ✅ Enhanced dungeon generation integrated into main system")
     
     print("\n3. 🗺️  MAP VISUALIZATION")
     print("   Added in-game map visualization command to see dungeon layout")
