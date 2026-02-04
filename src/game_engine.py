@@ -199,7 +199,7 @@ class SeededGameEngine:
                                 
                                 # Note: In a full implementation, we might want to track completed quests
                                 # to prevent re-completion, but for now we'll just complete it
-                                self._log_action(f"Completed quest with {npc.name}, received {reward_item.name}", self.player.position)
+                                self._log_action(f"Completed quest with {npc.name}, received {reward_item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                                 break
                             else:
                                 # Player doesn't have the required item, give hint about the quest
@@ -208,16 +208,16 @@ class SeededGameEngine:
                                 print(f"Required: {required_item_name}")
                                 print(f"Reward: {quest['reward']['name']}")
                                 print(f"Description: {quest['description']}")
-                                self._log_action(f"Started quest with {npc.name}: {quest['name']}", self.player.position)
+                                self._log_action(f"Started quest with {npc.name}: {quest['name']} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                                 break
                     else:
                         print(f"{npc.name} nods politely.")
-                        self._log_action(f"Talked to {npc.name} (no quest)", self.player.position)
+                        self._log_action(f"Talked to {npc.name} (no quest) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                     break
             
             if not npc_found_in_data:
                 print(f"{npc.name} nods politely.")
-                self._log_action(f"Talked to {npc.name} (no quest)", self.player.position)
+                self._log_action(f"Talked to {npc.name} (no quest) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
             
             return True
         else:
@@ -235,12 +235,12 @@ class SeededGameEngine:
                 if item.name == key_name and item.item_type.value == "key":
                     print(f"✨ You use the {key_name} to unlock the magical barrier!")
                     del self.current_room_state.locked_doors[direction]
-                    self._log_action(f"Used {key_name} to unlock door", self.player.position)
+                    self._log_action(f"Used {key_name} to unlock door - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                     break
             else:
                 print(f"🔑 You don't have the required key: {key_name}")
                 print(f"💡 Hint: Look for {key_name}s in earlier areas of the dungeon.")
-                self._log_action(f"Failed to unlock door - no {key_name}", self.player.position)
+                self._log_action(f"Failed to unlock door - no {key_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 return False
 
         if direction in self.current_room_state.blocked_passages:
@@ -251,12 +251,12 @@ class SeededGameEngine:
                 if item.name == trigger_name:
                     print(f"✨ You use the {trigger_name} to dispel the magical blockage!")
                     del self.current_room_state.blocked_passages[direction]
-                    self._log_action(f"Used {trigger_name} to unblock passage", self.player.position)
+                    self._log_action(f"Used {trigger_name} to unblock passage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                     break
             else:
                 print(f"🔮 You don't have the required item: {trigger_name}")
                 print(f"💡 Hint: Search for {trigger_name}s in rooms before reaching this area.")
-                self._log_action(f"Failed to unblock passage - no {trigger_name}", self.player.position)
+                self._log_action(f"Failed to unblock passage - no {trigger_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 return False
 
         # Handle special directions (stairs)
@@ -267,7 +267,7 @@ class SeededGameEngine:
                 self.current_room_state = self.dungeon.room_states[target_pos]
                 self.player.travel_to(target_pos)
                 print("⬆️  You climb up the stairs...")
-                self._log_action(f"Moved UP from {old_pos} to {target_pos}", old_pos)
+                self._log_action(f"Moved UP from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
                 return True
         elif direction == Direction.DOWN and self.current_room_state.has_stairs_down:
             target_pos = self.current_room_state.stairs_down_target
@@ -278,7 +278,7 @@ class SeededGameEngine:
                 print("⬇️  You descend down the stairs...")
                 # Process monster AI after moving
                 self.process_monster_ai()
-                self._log_action(f"Moved DOWN from {old_pos} to {target_pos}", old_pos)
+                self._log_action(f"Moved DOWN from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
                 return True
         elif direction in self.current_room_state.connections:
             new_pos = self.current_room_state.connections[direction]
@@ -287,11 +287,11 @@ class SeededGameEngine:
             self.player.travel_to(new_pos)
             # Process monster AI after moving
             self.process_monster_ai()
-            self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos}", old_pos)
+            self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
             return True
         
         print(f"❌ You cannot move {direction.value}.")
-        self._log_action(f"Tried to move {direction.value} but failed", self.player.position)
+        self._log_action(f"Tried to move {direction.value} but failed - HP: {self.player.health}/{self.player.max_health}", self.player.position)
         return False
 
     def attack_enemy(self, enemy_index: int) -> bool:
@@ -353,15 +353,15 @@ class SeededGameEngine:
                     print(f"The {enemy.name} dropped: {dropped_item.name}!")
                 # Process monster AI after combat
                 self.process_monster_ai()
-                self._log_action(f"Defeated {enemy.name}", self.player.position)
+                self._log_action(f"Defeated {enemy.name}, dealt {enemy_damage} damage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 return True
             else:
                 print(f"The {enemy.name} has {enemy.health}/{enemy.max_health} HP remaining.")
-                self._log_action(f"Attacked {enemy.name}, dealt {enemy_damage} damage", self.player.position)
+                self._log_action(f"Attacked {enemy.name}, dealt {enemy_damage} damage, took {damage_taken} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 
             if not self.player.is_alive():
                 print("You have been defeated...")
-                self._log_action("Player defeated in combat", self.player.position)
+                self._log_action("Player defeated in combat - HP: 0/" + str(self.player.max_health), self.player.position)
                 return False
             
             # Process monster AI after combat
@@ -392,13 +392,13 @@ class SeededGameEngine:
                 print(f"⚔️  ENEMIES DEFEATED: {self.player.enemies_defeated}")
                 print(f"💎 TREASURES COLLECTED: {self.player.treasures_collected}")
                 print("\\n🙏 Thanks for playing the dungeon crawler!")
-                self._log_action(f"WON GAME by taking {item.name} (artifact)", self.player.position)
+                self._log_action(f"WON GAME by taking {item.name} (artifact) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 return True  # Return early to indicate game completion
             
             self.current_room_state.items.remove(item)
             # Process monster AI after taking an item (noise might attract attention)
             self.process_monster_ai()
-            self._log_action(f"Took item {item.name}", self.player.position)
+            self._log_action(f"Took item {item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
             return True
         else:
             print("Invalid item selection.")
@@ -574,8 +574,8 @@ class SeededGameEngine:
                         # Print action description if there is one
                         if action_result["action_description"]:
                             print(action_result["action_description"])
-                        # Log the movement
-                        self._log_action(f"Enemy {entity.name} moved from {old_pos} to {new_pos}", self.player.position)
+                        # Don't log enemy movements - only log player interactions
+                        # self._log_action(f"Enemy {entity.name} moved from {old_pos} to {new_pos}", self.player.position)
                     
                     elif action_result["attacked"]:
                         # Action description already contains the attack info

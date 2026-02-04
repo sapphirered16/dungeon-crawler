@@ -87,3 +87,6 @@ pip-delete-this-directory.txt
 *.zip
 *.tar.gz
 *.rar
+
+# Dungeon logs
+dungeon_log_*.txt
