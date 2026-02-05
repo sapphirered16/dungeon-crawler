@@ -783,9 +783,9 @@ class SeededGameEngine:
                     else:  # It's part of a room
                         # Check if this room has items
                         if room_at_pos.items:
-                            grid[(x, y)] = '◘'  # Room with items
+                            grid[(x, y)] = '■'  # Room with items (black square)
                         else:
-                            grid[(x, y)] = '▫'  # Room without items
+                            grid[(x, y)] = '□'  # Room without items (white square)
                 else:
                     # Check cell type first
                     cell_type = self.dungeon.get_cell_type_at_position(pos)
@@ -817,8 +817,8 @@ class SeededGameEngine:
         # Show legend
         print("\nLegend:")
         print("  ♀ = Player Position")
-        print("  ◘ = Room/Hallway (with items)")
-        print("  ▫ = Room (no items)")
+        print("  ■ = Room/Hallway (with items)")
+        print("  □ = Room (no items)")
         print("  ∿ = Hallway (no items)")
         print("  ≈ = Hallway (with items)")
         print("  ░ = Unknown Area")
@@ -1127,9 +1127,9 @@ class SeededGameEngine:
                         # Check if this room has items
                         room_at_pos = self.dungeon.get_room_at_position(pos)
                         if room_at_pos and room_at_pos.items:
-                            row += "◘ "  # Room with items
+                            row += "■ "  # Room with items (black square)
                         else:
-                            row += "▫ "  # Room without items
+                            row += "□ "  # Room without items (white square)
                     elif cell_type == 'hallway':
                         # Check if this hallway has items
                         room_at_pos = self.dungeon.get_room_at_position(pos)
@@ -1156,8 +1156,8 @@ class SeededGameEngine:
         # Show legend for full local map command
         print("\n🗺️  Legend:")
         print("  ♀ = Player")
-        print("  ◘ = Room/Hallway (with items)")
-        print("  ▫ = Room (no items)")
+        print("  ■ = Room/Hallway (with items)")
+        print("  □ = Room (no items)")
         print("  ∿ = Hallway (no items)")
         print("  ≈ = Hallway (with items)")
         print("  ░ = Unknown Area")
@@ -1186,9 +1186,9 @@ class SeededGameEngine:
                         # Check if this room has items
                         room_at_pos = self.dungeon.get_room_at_position(pos)
                         if room_at_pos and room_at_pos.items:
-                            row += "◘ "  # Room with items
+                            row += "■ "  # Room with items (black square)
                         else:
-                            row += "▫ "  # Room without items
+                            row += "□ "  # Room without items (white square)
                     elif cell_type == 'hallway':
                         # Check if this hallway has items
                         room_at_pos = self.dungeon.get_room_at_position(pos)
