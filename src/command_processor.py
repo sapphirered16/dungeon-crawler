@@ -91,7 +91,7 @@ class CommandProcessor:
         print("  use <num>         - Use consumable item number <num>")
         print("  inventory/i       - Show inventory")
         print("  talk/speak <num>  - Talk to NPC number <num>")
-        print("  map               - Show current floor map")
+        print("  map               - Show full current floor map")
         print("  local/lm          - Show 5x5 local map around player")
         print("  save              - Save game")
         print("  load              - Load game")
@@ -113,8 +113,6 @@ class CommandProcessor:
     def look_command(self, args: List[str]) -> bool:
         """Look around the current room."""
         self.game_engine.look_around()
-        # Show a brief local map indicator
-        print("\n📍 Local area: Use 'local' command for 5x5 map view")
         return True
 
     def go_command(self, args: List[str]) -> bool:

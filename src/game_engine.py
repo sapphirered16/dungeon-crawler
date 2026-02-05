@@ -80,15 +80,13 @@ class SeededGameEngine:
         """Look around the current room."""
         print(f"\n--- {self.current_room_state.description} ---")
         
-        # Show items in room
+        # Show items in room (only if there are items)
         if self.current_room_state.items:
             print("\nItems in the room:")
             for i, item in enumerate(self.current_room_state.items, 1):
                 print(f"  {i}. {item.name} (Value: {item.value})")
-        else:
-            print("\nNo items in this room.")
         
-        # Show creatures in room (excluding NPCs)
+        # Show creatures in room (excluding NPCs, only if there are creatures)
         from .classes.character import NonPlayerCharacter
         creatures = []
         for e in self.current_room_state.entities:
@@ -99,10 +97,8 @@ class SeededGameEngine:
             print("\nCreatures in the room:")
             for i, entity in enumerate(creatures, 1):
                 print(f"  {i}. {entity.name} (HP: {entity.health}/{entity.max_health}, Attack: {entity.attack}, Defense: {entity.defense})")
-        else:
-            print("\nNo creatures in this room.")
         
-        # Show NPCs in room
+        # Show NPCs in room (only if there are NPCs)
         npcs = []
         for e in self.current_room_state.entities:
             if isinstance(e, NonPlayerCharacter) and e.is_alive():
@@ -112,23 +108,27 @@ class SeededGameEngine:
             print("\nNPCs in the room:")
             for i, npc in enumerate(npcs, 1):
                 print(f"  {i}. {npc.name}")
-        else:
-            print("\nNo NPCs in this room.")
         
-        # Show adjacent areas
-        print("\nAdjacent areas:")
+        # Show available movement directions as a single sentence
+        available_directions = []
         for direction in Direction:
             if direction in self.current_room_state.connections:
-                connected_pos = self.current_room_state.connections[direction]
-                connected_room = self.dungeon.get_room_at(connected_pos)
-                if connected_room:
-                    print(f"  {direction.value.capitalize()}: {connected_room.description}")
-            elif direction == Direction.UP and self.current_room_state.has_stairs_up:
-                print(f"  Up: Stairs leading up.")
-            elif direction == Direction.DOWN and self.current_room_state.has_stairs_down:
-                print(f"  Down: Stairs leading down.")
+                available_directions.append(direction.value)
+            elif direction in [Direction.UP, Direction.DOWN] and ((direction == Direction.UP and self.current_room_state.has_stairs_up) or (direction == Direction.DOWN and self.current_room_state.has_stairs_down)):
+                available_directions.append(direction.value)
+        
+        if available_directions:
+            directions_str = ", ".join(available_directions).replace("north", "North").replace("south", "South").replace("east", "East").replace("west", "West").replace("up", "Up").replace("down", "Down")
+            if len(available_directions) == 1:
+                print(f"\nYou are able to move {directions_str}.")
             else:
-                print(f"  {direction.value.capitalize()}: blocked")
+                print(f"\nYou are able to move {directions_str}.")
+        else:
+            print("\nYou cannot move in any direction.")
+        
+        # Show local map (mini-map) when looking around
+        print("\n📍 Local Map:")
+        self.show_local_map_no_legend()
 
     def talk_to_npc(self, npc_index: int) -> bool:
         """Talk to an NPC in the current room."""
@@ -453,42 +453,27 @@ class SeededGameEngine:
         player_x, player_y, player_z = self.player.position
         
         # Display grid
-        for y in range(max_y, min_y - 1, -1):  # Print from top to bottom visually
+        for y in range(min_y, max_y + 1):  # Print from low Y to high Y so North (lower Y values) appears at top
             row = ""
             for x in range(min_x, max_x + 1):
                 if (x, y) == (player_x, player_y):
                     row += "@"
                 elif (x, y) in grid:
                     room = grid[(x, y)]
-                    # Use first letter of room type as symbol
-                    if room.room_type == "treasure":
-                        row += "$"
-                    elif room.room_type == "monster":
-                        row += "M"
-                    elif room.room_type == "trap":
-                        row += "T"
-                    elif room.room_type == "npc":
-                        row += "N"
-                    elif room.room_type == "artifact":
-                        row += "A"
-                    elif room.room_type.startswith("stair"):  # stairs up or down
-                        row += "S"
+                    # Check if it's a hallway (connection to multiple rooms)
+                    connections = len(room.connections)
+                    if connections == 2:
+                        # Likely a hallway connecting two rooms
+                        row += "="
                     else:
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections > 2:
-                            row += "."
-                        elif connections == 2:
-                            # Likely a hallway
-                            row += "-"
-                        else:
-                            row += "."
+                        # Regular room
+                        row += "_"
                 else:
                     # Show unknown/void tiles as %
                     pos = (x, y, floor)  # Include z-coordinate for comparison
                     if pos in self.explored_positions:
                         # If position was visited but has no room, show as empty
-                        row += "."
+                        row += "_"
                     else:
                         # Show unexplored void tiles as %
                         row += "%"
@@ -496,18 +481,10 @@ class SeededGameEngine:
         
         # Show legend
         print("\nLegend:")
-        print("  . = Empty Room")
-        print("  - = Hallway")
-        print("  $ = Treasure Room")
-        print("  M = Monster Room")
-        print("  T = Trap Room")
-        print("  N = NPC Room")
-        print("  A = Artifact Room")
-        print("  S = Staircase Room")
+        print("  _ = Room")
+        print("  = = Hallway")
         print("  @ = Player Position")
-        print("  # = Locked Door")
-        print("  % = Unknown/Void Tile")
-        print("  % can hide secret doors or represent void spaces around rooms")
+        print("  % = Unknown/Void Tile (can hide secret doors or void spaces)")
 
     def save_game(self, filename: str = "savegame.json"):
         """Save the current game state."""
@@ -747,7 +724,7 @@ class SeededGameEngine:
         print(f"Total log entries: {len(self.log_actions)}")
 
     def show_local_map(self):
-        """Show a 5x5 map around the player's current position."""
+        """Show a 5x5 map around the player's current position with legend."""
         player_x, player_y, player_z = self.player.position
         
         # Define the 5x5 grid centered on player
@@ -757,7 +734,7 @@ class SeededGameEngine:
         print(f"\n📍 LOCAL MAP (5x5) around ({player_x}, {player_y}):")
         print("  " + " ".join([str(i % 10) for i in range(min_x, max_x + 1)]))
         
-        for y in range(max_y, min_y - 1, -1):  # Print from top to bottom
+        for y in range(min_y, max_y + 1):  # Print from low Y to high Y so North (lower Y) appears above player
             row = f"{(y % 10)} "
             for x in range(min_x, max_x + 1):
                 pos = (x, y, player_z)
@@ -766,49 +743,52 @@ class SeededGameEngine:
                     row += "@ "
                 elif pos in self.dungeon.room_states:
                     room = self.dungeon.room_states[pos]
-                    # Use first letter of room type as symbol
-                    if room.room_type == "treasure":
-                        row += "$ "
-                    elif room.room_type == "monster":
-                        row += "M "
-                    elif room.room_type == "trap":
-                        row += "T "
-                    elif room.room_type == "npc":
-                        row += "N "
-                    elif room.room_type == "artifact":
-                        row += "A "
-                    elif room.room_type.startswith("stair"):  # stairs up or down
-                        row += "S "
-                    else:
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections > 2:
-                            row += ". "
-                        elif connections == 2:
-                            # Likely a hallway
-                            row += "- "
-                        else:
-                            row += ". "
+                    # During normal gameplay, all rooms show as _
+                    row += "_ "
                 else:
                     # Show unknown/void tiles as %
                     if pos in self.explored_positions:
                         # If position was visited but has no room, show as empty
-                        row += ". "
+                        row += "_ "
                     else:
                         # Show unexplored void tiles as %
                         row += "% "
             print(row)
         
-        # Show legend
+        # Show legend for full local map command
         print("\n🗺️  Legend:")
         print("  @ = Player")
-        print("  . = Empty Room")
-        print("  - = Hallway")
-        print("  $ = Treasure Room")
-        print("  M = Monster Room")
-        print("  T = Trap Room")
-        print("  N = NPC Room")
-        print("  A = Artifact Room")
-        print("  S = Staircase Room")
-        print("  % = Unknown/Void Tile")
-        print("  % can hide secret doors or represent void spaces around rooms")
+        print("  _ = Room")
+        print("  = = Hallway")
+        print("  % = Unknown/Void Tile (can hide secret doors or void spaces)")
+
+    def show_local_map_no_legend(self):
+        """Show a 5x5 map around the player's current position without legend."""
+        player_x, player_y, player_z = self.player.position
+        
+        # Define the 5x5 grid centered on player
+        min_x, max_x = player_x - 2, player_x + 2
+        min_y, max_y = player_y - 2, player_y + 2
+        
+        print("  " + " ".join([str(i % 10) for i in range(min_x, max_x + 1)]))
+        
+        for y in range(min_y, max_y + 1):  # Print from low Y to high Y so North (lower Y) appears above player
+            row = f"{(y % 10)} "
+            for x in range(min_x, max_x + 1):
+                pos = (x, y, player_z)
+                if pos == (player_x, player_y, player_z):
+                    # Player position
+                    row += "@ "
+                elif pos in self.dungeon.room_states:
+                    room = self.dungeon.room_states[pos]
+                    # During normal gameplay, all rooms show as _
+                    row += "_ "
+                else:
+                    # Show unknown/void tiles as %
+                    if pos in self.explored_positions:
+                        # If position was visited but has no room, show as empty
+                        row += "_ "
+                    else:
+                        # Show unexplored void tiles as %
+                        row += "% "
+            print(row)
