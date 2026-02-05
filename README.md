@@ -142,8 +142,7 @@ python src/dungeon_visualizer.py 12345 0  # Visualize only floor 0
 ```
 dungeon-game/
 ├── src/
-│   ├── seeded_game_engine.py     # Main game engine with seed-based generation
-│   ├── new_game_engine.py        # Updated game engine with proper room-based layouts
+│   ├── new_game_engine.py        # Main game engine with proper room-based layouts
 │   ├── classes/
 │   │   ├── new_dungeon.py       # New dungeon system with proper room dimensions
 │   │   └── ...                  # Other class files

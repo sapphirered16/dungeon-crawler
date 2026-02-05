@@ -3,7 +3,7 @@
 import re
 from typing import List, Tuple, Optional
 from .classes.base import Direction
-from .game_engine import SeededGameEngine
+from .new_game_engine import SeededGameEngine
 
 
 class CommandProcessor:
