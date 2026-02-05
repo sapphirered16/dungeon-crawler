@@ -120,7 +120,7 @@ class CommandProcessor:
 
     def look_command(self, args: List[str]) -> bool:
         """Look around the current room."""
-        self.game_engine.look_around()
+        self.game_engine.look_around_with_map()
         return True
 
     def go_command(self, args: List[str]) -> bool:

@@ -171,7 +171,68 @@ class SeededGameEngine:
         else:
             print("\nYou cannot move in any direction.")
         
-        # Show local map (mini-map) when looking around
+        # Don't show local map here - only show it for explicit look commands
+        # Local map display moved to look_around_with_map method
+
+    def look_around_with_map(self):
+        """Look around the current room and show local map (for explicit look command)."""
+        print(f"\n--- {self.current_room_state.description} ---")
+        
+        # Show environmental features from map effects
+        current_pos = self.player.position
+        effect_descriptions = self.dungeon.map_effects.get_effect_descriptions_at_position(current_pos)
+        if effect_descriptions:
+            print("\nEnvironmental features:")
+            for desc in effect_descriptions:
+                print(f"  • {desc}")
+        
+        # Show items in room (only if there are items)
+        if self.current_room_state.items:
+            print("\nItems in the room:")
+            for i, item in enumerate(self.current_room_state.items, 1):
+                print(f"  {i}. {item.name} (Value: {item.value})")
+        
+        # Show creatures in room (excluding NPCs, only if there are creatures)
+        from .classes.character import NonPlayerCharacter
+        creatures = []
+        for e in self.current_room_state.entities:
+            if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
+                creatures.append(e)
+        
+        if creatures:
+            print("\nCreatures in the room:")
+            for i, entity in enumerate(creatures, 1):
+                print(f"  {i}. {entity.name} (HP: {entity.health}/{entity.max_health}, Attack: {entity.attack}, Defense: {entity.defense})")
+        
+        # Show NPCs in room (only if there are NPCs)
+        npcs = []
+        for e in self.current_room_state.entities:
+            if isinstance(e, NonPlayerCharacter) and e.is_alive():
+                npcs.append(e)
+        
+        if npcs:
+            print("\nNPCs in the room:")
+            for i, npc in enumerate(npcs, 1):
+                print(f"  {i}. {npc.name}")
+        
+        # Show available movement directions as a single sentence
+        available_directions = []
+        for direction in Direction:
+            if direction in self.current_room_state.connections:
+                available_directions.append(direction.value)
+            elif direction in [Direction.UP, Direction.DOWN] and ((direction == Direction.UP and self.current_room_state.has_stairs_up) or (direction == Direction.DOWN and self.current_room_state.has_stairs_down)):
+                available_directions.append(direction.value)
+        
+        if available_directions:
+            directions_str = ", ".join(available_directions).replace("north", "North").replace("south", "South").replace("east", "East").replace("west", "West").replace("up", "Up").replace("down", "Down")
+            if len(available_directions) == 1:
+                print(f"\nYou are able to move {directions_str}.")
+            else:
+                print(f"\nYou are able to move {directions_str}.")
+        else:
+            print("\nYou cannot move in any direction.")
+        
+        # Show local map (mini-map) - only for explicit look commands
         print("\n📍 Local Map:")
         self.show_local_map_no_legend()
 
