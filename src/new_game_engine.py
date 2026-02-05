@@ -149,11 +149,14 @@ class SeededGameEngine:
             for desc in effect_descriptions:
                 print(f"  • {desc}")
         
-        # Show items in room (only if there are items)
-        if self.current_room.items:
-            print("\nItems in the room:")
-            for i, item in enumerate(self.current_room.items, 1):
-                print(f"  {i}. {item.name} (Value: {item.value})")
+        # Show items in the current grid cell (only if there are items)
+        current_pos = self.player.position
+        if current_pos in self.dungeon.grid:
+            current_cell = self.dungeon.grid[current_pos]
+            if current_cell.items:
+                print("\nItems in this area:")
+                for i, item in enumerate(current_cell.items, 1):
+                    print(f"  {i}. {item.name} (Value: {item.value})")
         
         # Show creatures in room (excluding NPCs, only if there are creatures)
         from .classes.character import NonPlayerCharacter
@@ -234,11 +237,14 @@ class SeededGameEngine:
             for desc in effect_descriptions:
                 print(f"  • {desc}")
         
-        # Show items in room (only if there are items)
-        if self.current_room.items:
-            print("\nItems in the room:")
-            for i, item in enumerate(self.current_room.items, 1):
-                print(f"  {i}. {item.name} (Value: {item.value})")
+        # Show items in the current grid cell (only if there are items)
+        current_pos = self.player.position
+        if current_pos in self.dungeon.grid:
+            current_cell = self.dungeon.grid[current_pos]
+            if current_cell.items:
+                print("\nItems in this area:")
+                for i, item in enumerate(current_cell.items, 1):
+                    print(f"  {i}. {item.name} (Value: {item.value})")
         
         # Show creatures in room (excluding NPCs, only if there are creatures)
         from .classes.character import NonPlayerCharacter
@@ -317,11 +323,14 @@ class SeededGameEngine:
         effect_descriptions = self.dungeon.map_effects.get_effect_descriptions_at_position(current_pos)
         if effect_descriptions:
             print("\nEnvironmental features:")
-            for desc in effect_descriptions:
-                print(f"  • {desc}")
-        
-        # Show items in room (only if there are items)
-        if self.current_room.items:
+        # Show items in the current grid cell (only if there are items)
+        current_pos = self.player.position
+        if current_pos in self.dungeon.grid:
+            current_cell = self.dungeon.grid[current_pos]
+            if current_cell.items:
+                print("\nItems in this area:")
+                for i, item in enumerate(current_cell.items, 1):
+                    print(f"  {i}. {item.name} (Value: {item.value})")
             print("\nItems in the room:")
             for i, item in enumerate(self.current_room.items, 1):
                 print(f"  {i}. {item.name} (Value: {item.value})")
@@ -508,41 +517,59 @@ class SeededGameEngine:
         # Start a new turn by clearing the event buffer
         self.event_buffer = []
         
-        # Check if the direction is locked
-        if direction in self.current_room.locked_doors:
-            key_name = self.current_room.locked_doors[direction]
-            self.event_buffer.append(f"🔒 This way is locked by a magical barrier. You need a {key_name} to proceed.")
-            # Check if player has the key
-            for item in self.player.inventory:
-                if item.name == key_name and item.item_type.value == "key":
-                    self.event_buffer.append(f"✨ You use the {key_name} to unlock the magical barrier!")
-                    del self.current_room.locked_doors[direction]
-                    self._log_action(f"Used {key_name} to unlock door - HP: {self.player.health}/{self.player.max_health}", self.player.position)
-                    break
-            else:
-                self.event_buffer.append(f"🔑 You don't have the required key: {key_name}")
-                self.event_buffer.append(f"💡 Hint: Look for {key_name}s in earlier areas of the dungeon.")
-                self._log_action(f"Failed to unlock door - no {key_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
-                self._display_events()
-                return False
+        # Calculate destination position
+        current_x, current_y, current_z = self.player.position
+        if direction == Direction.NORTH:
+            dest_pos = (current_x, current_y - 1, current_z)
+        elif direction == Direction.SOUTH:
+            dest_pos = (current_x, current_y + 1, current_z)
+        elif direction == Direction.EAST:
+            dest_pos = (current_x + 1, current_y, current_z)
+        elif direction == Direction.WEST:
+            dest_pos = (current_x - 1, current_y, current_z)
+        else:
+            # For stairs, handle separately
+            dest_pos = self.player.position
+        
+        # Check if the destination has locked doors or blocked passages
+        if dest_pos in self.dungeon.grid:
+            dest_cell = self.dungeon.grid[dest_pos]
+            
+            # Check if the destination has locked doors
+            if direction in dest_cell.locked_doors:
+                key_name = dest_cell.locked_doors[direction]
+                self.event_buffer.append(f"🔒 This way is locked by a magical barrier. You need a {key_name} to proceed.")
+                # Check if player has the key
+                for item in self.player.inventory:
+                    if item.name == key_name and item.item_type.value == "key":
+                        self.event_buffer.append(f"✨ You use the {key_name} to unlock the magical barrier!")
+                        del dest_cell.locked_doors[direction]
+                        self._log_action(f"Used {key_name} to unlock door - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                        break
+                else:
+                    self.event_buffer.append(f"🔑 You don't have the required key: {key_name}")
+                    self.event_buffer.append(f"💡 Hint: Look for {key_name}s in earlier areas of the dungeon.")
+                    self._log_action(f"Failed to unlock door - no {key_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                    self._display_events()
+                    return False
 
-        # Check if the direction is blocked
-        if direction in self.current_room.blocked_passages:
-            trigger_name = self.current_room.blocked_passages[direction]
-            self.event_buffer.append(f"🚧 This way is blocked by ancient magic. You need a {trigger_name} to proceed.")
-            # Check if player has the trigger item
-            for item in self.player.inventory:
-                if item.name == trigger_name:
-                    self.event_buffer.append(f"✨ You use the {trigger_name} to dispel the magical blockage!")
-                    del self.current_room.blocked_passages[direction]
-                    self._log_action(f"Used {trigger_name} to unblock passage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
-                    break
-            else:
-                self.event_buffer.append(f"🔮 You don't have the required item: {trigger_name}")
-                self.event_buffer.append(f"💡 Hint: Search for {trigger_name}s in rooms before reaching this area.")
-                self._log_action(f"Failed to unblock passage - no {trigger_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
-                self._display_events()
-                return False
+            # Check if the destination is blocked
+            if direction in dest_cell.blocked_passages:
+                trigger_name = dest_cell.blocked_passages[direction]
+                self.event_buffer.append(f"🚧 This way is blocked by ancient magic. You need a {trigger_name} to proceed.")
+                # Check if player has the trigger item
+                for item in self.player.inventory:
+                    if item.name == trigger_name:
+                        self.event_buffer.append(f"✨ You use the {trigger_name} to dispel the magical blockage!")
+                        del dest_cell.blocked_passages[direction]
+                        self._log_action(f"Used {trigger_name} to unblock passage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                        break
+                else:
+                    self.event_buffer.append(f"🔮 You don't have the required item: {trigger_name}")
+                    self.event_buffer.append(f"💡 Hint: Search for {trigger_name}s in rooms before reaching this area.")
+                    self._log_action(f"Failed to unblock passage - no {trigger_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                    self._display_events()
+                    return False
 
         # Handle special directions (stairs)
         if direction == Direction.UP and self.current_room.has_stairs_up:
@@ -765,38 +792,42 @@ class SeededGameEngine:
             return False
 
     def take_item(self, item_index: int) -> bool:
-        """Take an item from the current room."""
+        """Take an item from the current grid cell."""
         # Adjust item_index since the game displays items starting from 1
         adjusted_index = item_index - 1
         
-        if 0 <= adjusted_index < len(self.current_room.items):
-            item = self.current_room.items[adjusted_index]
-            print(f"You take the {item.name}.")
-            self.player.take_item(item)
-            
-            # Check if this is an artifact and if it's the final win condition
-            if item.item_type.value == "artifact":
-                print("🎉 CONGRATULATIONS! You have found the ultimate artifact!")
-                print("✨ Your journey through the dungeon has ended in triumph!")
-                print("🏆 You have achieved victory!")
-                self.player.victory = True  # Mark player as having won
-                print(f"\n📊 FINAL SCORE: {self.player.score}")
-                print(f"⚔️  ENEMIES DEFEATED: {self.player.enemies_defeated}")
-                print(f"💎 TREASURES COLLECTED: {self.player.treasures_collected}")
-                self._log_action(f"WON GAME by taking {item.name} (artifact) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
-                return True  # Return early to indicate game completion
-            
-            self.current_room.items.remove(item)
-            # Process monster AI after taking an item (noise might attract attention)
-            self.process_monster_ai()
-            # Update temporary buffs
-            self.player.update_temporary_buffs()
-            self._log_action(f"Took item {item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
-            return True
-        else:
-            print("Invalid item selection.")
-            self._log_action("Invalid item selection", self.player.position)
-            return False
+        current_pos = self.player.position
+        if current_pos in self.dungeon.grid:
+            current_cell = self.dungeon.grid[current_pos]
+            if 0 <= adjusted_index < len(current_cell.items):
+                item = current_cell.items[adjusted_index]
+                print(f"You take the {item.name}.")
+                self.player.take_item(item)
+                
+                # Check if this is an artifact and if it's the final win condition
+                if item.item_type.value == "artifact":
+                    print("🎉 CONGRATULATIONS! You have found the ultimate artifact!")
+                    print("✨ Your journey through the dungeon has ended in triumph!")
+                    print("🏆 You have achieved victory!")
+                    self.player.victory = True  # Mark player as having won
+                    print(f"\n📊 FINAL SCORE: {self.player.score}")
+                    print(f"⚔️  ENEMIES DEFEATED: {self.player.enemies_defeated}")
+                    print(f"💎 TREASURES COLLECTED: {self.player.treasures_collected}")
+                    self._log_action(f"WON GAME by taking {item.name} (artifact) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                    return True  # Return early to indicate game completion
+                
+                current_cell.items.remove(item)
+                # Process monster AI after taking an item (noise might attract attention)
+                self.process_monster_ai()
+                # Update temporary buffs
+                self.player.update_temporary_buffs()
+                self.player.treasures_collected += 1  # Update treasures collected
+                self._log_action(f"Took item {item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                return True
+        
+        print("Invalid item selection.")
+        self._log_action("Invalid item selection", self.player.position)
+        return False
 
     def use_item(self, item_index: int) -> bool:
         """Use an item from the player's inventory."""
@@ -857,16 +888,24 @@ class SeededGameEngine:
                     # Check if it's part of a hallway
                     cell_type = self.dungeon.get_cell_type_at_position(pos)
                     if cell_type == 'hallway':
-                        # Check if this hallway position has items
-                        # For hallways, check if any room in the area has items
-                        has_items = any(item for item in room_at_pos.items)
-                        if has_items:
+                        # Check if this hallway position has items or obstacles
+                        cell_at_pos = self.dungeon.grid.get(pos)
+                        has_items = cell_at_pos and cell_at_pos.items
+                        has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
+                        if has_obstacles:
+                            grid[(x, y)] = '#'  # Hallway with obstacles (locked doors/blocked passages)
+                        elif has_items:
                             grid[(x, y)] = '≈'  # Hallway with items
                         else:
                             grid[(x, y)] = '∿'  # Hallway without items
                     else:  # It's part of a room
-                        # Check if this room has items
-                        if room_at_pos.items:
+                        # Check if this position has items or obstacles in the grid cell
+                        cell_at_pos = self.dungeon.grid.get(pos)
+                        has_items = cell_at_pos and cell_at_pos.items
+                        has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
+                        if has_obstacles:
+                            grid[(x, y)] = '#'  # Room with obstacles (locked doors/blocked passages)
+                        elif has_items:
                             grid[(x, y)] = '■'  # Room with items (black square)
                         else:
                             grid[(x, y)] = '□'  # Room without items (white square)
@@ -874,12 +913,16 @@ class SeededGameEngine:
                     # Check cell type first
                     cell_type = self.dungeon.get_cell_type_at_position(pos)
                     if cell_type == 'hallway':
-                        # Check if this hallway position has items
-                        # For hallways, we need to check surrounding rooms for items
-                        # This is trickier since hallways aren't tied to specific rooms anymore
-                        # For now, treat as hallway without items
-                        # TODO: Could check nearby rooms for items in hallways
-                        grid[(x, y)] = '∿'  # Hallway without items
+                        # Check if this hallway position has items or obstacles
+                        cell_at_pos = self.dungeon.grid.get(pos)
+                        has_items = cell_at_pos and cell_at_pos.items
+                        has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
+                        if has_obstacles:
+                            grid[(x, y)] = '#'  # Hallway with obstacles (locked doors/blocked passages)
+                        elif has_items:
+                            grid[(x, y)] = '≈'  # Hallway with items
+                        else:
+                            grid[(x, y)] = '∿'  # Hallway without items
                     else:
                         # Check if position was explored
                         if pos in self.explored_positions:
@@ -901,6 +944,7 @@ class SeededGameEngine:
         # Show legend
         print("\nLegend:")
         print("  ♀ = Player Position")
+        print("  # = Obstacle (locked doors/blocked passages)")
         print("  ■ = Room/Hallway (with items)")
         print("  □ = Room (no items)")
         print("  ∿ = Hallway (no items)")
@@ -1208,16 +1252,24 @@ class SeededGameEngine:
                 elif pos in self.dungeon.grid:
                     cell_type = self.dungeon.get_cell_type_at_position(pos)
                     if cell_type == 'room':
-                        # Check if this room has items
-                        room_at_pos = self.dungeon.get_room_at_position(pos)
-                        if room_at_pos and room_at_pos.items:
+                        # Check if this position has items or obstacles in the grid cell
+                        cell_at_pos = self.dungeon.grid.get(pos)
+                        has_items = cell_at_pos and cell_at_pos.items
+                        has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
+                        if has_obstacles:
+                            row += "# "  # Room with obstacles (locked doors/blocked passages)
+                        elif has_items:
                             row += "■ "  # Room with items (black square)
                         else:
                             row += "□ "  # Room without items (white square)
                     elif cell_type == 'hallway':
-                        # Check if this hallway has items
-                        room_at_pos = self.dungeon.get_room_at_position(pos)
-                        if room_at_pos and room_at_pos.items:
+                        # Check if this hallway position has items or obstacles in the grid cell
+                        cell_at_pos = self.dungeon.grid.get(pos)
+                        has_items = cell_at_pos and cell_at_pos.items
+                        has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
+                        if has_obstacles:
+                            row += "# "  # Hallway with obstacles (locked doors/blocked passages)
+                        elif has_items:
                             row += "≈ "  # Hallway with items
                         else:
                             row += "∿ "  # Hallway without items
@@ -1240,6 +1292,7 @@ class SeededGameEngine:
         # Show legend for full local map command
         print("\n🗺️  Legend:")
         print("  ♀ = Player")
+        print("  # = Obstacle (locked doors/blocked passages)")
         print("  ■ = Room/Hallway (with items)")
         print("  □ = Room (no items)")
         print("  ∿ = Hallway (no items)")
@@ -1267,16 +1320,24 @@ class SeededGameEngine:
                 elif pos in self.dungeon.grid:
                     cell_type = self.dungeon.get_cell_type_at_position(pos)
                     if cell_type == 'room':
-                        # Check if this room has items
-                        room_at_pos = self.dungeon.get_room_at_position(pos)
-                        if room_at_pos and room_at_pos.items:
+                        # Check if this position has items or obstacles in the grid cell
+                        cell_at_pos = self.dungeon.grid.get(pos)
+                        has_items = cell_at_pos and cell_at_pos.items
+                        has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
+                        if has_obstacles:
+                            row += "# "  # Room with obstacles (locked doors/blocked passages)
+                        elif has_items:
                             row += "■ "  # Room with items (black square)
                         else:
                             row += "□ "  # Room without items (white square)
                     elif cell_type == 'hallway':
-                        # Check if this hallway has items
-                        room_at_pos = self.dungeon.get_room_at_position(pos)
-                        if room_at_pos and room_at_pos.items:
+                        # Check if this hallway position has items or obstacles in the grid cell
+                        cell_at_pos = self.dungeon.grid.get(pos)
+                        has_items = cell_at_pos and cell_at_pos.items
+                        has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
+                        if has_obstacles:
+                            row += "# "  # Hallway with obstacles (locked doors/blocked passages)
+                        elif has_items:
                             row += "≈ "  # Hallway with items
                         else:
                             row += "∿ "  # Hallway without items

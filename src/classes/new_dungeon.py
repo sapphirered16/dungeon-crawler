@@ -70,6 +70,9 @@ class GridCell:
     def __init__(self, cell_type='empty'):
         self.cell_type = cell_type  # 'empty', 'room', 'hallway', 'wall'
         self.room_ref = None  # Reference to the room object if this cell is part of a room
+        self.items = []  # Items placed on this specific tile
+        self.locked_doors = {}  # Locked doors in this cell: {direction: key_name}
+        self.blocked_passages = {}  # Blocked passages in this cell: {direction: trigger_name}
         self.has_map_effect = False
         self.map_effect = None
 
@@ -506,6 +509,43 @@ class SeededDungeon:
         
         # Add map effects to random positions in rooms
         self._add_map_effects(floor)
+        
+        # Add locked doors and blocked passages to hallway tiles
+        self._add_obstacles_to_hallways(floor)
+    
+    def _add_obstacles_to_hallways(self, floor: int):
+        """Add locked doors and blocked passages to hallway tiles between rooms."""
+        # Get all hallway positions on this floor
+        hallway_positions = [(x, y, z) for (x, y, z), cell in self.grid.items() 
+                             if z == floor and cell.cell_type == 'hallway']
+        
+        # Place locked doors and blocked passages on hallway tiles
+        # We'll place them randomly to create challenges between rooms
+        items = self.data_provider.get_items()
+        key_items = [item for item in items if item.get("type", "").lower() == "key"]
+        
+        # Place locked doors (magical barriers that require keys)
+        num_locked_doors = min(len(hallway_positions) // 10, 5)  # Place up to 5 locked doors
+        selected_hallways = random.sample(hallway_positions, min(num_locked_doors, len(hallway_positions)))
+        
+        for pos in selected_hallways:
+            if key_items:
+                key_item = random.choice(key_items)
+                direction = random.choice(list(Direction))  # Random direction for the lock
+                self.grid[pos].locked_doors[direction] = key_item["name"]
+        
+        # Place blocked passages (magical barriers that require trigger items)
+        remaining_hallways = [pos for pos in hallway_positions if pos not in selected_hallways]
+        num_blocked_passages = min(len(remaining_hallways) // 15, 3)  # Place up to 3 blocked passages
+        selected_blocked = random.sample(remaining_hallways, min(num_blocked_passages, len(remaining_hallways)))
+        
+        for pos in selected_blocked:
+            # Choose a random item as the trigger (could be any item type)
+            all_items = self.data_provider.get_items()
+            if all_items:
+                trigger_item = random.choice(all_items)
+                direction = random.choice(list(Direction))  # Random direction for the block
+                self.grid[pos].blocked_passages[direction] = trigger_item["name"]
 
     def _connect_stairs_properly(self):
         """Ensure stairs are properly connected between floors."""
@@ -560,18 +600,28 @@ class SeededDungeon:
         all_floors = set(r.z for r in self.rooms)
         lowest_floor = min(all_floors) if all_floors else 0
         
+        # Get all positions within this room
+        room_positions = room.get_all_positions()
+        
         # Add items based on room type
         if room.room_type == "treasure":
-            # Add 1-3 treasure items
-            for _ in range(random.randint(1, 3)):
-                item = self._generate_random_item()
-                room.items.append(item)
+            # Add 1-3 treasure items to specific positions in the room
+            num_items = random.randint(1, 3)
+            selected_positions = random.sample(room_positions, min(num_items, len(room_positions)))
+            for pos_idx, (x, y) in enumerate(selected_positions):
+                pos = (x, y, room.z)
+                if pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[pos].items.append(item)
         elif room.room_type == "empty":
             # Small chance to add an item in empty rooms
-            if random.random() < 0.2:
+            if random.random() < 0.2 and room_positions:
                 if random.random() < 0.5:
-                    item = self._generate_random_item()
-                    room.items.append(item)
+                    pos = random.choice(room_positions)
+                    full_pos = (pos[0], pos[1], room.z)
+                    if full_pos in self.grid:
+                        item = self._generate_random_item()
+                        self.grid[full_pos].items.append(item)
         elif room.room_type == "monster":
             # Add monsters
             num_monsters = random.randint(1, 3)
@@ -579,48 +629,78 @@ class SeededDungeon:
                 monster = self._generate_random_enemy(room.z)
                 room.entities.append(monster)
             # Maybe add a treasure item too
-            if random.random() < 0.3:
-                item = self._generate_random_item()
-                room.items.append(item)
+            if random.random() < 0.3 and room_positions:
+                pos = random.choice(room_positions)
+                full_pos = (pos[0], pos[1], room.z)
+                if full_pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[full_pos].items.append(item)
         elif room.room_type == "npc":
             # Add an NPC
             npc = self._generate_random_npc()
             room.npcs.append(npc)
         elif room.room_type == "artifact":
             # Add a special artifact ONLY if this is the lowest floor
-            if room.z == lowest_floor:
-                artifact = self._generate_artifact()
-                room.items.append(artifact)
+            if room.z == lowest_floor and room_positions:
+                pos = random.choice(room_positions)
+                full_pos = (pos[0], pos[1], room.z)
+                if full_pos in self.grid:
+                    artifact = self._generate_artifact()
+                    self.grid[full_pos].items.append(artifact)
         elif room.room_type == "storage":
-            # Add 1-3 storage-related items
-            for _ in range(random.randint(1, 3)):
-                item = self._generate_random_item()
-                room.items.append(item)
+            # Add 1-3 storage-related items to specific positions
+            num_items = random.randint(1, 3)
+            selected_positions = random.sample(room_positions, min(num_items, len(room_positions)))
+            for pos_idx, (x, y) in enumerate(selected_positions):
+                pos = (x, y, room.z)
+                if pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[pos].items.append(item)
         elif room.room_type == "bunk":
-            # Add 1-2 items related to rest/sleep
-            for _ in range(random.randint(1, 2)):
-                item = self._generate_random_item()
-                room.items.append(item)
+            # Add 1-2 items related to rest/sleep to specific positions
+            num_items = random.randint(1, 2)
+            selected_positions = random.sample(room_positions, min(num_items, len(room_positions)))
+            for pos_idx, (x, y) in enumerate(selected_positions):
+                pos = (x, y, room.z)
+                if pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[pos].items.append(item)
         elif room.room_type == "kitchen":
-            # Add food and cooking-related items
-            for _ in range(random.randint(1, 3)):
-                item = self._generate_random_item()
-                room.items.append(item)
+            # Add 1-3 food and cooking-related items to specific positions
+            num_items = random.randint(1, 3)
+            selected_positions = random.sample(room_positions, min(num_items, len(room_positions)))
+            for pos_idx, (x, y) in enumerate(selected_positions):
+                pos = (x, y, room.z)
+                if pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[pos].items.append(item)
         elif room.room_type == "library":
-            # Add 1-2 knowledge-related items
-            for _ in range(random.randint(1, 2)):
-                item = self._generate_random_item()
-                room.items.append(item)
+            # Add 1-2 knowledge-related items to specific positions
+            num_items = random.randint(1, 2)
+            selected_positions = random.sample(room_positions, min(num_items, len(room_positions)))
+            for pos_idx, (x, y) in enumerate(selected_positions):
+                pos = (x, y, room.z)
+                if pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[pos].items.append(item)
         elif room.room_type == "workshop":
-            # Add 1-3 crafting/tool-related items
-            for _ in range(random.randint(1, 3)):
-                item = self._generate_random_item()
-                room.items.append(item)
+            # Add 1-3 crafting/tool-related items to specific positions
+            num_items = random.randint(1, 3)
+            selected_positions = random.sample(room_positions, min(num_items, len(room_positions)))
+            for pos_idx, (x, y) in enumerate(selected_positions):
+                pos = (x, y, room.z)
+                if pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[pos].items.append(item)
         elif room.room_type == "garden":
-            # Add 1-2 plant/herb-related items
-            for _ in range(random.randint(1, 2)):
-                item = self._generate_random_item()
-                room.items.append(item)
+            # Add 1-2 plant/herb-related items to specific positions
+            num_items = random.randint(1, 2)
+            selected_positions = random.sample(room_positions, min(num_items, len(room_positions)))
+            for pos_idx, (x, y) in enumerate(selected_positions):
+                pos = (x, y, room.z)
+                if pos in self.grid:
+                    item = self._generate_random_item()
+                    self.grid[pos].items.append(item)
 
     def _generate_random_item(self) -> Item:
         """Generate a random item."""
