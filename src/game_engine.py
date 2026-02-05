@@ -20,6 +20,11 @@ class SeededGameEngine:
         self.current_room_state = self._find_starting_room()
         self.data_provider = DataProvider()
         
+        # Track explored areas for visualization
+        self.explored_positions = set()
+        if self.current_room_state:
+            self.explored_positions.add(self.current_room_state.pos)
+        
         # Initialize logging
         self.log_file = f"dungeon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         self.log_actions = []
@@ -266,6 +271,8 @@ class SeededGameEngine:
                 old_pos = self.player.position
                 self.current_room_state = self.dungeon.room_states[target_pos]
                 self.player.travel_to(target_pos)
+                # Add new position to explored areas
+                self.explored_positions.add(target_pos)
                 print("⬆️  You climb up the stairs...")
                 self._log_action(f"Moved UP from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
                 # Automatically look around after moving
@@ -277,6 +284,8 @@ class SeededGameEngine:
                 old_pos = self.player.position
                 self.current_room_state = self.dungeon.room_states[target_pos]
                 self.player.travel_to(target_pos)
+                # Add new position to explored areas
+                self.explored_positions.add(target_pos)
                 print("⬇️  You descend down the stairs...")
                 # Process monster AI after moving
                 self.process_monster_ai()
@@ -289,6 +298,8 @@ class SeededGameEngine:
             old_pos = self.player.position
             self.current_room_state = self.dungeon.room_states[new_pos]
             self.player.travel_to(new_pos)
+            # Add new position to explored areas
+            self.explored_positions.add(new_pos)
             # Process monster AI after moving
             self.process_monster_ai()
             self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
@@ -442,7 +453,7 @@ class SeededGameEngine:
         player_x, player_y, player_z = self.player.position
         
         # Display grid
-        for y in range(min_y, max_y + 1):
+        for y in range(max_y, min_y - 1, -1):  # Print from top to bottom visually
             row = ""
             for x in range(min_x, max_x + 1):
                 if (x, y) == (player_x, player_y):
@@ -473,7 +484,14 @@ class SeededGameEngine:
                         else:
                             row += "."
                 else:
-                    row += " "
+                    # Show unknown/void tiles as %
+                    pos = (x, y, floor)  # Include z-coordinate for comparison
+                    if pos in self.explored_positions:
+                        # If position was visited but has no room, show as empty
+                        row += "."
+                    else:
+                        # Show unexplored void tiles as %
+                        row += "%"
             print(row)
         
         # Show legend
@@ -488,7 +506,8 @@ class SeededGameEngine:
         print("  S = Staircase Room")
         print("  @ = Player Position")
         print("  # = Locked Door")
-        print("  % = Blocked Passage")
+        print("  % = Unknown/Void Tile")
+        print("  % can hide secret doors or represent void spaces around rooms")
 
     def save_game(self, filename: str = "savegame.json"):
         """Save the current game state."""
@@ -771,8 +790,13 @@ class SeededGameEngine:
                         else:
                             row += ". "
                 else:
-                    # Empty space
-                    row += "  "
+                    # Show unknown/void tiles as %
+                    if pos in self.explored_positions:
+                        # If position was visited but has no room, show as empty
+                        row += ". "
+                    else:
+                        # Show unexplored void tiles as %
+                        row += "% "
             print(row)
         
         # Show legend
@@ -786,3 +810,5 @@ class SeededGameEngine:
         print("  N = NPC Room")
         print("  A = Artifact Room")
         print("  S = Staircase Room")
+        print("  % = Unknown/Void Tile")
+        print("  % can hide secret doors or represent void spaces around rooms")
