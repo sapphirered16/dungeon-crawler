@@ -40,6 +40,9 @@ class CommandProcessor:
             'exit': self.quit_command,
             'items': self.items_map_command,
             'item': self.items_map_command,
+            'stairs': self.stairs_command,
+            'staircase': self.stairs_command,
+            'levels': self.stairs_command,
         }
 
     def process_command(self, command: str) -> bool:
@@ -96,6 +99,7 @@ class CommandProcessor:
         print("  map               - Show full current floor map")
         print("  local/lm          - Show 5x5 local map around player")
         print("  items/item        - Show map with item location indicators")
+        print("  stairs/staircase  - Show locations of stairs on current floor")
         print("  save              - Save game")
         print("  load              - Load game")
         print("  clear             - Clear save and log files")
@@ -299,6 +303,13 @@ class CommandProcessor:
     def local_map_command(self, args: List[str]) -> bool:
         """Show a 5x5 map around the player."""
         self.game_engine.show_local_map()
+        return True
+
+    def stairs_command(self, args: List[str]) -> bool:
+        """Show locations of stairs on the current floor."""
+        print("\n🪜 STAIRS LOCATION MAP")
+        print("Showing locations of rooms with stairs...")
+        self.game_engine.show_stairs_locations()
         return True
 
     def items_map_command(self, args: List[str]) -> bool:

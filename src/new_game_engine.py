@@ -1201,3 +1201,45 @@ class SeededGameEngine:
                         # Show unexplored void tiles as ░
                         row += "░ "  # Medium shade for unknown areas
             print(row)
+    def show_stairs_locations(self):
+        """Show locations of stairs on the current floor."""
+        current_floor = self.player.position[2]
+        
+        print(f"\nFloor {current_floor + 1} Stair Locations:")
+        
+        # Get all rooms on current floor
+        floor_rooms = self.dungeon.get_all_rooms_on_floor(current_floor)
+        
+        # Find rooms with stairs
+        rooms_with_up_stairs = [room for room in floor_rooms if room.has_stairs_up]
+        rooms_with_down_stairs = [room for room in floor_rooms if room.has_stairs_down]
+        
+        if not rooms_with_up_stairs and not rooms_with_down_stairs:
+            print("  No stairs found on this floor.")
+            return
+        
+        if rooms_with_up_stairs:
+            print("  🡅 UP STAIRS:")
+            for room in rooms_with_up_stairs:
+                print(f"    - {room.room_type.title()} room at ({room.x}, {room.y})")
+        
+        if rooms_with_down_stairs:
+            print("  🡇 DOWN STAIRS:")
+            for room in rooms_with_down_stairs:
+                print(f"    - {room.room_type.title()} room at ({room.x}, {room.y})")
+        
+        # Show visual hint if player is close to any stairs
+        player_x, player_y, player_z = self.player.position
+        nearby_up_stairs = [room for room in rooms_with_up_stairs 
+                           if abs(room.x - player_x) <= 5 and abs(room.y - player_y) <= 5]
+        nearby_down_stairs = [room for room in rooms_with_down_stairs 
+                             if abs(room.x - player_x) <= 5 and abs(room.y - player_y) <= 5]
+        
+        if nearby_up_stairs or nearby_down_stairs:
+            print("\n💡 HINT: You're close to these stairs:")
+            for room in nearby_up_stairs:
+                dist = abs(room.x - player_x) + abs(room.y - player_y)
+                print(f"  - Up stairs in {room.room_type} room at ({room.x}, {room.y}), {dist} tiles away")
+            for room in nearby_down_stairs:
+                dist = abs(room.x - player_x) + abs(room.y - player_y)
+                print(f"  - Down stairs in {room.room_type} room at ({room.x}, {room.y}), {dist} tiles away")
