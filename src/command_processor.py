@@ -38,6 +38,8 @@ class CommandProcessor:
             'quit': self.quit_command,
             'q': self.quit_command,
             'exit': self.quit_command,
+            'items': self.items_map_command,
+            'item': self.items_map_command,
         }
 
     def process_command(self, command: str) -> bool:
@@ -93,6 +95,7 @@ class CommandProcessor:
         print("  talk/speak <num>  - Talk to NPC number <num>")
         print("  map               - Show full current floor map")
         print("  local/lm          - Show 5x5 local map around player")
+        print("  items/item        - Show map with item location indicators")
         print("  save              - Save game")
         print("  load              - Load game")
         print("  clear             - Clear save and log files")
@@ -102,6 +105,7 @@ class CommandProcessor:
         print("  - Move directly with direction names: n/s/e/w/u/d")
         print("  - Items/monsters/NPCs are numbered in room descriptions")
         print("  - Use 'local' or 'lm' for 5x5 map view")
+        print("  - Use 'items' to see item location indicators on the map")
         print("  - Use 'log' to review adventure history")
         return True
 
@@ -309,4 +313,18 @@ class CommandProcessor:
     def local_map_command(self, args: List[str]) -> bool:
         """Show a 5x5 map around the player."""
         self.game_engine.show_local_map()
+        return True
+
+    def items_map_command(self, args: List[str]) -> bool:
+        """Show a map highlighting locations with items."""
+        print("\n🔍 ITEM LOCATION MAP")
+        print("Showing locations of rooms that contain items...")
+        if args and len(args) == 1:
+            try:
+                floor_num = int(args[0])
+                self.game_engine.visualize_floor(floor_num - 1)  # Convert to 0-indexed
+            except ValueError:
+                print(f"❌ Invalid floor number: {args[0]}.")
+        else:
+            self.game_engine.visualize_floor()
         return True

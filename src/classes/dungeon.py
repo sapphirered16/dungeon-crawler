@@ -94,6 +94,7 @@ class SeededDungeon:
         # Determine the total number of floors from the generated dungeon
         all_floors = set(pos[2] for pos in self.room_states.keys())
         max_floor = max(all_floors) if all_floors else 0
+        min_floor = min(all_floors) if all_floors else 0
         
         # Connect stairs between each consecutive pair of floors
         for floor in range(max_floor):  # Connect floors 0->1, 1->2, ..., (n-1)->n
@@ -113,11 +114,11 @@ class SeededDungeon:
                 self.room_states[to_room_pos].has_stairs_up = True
                 self.room_states[to_room_pos].stairs_up_target = from_room_pos
         
-        # Ensure there's a special artifact room on the lowest floor as the win condition
-        lowest_floor_rooms = [pos for pos in self.room_states.keys() if pos[2] == max_floor]
-        if lowest_floor_rooms:
-            # Select a room on the lowest floor to be the special artifact room
-            artifact_room_pos = random.choice(lowest_floor_rooms)
+        # Ensure there's a special artifact room on the deepest (highest-numbered) floor as the win condition
+        deepest_floor_rooms = [pos for pos in self.room_states.keys() if pos[2] == max_floor]
+        if deepest_floor_rooms:
+            # Select a room on the deepest floor to be the special artifact room
+            artifact_room_pos = random.choice(deepest_floor_rooms)
             artifact_room = self.room_states[artifact_room_pos]
             
             # Change this room to be an artifact room if it isn't already
@@ -173,7 +174,9 @@ class SeededDungeon:
                 continue
                 
             # Create new room with all available room types including fillers
-            room_types = ["empty", "treasure", "monster", "trap", "npc", "artifact", 
+            # BUT exclude "artifact" room type during initial generation since 
+            # the special artifact room is created separately in _connect_stairs_properly
+            room_types = ["empty", "treasure", "monster", "trap", "npc", 
                          "storage", "bunk", "kitchen", "library", "workshop", "garden"]
             room_type = random.choice(room_types)
             
@@ -240,35 +243,147 @@ class SeededDungeon:
                 description = random.choice(room_template['descriptions'])
                 self.room_states[pos].description = description
         
-        # Add locked doors and blocked passages
-        for pos in positions:
-            # Random chance to add locked door
+        # Add map effects to random positions
+        self._add_map_effects(floor)
+        
+        # Populate rooms with items and entities BEFORE adding obstacles
+        # This ensures items are available before any obstacles are placed
+        self._populate_floor_rooms(floor)
+        
+        # Now add obstacles but in a logical way ensuring required items are available
+        # First, sort positions by distance from starting area to create a logical flow
+        # Find the actual starting room (the one that was originally created at (12, 12, 0))
+        start_positions = [pos for pos in positions if pos == (12, 12, 0)]
+        
+        if start_positions:
+            start_pos = start_positions[0]
+            # Calculate distances from start to create logical progression
+            distances = {}
+            queue = [(start_pos, 0)]
+            visited = set()
+            
+            while queue:
+                current_pos, dist = queue.pop(0)
+                if current_pos in visited:
+                    continue
+                visited.add(current_pos)
+                distances[current_pos] = dist
+                
+                # Add connected rooms to queue
+                for direction, connected_pos in self.room_states[current_pos].connections.items():
+                    if connected_pos not in visited:
+                        queue.append((connected_pos, dist + 1))
+        else:
+            # If no start position found, just use all positions with arbitrary distances
+            distances = {pos: i for i, pos in enumerate(positions)}
+        
+        # Sort positions by distance to create progression from early to late areas
+        sorted_positions = sorted(positions, key=lambda pos: distances.get(pos, 0))
+        
+        # Add locked doors and blocked passages in a logical progression
+        # Place obstacles only between rooms where required items already exist in earlier rooms
+        for pos in sorted_positions:
+            # For locked doors, only place them if we can ensure the key exists in an earlier room
             if random.random() < 0.1:  # 10% chance
                 available_dirs = [d for d in Direction if d not in [Direction.UP, Direction.DOWN] and 
                                  d in self.room_states[pos].connections]
                 if available_dirs:
                     direction = random.choice(available_dirs)
+                    
+                    # Check if a key exists in earlier rooms in the progression
+                    current_dist = distances.get(pos, 0)
+                    key_exists = False
+                    
+                    # Check if any room with a key is earlier in the progression
+                    for check_pos in sorted_positions:
+                        if distances.get(check_pos, 0) < current_dist:
+                            # Check if this room has a key item
+                            for item in self.room_states[check_pos].items:
+                                if "Key" in item.name:
+                                    key_exists = True
+                                    break
+                        if key_exists:
+                            break
+                    
+                    # If no key exists in earlier rooms, add one to an earlier room
+                    if not key_exists:
+                        # Add a key to an earlier room in the progression
+                        earlier_rooms = [p for p in sorted_positions if distances.get(p, 0) < current_dist]
+                        if earlier_rooms:
+                            key_room = random.choice(earlier_rooms)
+                            
+                            # Add a key to this room
+                            from .item import Item
+                            from .base import ItemType
+                            
+                            # Choose an appropriate key
+                            key_options = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key"]
+                            key_name = random.choice(key_options)
+                            
+                            # Add the key to the earlier room
+                            key_item = Item(
+                                name=key_name,
+                                item_type=ItemType.KEY,
+                                value={"Iron Key": 10, "Silver Key": 15, "Golden Key": 25, "Ancient Key": 50}[key_name],
+                                description=f"Unlocks doors that require a {key_name}"
+                            )
+                            self.room_states[key_room].add_item(key_item)
+                    
                     # Add locked door requiring a key
-                    self.room_states[pos].locked_doors[direction] = "Silver Key"
+                    self.room_states[pos].locked_doors[direction] = "Silver Key"  # Use Silver Key as default
             
-            # Random chance to add blocked passage
+            # Similar logic for blocked passages
             if random.random() < 0.05:  # 5% chance
                 available_dirs = [d for d in Direction if d not in [Direction.UP, Direction.DOWN] and 
                                  d in self.room_states[pos].connections]
                 if available_dirs:
                     direction = random.choice(available_dirs)
+                    
+                    # Check if a trigger item exists in earlier rooms in the progression
+                    current_dist = distances.get(pos, 0)
+                    trigger_exists = False
+                    
+                    # Check if any room with a trigger item is earlier in the progression
+                    for check_pos in sorted_positions:
+                        if distances.get(check_pos, 0) < current_dist:
+                            # Check if this room has a trigger item
+                            for item in self.room_states[check_pos].items:
+                                if item.item_type.value in ["trigger", "key"]:
+                                    trigger_exists = True
+                                    break
+                        if trigger_exists:
+                            break
+                    
+                    # If no trigger exists in earlier rooms, add one to an earlier room
+                    if not trigger_exists:
+                        # Add a trigger to an earlier room in the progression
+                        earlier_rooms = [p for p in sorted_positions if distances.get(p, 0) < current_dist]
+                        if earlier_rooms:
+                            trigger_room = random.choice(earlier_rooms)
+                            
+                            # Add a trigger item to this room
+                            from .item import Item
+                            from .base import ItemType
+                            
+                            # Add a Power Rune as a trigger item
+                            trigger_item = Item(
+                                name="Power Rune",
+                                item_type=ItemType.TRIGGER,
+                                value=5,
+                                description="Can be used to clear blocked passages"
+                            )
+                            self.room_states[trigger_room].add_item(trigger_item)
+                    
                     # Add blocked passage requiring a trigger item
-                    self.room_states[pos].blocked_passages[direction] = "Rune"
-        
-        # Add map effects to random positions
-        self._add_map_effects(floor)
-        
-        # Populate rooms with items and entities
-        self._populate_floor_rooms(floor)
+                    self.room_states[pos].blocked_passages[direction] = "Power Rune"  # Use Power Rune as default
 
     def _populate_floor_rooms(self, floor: int):
         """Populate rooms on a floor with items and entities."""
         positions = [pos for pos in self.room_states.keys() if pos[2] == floor]
+        
+        # Determine the lowest floor in the dungeon
+        all_floors = set(pos[2] for pos in self.room_states.keys())
+        lowest_floor = min(all_floors) if all_floors else 0
         
         for pos in positions:
             room = self.room_states[pos]
@@ -301,12 +416,19 @@ class SeededDungeon:
                 room.add_npc(npc)
             elif room.room_type == "trap":
                 # Convert trap rooms to other types, since we now have map effects for traps
-                other_types = ["empty", "treasure", "monster", "npc", "artifact"]
+                other_types = ["empty", "treasure", "monster", "npc"]  # Removed "artifact" to prevent artifact rooms elsewhere
                 room.room_type = random.choice(other_types)
             elif room.room_type == "artifact":
-                # Add a special artifact
-                artifact = self._generate_artifact()
-                room.add_item(artifact)
+                # Add a special artifact ONLY if this is the lowest floor
+                if floor == lowest_floor:
+                    artifact = self._generate_artifact()
+                    room.add_item(artifact)
+                else:
+                    # If this is not the lowest floor, convert to a different room type
+                    other_types = ["empty", "treasure", "monster", "npc"]
+                    room.room_type = random.choice(other_types)
+                    # Repopulate with the new room type logic
+                    continue  # Continue to the next room to be repopulated with the new type
             elif room.room_type == "storage":
                 # Add 1-3 storage-related items
                 for _ in range(random.randint(1, 3)):
@@ -341,8 +463,11 @@ class SeededDungeon:
     def _generate_random_item(self) -> Item:
         """Generate a random item."""
         items = self.data_provider.get_items()
-        if items:
-            item_data = random.choice(items)
+        # Filter out artifacts to avoid placing them in regular rooms
+        non_artifact_items = [item for item in items if item.get("type", "").lower() != "artifact"]
+        
+        if non_artifact_items:
+            item_data = random.choice(non_artifact_items)
             return Item(
                 name=item_data["name"],
                 item_type=ItemType(item_data["type"]),

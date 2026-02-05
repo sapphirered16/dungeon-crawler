@@ -54,6 +54,12 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - Provides immediate spatial awareness
 - Shows nearby room types and points of interest
 
+### 🗺️ Item Location Indicators
+- **Item Map Command**: Use `items` or `item` command to highlight locations with items
+- **Visual Indicators**: '*' symbols on maps show rooms containing items
+- **Enhanced Navigation**: Makes it easier to find backtracked items
+- **Both Maps Supported**: Works on both full floor maps and local 5x5 maps
+
 ### 🤖 Intelligent Enemy AI
 - Selective movement reporting: Only see enemy movements when in player's line of sight
 - Enemies patrol and hunt intelligently
