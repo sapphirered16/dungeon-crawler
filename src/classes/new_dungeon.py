@@ -107,16 +107,26 @@ class SeededDungeon:
 
     def _determine_number_of_floors(self, room_templates):
         """Determine number of floors based on room template constraints and content diversity."""
-        # Analyze the room templates and other data sources to determine appropriate number of floors
-        actual_templates = room_templates['room_templates']
+        # Handle both dictionary and list formats for room templates
+        if isinstance(room_templates, dict) and 'room_templates' in room_templates:
+            # Dictionary format: {'room_templates': [...]}
+            actual_templates = room_templates['room_templates']
+        elif isinstance(room_templates, list):
+            # List format: [...]
+            actual_templates = room_templates
+        else:
+            # Default to empty list if format is unexpected
+            actual_templates = []
         
         # Count different room types
-        room_types = set(template["type"] for template in actual_templates)
-        
-        # Count different themes
+        room_types = set()
         all_themes = set()
+        
         for template in actual_templates:
-            all_themes.update(template["themes"])
+            if "type" in template:
+                room_types.add(template["type"])
+            if "themes" in template and isinstance(template["themes"], list):
+                all_themes.update(template["themes"])
         
         # Based on the diversity of content, suggest an appropriate number of floors
         content_diversity_score = len(room_types) + len(all_themes)
@@ -151,35 +161,14 @@ class SeededDungeon:
             for y in range(self.grid_height):
                 self.grid[(x, y, floor)] = GridCell('empty')
         
-        # Start with a central hub room
-        hub_width = random.randint(3, 5)
-        hub_height = random.randint(3, 5)
-        hub_x = self.grid_width // 2 - hub_width // 2
-        hub_y = self.grid_height // 2 - hub_height // 2
-        
-        # Create the hub room
-        hub_room = Room(hub_x, hub_y, floor, hub_width, hub_height, "hub")
-        hub_room.description = "A central hub of this floor."
-        self.rooms.append(hub_room)
-        
-        # Mark grid cells as part of the hub room
-        for x in range(hub_x, hub_x + hub_width):
-            for y in range(hub_y, hub_y + hub_height):
-                if (x, y, floor) in self.grid:
-                    self.grid[(x, y, floor)].cell_type = 'room'
-                    self.grid[(x, y, floor)].room_ref = hub_room
-        
-        # Generate additional rooms
-        self._generate_rooms_for_floor(floor)
-        
-        # Create hallways to connect rooms
-        self._create_hallways_for_floor(floor)
+        # Generate additional rooms with linear progression
+        self._generate_linear_progression_floor(floor)
         
         # Add special features to the floor
         self._add_special_features(floor)
 
-    def _generate_rooms_for_floor(self, floor: int):
-        """Generate rooms for a specific floor."""
+    def _generate_linear_progression_floor(self, floor: int):
+        """Generate a floor with a linear progression path from start to end."""
         # Define room types and their size ranges
         room_configs = {
             "empty": {"min_width": 2, "max_width": 4, "min_height": 2, "max_height": 4},
@@ -194,51 +183,193 @@ class SeededDungeon:
             "garden": {"min_width": 3, "max_width": 6, "min_height": 3, "max_height": 4}
         }
         
-        # Generate a random number of rooms for this floor
-        num_rooms = random.randint(8, 15)
+        # Create start room (entrance) near top of the grid
+        start_width = random.randint(3, 5)
+        start_height = random.randint(3, 5)
+        start_x = random.randint(2, 8)  # Near left edge
+        start_y = random.randint(2, 8)  # Near top edge
         
-        for _ in range(num_rooms):
-            # Try to place a room, with retries to handle overlap issues
-            placed = False
-            attempts = 0
-            max_attempts = 50  # Prevent infinite loops
+        start_room = Room(start_x, start_y, floor, start_width, start_height, "entrance")
+        start_room.description = "The entrance to this dungeon floor. A bright light comes from behind you."
+        self.rooms.append(start_room)
+        
+        # Mark grid cells as part of the start room
+        for x in range(start_x, start_x + start_width):
+            for y in range(start_y, start_y + start_height):
+                if (x, y, floor) in self.grid:
+                    self.grid[(x, y, floor)].cell_type = 'room'
+                    self.grid[(x, y, floor)].room_ref = start_room
+        
+        # Create end room (exit) near bottom of the grid
+        end_width = random.randint(3, 5)
+        end_height = random.randint(3, 5)
+        end_x = random.randint(self.grid_width - 10, self.grid_width - 5)  # Near right edge
+        end_y = random.randint(self.grid_height - 10, self.grid_height - 5)  # Near bottom edge
+        
+        end_room = Room(end_x, end_y, floor, end_width, end_height, "exit")
+        end_room.description = "The exit of this dungeon floor. A bright light shines ahead."
+        self.rooms.append(end_room)
+        
+        # Mark grid cells as part of the end room
+        for x in range(end_x, end_x + end_width):
+            for y in range(end_y, end_y + end_height):
+                if (x, y, floor) in self.grid:
+                    self.grid[(x, y, floor)].cell_type = 'room'
+                    self.grid[(x, y, floor)].room_ref = end_room
+        
+        # Create main path from start to end room
+        main_path_rooms = self._create_main_path(start_room, end_room, floor, room_configs)
+        
+        # Generate additional filler rooms as branches off the main path
+        self._generate_branch_rooms(floor, main_path_rooms, room_configs)
+        
+        # Create hallways to connect the main path
+        self._create_main_path_hallways(main_path_rooms, floor)
+
+    def _create_main_path(self, start_room: Room, end_room: Room, floor: int, room_configs: dict):
+        """Create the main path of rooms from start to end."""
+        main_path_rooms = [start_room]
+        
+        # Calculate how many intermediate rooms we need based on distance
+        start_center = start_room.get_center()
+        end_center = end_room.get_center()
+        
+        # Calculate distance to determine number of intermediate rooms
+        dist_x = abs(end_center[0] - start_center[0])
+        dist_y = abs(end_center[1] - start_center[1])
+        total_dist = dist_x + dist_y
+        
+        # Number of intermediate rooms based on distance (at least 3)
+        num_intermediate = max(3, total_dist // 8)
+        
+        # Generate intermediate rooms along the path
+        prev_room = start_room
+        for i in range(num_intermediate):
+            # Calculate target position closer to end room
+            prev_center = prev_room.get_center()
+            target_x, target_y = end_center
             
-            while not placed and attempts < max_attempts:
-                # Select a random room type
-                room_type = random.choice(list(room_configs.keys()))
+            # Interpolate position along the path
+            progress = (i + 1) / (num_intermediate + 1)
+            mid_x = int(prev_center[0] + (target_x - prev_center[0]) * progress)
+            mid_y = int(prev_center[1] + (target_y - prev_center[1]) * progress)
+            
+            # Add some randomness to the path
+            mid_x += random.randint(-3, 3)
+            mid_y += random.randint(-3, 3)
+            
+            # Keep within bounds
+            mid_x = max(1, min(self.grid_width - 6, mid_x))
+            mid_y = max(1, min(self.grid_height - 6, mid_y))
+            
+            # Create intermediate room
+            room_type = random.choice(["empty", "treasure", "monster", "npc"])  # Main path rooms
+            config = room_configs[room_type]
+            width = random.randint(config["min_width"], config["max_width"])
+            height = random.randint(config["min_height"], config["max_height"])
+            
+            # Position the room with some space for hallways
+            room_x = max(0, min(mid_x - width//2, self.grid_width - width))
+            room_y = max(0, min(mid_y - height//2, self.grid_height - height))
+            
+            # Check for overlap
+            if not self._room_overlaps_existing(room_x, room_y, width, height, floor):
+                room = Room(room_x, room_y, floor, width, height, room_type)
+                self._assign_room_description(room)
+                self.rooms.append(room)
                 
-                # Determine room size based on configuration
-                config = room_configs[room_type]
-                width = random.randint(config["min_width"], config["max_width"])
-                height = random.randint(config["min_height"], config["max_height"])
+                # Mark grid cells as part of the room
+                for rx in range(room_x, room_x + width):
+                    for ry in range(room_y, room_y + height):
+                        if (rx, ry, floor) in self.grid:
+                            self.grid[(rx, ry, floor)].cell_type = 'room'
+                            self.grid[(rx, ry, floor)].room_ref = room
                 
-                # Select a random position for the room
-                max_x = self.grid_width - width
-                max_y = self.grid_height - height
-                x = random.randint(0, max_x)
-                y = random.randint(0, max_y)
+                main_path_rooms.append(room)
+                prev_room = room
+            else:
+                # If we can't place the room due to overlap, adjust position and try again
+                for attempt in range(50):
+                    new_x = max(0, min(mid_x - width//2 + random.randint(-5, 5), self.grid_width - width))
+                    new_y = max(0, min(mid_y - height//2 + random.randint(-5, 5), self.grid_height - height))
+                    
+                    if not self._room_overlaps_existing(new_x, new_y, width, height, floor):
+                        room = Room(new_x, new_y, floor, width, height, room_type)
+                        self._assign_room_description(room)
+                        self.rooms.append(room)
+                        
+                        # Mark grid cells as part of the room
+                        for rx in range(new_x, new_x + width):
+                            for ry in range(new_y, new_y + height):
+                                if (rx, ry, floor) in self.grid:
+                                    self.grid[(rx, ry, floor)].cell_type = 'room'
+                                    self.grid[(rx, ry, floor)].room_ref = room
+                        
+                        main_path_rooms.append(room)
+                        prev_room = room
+                        break
+        
+        # Add the end room to the main path
+        main_path_rooms.append(end_room)
+        
+        return main_path_rooms
+
+    def _generate_branch_rooms(self, floor: int, main_path_rooms: list, room_configs: dict):
+        """Generate branch rooms that connect off the main path."""
+        # Number of branch rooms to create
+        num_branches = random.randint(5, 10)
+        
+        for _ in range(num_branches):
+            # Select a random room from the main path to branch from
+            main_room = random.choice(main_path_rooms)
+            main_center = main_room.get_center()
+            
+            # Determine branch direction (perpendicular to the general path direction)
+            # For now, just choose a random direction from the main room
+            directions = [
+                (main_center[0] + random.randint(5, 10), main_center[1]),  # Right
+                (main_center[0] - random.randint(5, 10), main_center[1]),  # Left
+                (main_center[0], main_center[1] + random.randint(5, 10)),  # Down
+                (main_center[0], main_center[1] - random.randint(5, 10))   # Up
+            ]
+            
+            branch_pos = random.choice(directions)
+            branch_x, branch_y = branch_pos
+            
+            # Select room type for branch (could be quest rooms, treasure rooms, etc.)
+            room_type = random.choice(["treasure", "monster", "npc", "storage", "library", "workshop", "garden"])
+            config = room_configs[room_type]
+            width = random.randint(config["min_width"], config["max_width"])
+            height = random.randint(config["min_height"], config["max_height"])
+            
+            # Adjust position to fit in grid
+            branch_x = max(0, min(branch_x - width//2, self.grid_width - width))
+            branch_y = max(0, min(branch_y - height//2, self.grid_height - height))
+            
+            # Check for overlap
+            if not self._room_overlaps_existing(branch_x, branch_y, width, height, floor):
+                branch_room = Room(branch_x, branch_y, floor, width, height, room_type)
+                self._assign_room_description(branch_room)
+                self.rooms.append(branch_room)
                 
-                # Check if the room overlaps with existing rooms
-                if not self._room_overlaps_existing(x, y, width, height, floor):
-                    # Create the room
-                    room = Room(x, y, floor, width, height, room_type)
-                    
-                    # Assign a description based on room type
-                    self._assign_room_description(room)
-                    
-                    # Add the room to our collection
-                    self.rooms.append(room)
-                    
-                    # Mark grid cells as part of the room
-                    for rx in range(x, x + width):
-                        for ry in range(y, y + height):
-                            if (rx, ry, floor) in self.grid:
-                                self.grid[(rx, ry, floor)].cell_type = 'room'
-                                self.grid[(rx, ry, floor)].room_ref = room
-                    
-                    placed = True
+                # Mark grid cells as part of the room
+                for rx in range(branch_x, branch_x + width):
+                    for ry in range(branch_y, branch_y + height):
+                        if (rx, ry, floor) in self.grid:
+                            self.grid[(rx, ry, floor)].cell_type = 'room'
+                            self.grid[(rx, ry, floor)].room_ref = branch_room
                 
-                attempts += 1
+                # Create a hallway connecting the main path room to the branch room
+                self._create_hallway_between_rooms(main_room, branch_room, floor)
+
+    def _create_main_path_hallways(self, main_path_rooms: list, floor: int):
+        """Create hallways connecting the main path rooms sequentially."""
+        for i in range(len(main_path_rooms) - 1):
+            room1 = main_path_rooms[i]
+            room2 = main_path_rooms[i + 1]
+            
+            # Create a hallway between consecutive rooms in the main path
+            self._create_hallway_between_rooms(room1, room2, floor)
 
     def _room_overlaps_existing(self, x: int, y: int, width: int, height: int, floor: int) -> bool:
         """Check if a room at the given position overlaps with existing rooms."""
@@ -284,34 +415,6 @@ class SeededDungeon:
             }
             room.description = defaults.get(room.room_type, f"A {room.room_type} room.")
 
-    def _create_hallways_for_floor(self, floor: int):
-        """Create hallways connecting the rooms on a floor."""
-        floor_rooms = [room for room in self.rooms if room.z == floor]
-        
-        if len(floor_rooms) < 2:
-            return  # Need at least 2 rooms to connect
-        
-        # Create a spanning tree to connect all rooms
-        unconnected = set(range(len(floor_rooms)))
-        connected = {0}  # Start with the first room
-        unconnected.remove(0)
-        
-        while unconnected:
-            # Connect a random connected room to a random unconnected room
-            connected_idx = random.choice(list(connected))
-            unconnected_idx = random.choice(list(unconnected))
-            
-            # Create a hallway between the two rooms
-            self._create_hallway_between_rooms(
-                floor_rooms[connected_idx], 
-                floor_rooms[unconnected_idx], 
-                floor
-            )
-            
-            # Move the unconnected room to connected
-            connected.add(unconnected_idx)
-            unconnected.remove(unconnected_idx)
-
     def _create_hallway_between_rooms(self, room1: Room, room2: Room, floor: int):
         """Create a hallway between two rooms."""
         # Get centers of both rooms
@@ -331,9 +434,25 @@ class SeededDungeon:
             self._create_vertical_hallway(start_y, end_y, start_x, floor)
             self._create_horizontal_hallway(start_x, end_x, end_y, floor)
         
-        # Add connections between rooms
-        room1.connections[Direction.NORTH] = (end_x, end_y, floor)
-        room2.connections[Direction.SOUTH] = (start_x, start_y, floor)
+        # Add connections between rooms - determine direction based on relative positions
+        dx = end_x - start_x
+        dy = end_y - start_y
+        
+        # Determine primary direction for connection
+        if abs(dx) > abs(dy):  # More horizontal movement
+            if dx > 0:
+                room1.connections[Direction.EAST] = (end_x, end_y, floor)
+                room2.connections[Direction.WEST] = (start_x, start_y, floor)
+            else:
+                room1.connections[Direction.WEST] = (end_x, end_y, floor)
+                room2.connections[Direction.EAST] = (start_x, start_y, floor)
+        else:  # More vertical movement
+            if dy > 0:
+                room1.connections[Direction.SOUTH] = (end_x, end_y, floor)
+                room2.connections[Direction.NORTH] = (start_x, start_y, floor)
+            else:
+                room1.connections[Direction.NORTH] = (end_x, end_y, floor)
+                room2.connections[Direction.SOUTH] = (start_x, start_y, floor)
 
     def _create_horizontal_hallway(self, start_x: int, end_x: int, y: int, floor: int):
         """Create a horizontal hallway."""

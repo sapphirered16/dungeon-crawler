@@ -97,10 +97,19 @@ class DataProvider:
         try:
             with open(os.path.join(self.data_dir, "items.json"), 'r') as f:
                 item_data = json.load(f)
-                # Flatten the categorized item data into a single list
+                # Handle both dictionary (categorized) and array (flat) formats
                 self.items = []
-                for category, items in item_data.items():
-                    for item in items:
+                if isinstance(item_data, dict):
+                    # Categorized format: {category: [items]}
+                    for category, items in item_data.items():
+                        for item in items:
+                            # Normalize the type to lowercase to match ItemType enum values
+                            if "type" in item:
+                                item["type"] = item["type"].lower()
+                            self.items.append(item)
+                elif isinstance(item_data, list):
+                    # Flat format: [items]
+                    for item in item_data:
                         # Normalize the type to lowercase to match ItemType enum values
                         if "type" in item:
                             item["type"] = item["type"].lower()
@@ -111,21 +120,28 @@ class DataProvider:
         try:
             with open(os.path.join(self.data_dir, "enemies.json"), 'r') as f:
                 enemy_data = json.load(f)
-                # Flatten the categorized enemy data into a single list
+                # Handle both dictionary (categorized) and array (flat) formats
                 self.enemies = []
-                for category, enemies in enemy_data.items():
-                    for enemy in enemies:
-                        # Add min_floor based on category
-                        if "themed_enemies" in category:
-                            enemy.setdefault("min_floor", 0)
-                        elif "common_enemies" in category:
-                            enemy.setdefault("min_floor", 0)
-                        elif "mid_level_enemies" in category:
-                            enemy.setdefault("min_floor", 1)
-                        elif "boss_enemies" in category:
-                            enemy.setdefault("min_floor", 2)
-                        else:
-                            enemy.setdefault("min_floor", 0)
+                if isinstance(enemy_data, dict):
+                    # Categorized format: {category: [enemies]}
+                    for category, enemies in enemy_data.items():
+                        for enemy in enemies:
+                            # Add min_floor based on category
+                            if "themed_enemies" in category:
+                                enemy.setdefault("min_floor", 0)
+                            elif "common_enemies" in category:
+                                enemy.setdefault("min_floor", 0)
+                            elif "mid_level_enemies" in category:
+                                enemy.setdefault("min_floor", 1)
+                            elif "boss_enemies" in category:
+                                enemy.setdefault("min_floor", 2)
+                            else:
+                                enemy.setdefault("min_floor", 0)
+                            self.enemies.append(enemy)
+                elif isinstance(enemy_data, list):
+                    # Flat format: [enemies]
+                    for enemy in enemy_data:
+                        enemy.setdefault("min_floor", 0)
                         self.enemies.append(enemy)
         except FileNotFoundError:
             self.enemies = []
@@ -133,14 +149,18 @@ class DataProvider:
         try:
             with open(os.path.join(self.data_dir, "npcs.json"), 'r') as f:
                 npc_data = json.load(f)
-                # Extract NPCs from the structured format
+                # Handle both structured and flat formats
                 self.npcs = []
-                if "npc_types" in npc_data:
+                if isinstance(npc_data, dict) and "npc_types" in npc_data:
+                    # Structured format: {"npc_types": [npcs]}
                     for npc in npc_data["npc_types"]:
                         self.npcs.append(npc)
+                elif isinstance(npc_data, list):
+                    # Flat format: [npcs]
+                    self.npcs = npc_data
                 else:
-                    # Fallback to direct loading if structure is different
-                    self.npcs = npc_data if isinstance(npc_data, list) else []
+                    # Other structured format
+                    self.npcs = []
         except FileNotFoundError:
             self.npcs = []
         
