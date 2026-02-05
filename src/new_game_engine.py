@@ -67,17 +67,17 @@ class SeededGameEngine:
         """Find the starting room (z=0 floor)."""
         # Find a room on floor 0 that is suitable as a starting room
         for room in self.dungeon.rooms:
-            if room.z == 0 and room.room_type == "hub":
-                # Set player position to the center of the hub room
-                center_x, center_y = room.get_center()
-                self.player.travel_to((center_x, center_y, 0))
+            if room.z == 0 and room.room_type == "entrance":
+                # Set player position to the center of the entrance room
+                center_x, center_y, center_z = room.get_center()
+                self.player.travel_to((center_x, center_y, center_z))
                 return room
         
-        # If no hub room found on floor 0, use the first room on floor 0
+        # If no entrance room found on floor 0, use the first room on floor 0
         for room in self.dungeon.rooms:
             if room.z == 0:
-                center_x, center_y = room.get_center()
-                self.player.travel_to((center_x, center_y, 0))
+                center_x, center_y, center_z = room.get_center()
+                self.player.travel_to((center_x, center_y, center_z))
                 room.description = "The entrance to the dungeon. A safe starting area."
                 return room
         
@@ -181,12 +181,34 @@ class SeededGameEngine:
         # Show available movement directions as a single sentence
         available_directions = []
         for direction in Direction:
-            if direction in self.current_room.connections:
-                available_directions.append(direction.value)
+            # Calculate the new position based on direction (move one step in that direction)
+            old_pos = self.player.position
+            new_x, new_y, new_z = old_pos
+            
+            if direction == Direction.NORTH:
+                new_y -= 1
+            elif direction == Direction.SOUTH:
+                new_y += 1
+            elif direction == Direction.EAST:
+                new_x += 1
+            elif direction == Direction.WEST:
+                new_x -= 1
             elif direction in [Direction.UP, Direction.DOWN]:
+                # For stairs, check if available
                 if (direction == Direction.UP and self.current_room.has_stairs_up) or \
                    (direction == Direction.DOWN and self.current_room.has_stairs_down):
                     available_directions.append(direction.value)
+                continue  # Skip to next direction
+            else:
+                continue  # Skip invalid directions
+            
+            new_pos = (new_x, new_y, new_z)
+            
+            # Check if the new position is valid (part of current room, hallway, or adjacent room)
+            cell_type = self.dungeon.get_cell_type_at_position(new_pos)
+            
+            if cell_type in ['room', 'hallway']:
+                available_directions.append(direction.value)
         
         if available_directions:
             directions_str = ", ".join(available_directions).replace("north", "North").replace("south", "South").replace("east", "East").replace("west", "West").replace("up", "Up").replace("down", "Down")
@@ -245,12 +267,34 @@ class SeededGameEngine:
         # Show available movement directions as a single sentence
         available_directions = []
         for direction in Direction:
-            if direction in self.current_room.connections:
-                available_directions.append(direction.value)
+            # Calculate the new position based on direction (move one step in that direction)
+            old_pos = self.player.position
+            new_x, new_y, new_z = old_pos
+            
+            if direction == Direction.NORTH:
+                new_y -= 1
+            elif direction == Direction.SOUTH:
+                new_y += 1
+            elif direction == Direction.EAST:
+                new_x += 1
+            elif direction == Direction.WEST:
+                new_x -= 1
             elif direction in [Direction.UP, Direction.DOWN]:
+                # For stairs, check if available
                 if (direction == Direction.UP and self.current_room.has_stairs_up) or \
                    (direction == Direction.DOWN and self.current_room.has_stairs_down):
                     available_directions.append(direction.value)
+                continue  # Skip to next direction
+            else:
+                continue  # Skip invalid directions
+            
+            new_pos = (new_x, new_y, new_z)
+            
+            # Check if the new position is valid (part of current room, hallway, or adjacent room)
+            cell_type = self.dungeon.get_cell_type_at_position(new_pos)
+            
+            if cell_type in ['room', 'hallway']:
+                available_directions.append(direction.value)
         
         if available_directions:
             directions_str = ", ".join(available_directions).replace("north", "North").replace("south", "South").replace("east", "East").replace("west", "West").replace("up", "Up").replace("down", "Down")
@@ -464,18 +508,48 @@ class SeededGameEngine:
                     self._display_events()
                     self.look_around_simple()
                     return True
-        elif direction in self.current_room.connections:
-            new_pos = self.current_room.connections[direction]
+        else:
+            # Calculate the new position based on direction (move one step in that direction)
             old_pos = self.player.position
+            new_x, new_y, new_z = old_pos
             
-            # Find the room at the new position
-            new_room = self.dungeon.get_room_at_position(new_pos)
-            if new_room:
-                self.current_room = new_room
+            if direction == Direction.NORTH:
+                new_y -= 1
+            elif direction == Direction.SOUTH:
+                new_y += 1
+            elif direction == Direction.EAST:
+                new_x += 1
+            elif direction == Direction.WEST:
+                new_x -= 1
+            else:
+                self.event_buffer.append(f"❌ Invalid direction: {direction.value}")
+                self._log_action(f"Tried to move invalid direction {direction.value} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                self._display_events()
+                return False
+            
+            new_pos = (new_x, new_y, new_z)
+            
+            # Check if the new position is valid (part of current room, hallway, or adjacent room)
+            cell_type = self.dungeon.get_cell_type_at_position(new_pos)
+            
+            if cell_type in ['room', 'hallway']:
+                # Valid move - either to a hallway or into a room
+                new_room = self.dungeon.get_room_at_position(new_pos)
+                
+                # Update player position
                 self.player.travel_to(new_pos)
-                # Add all positions in the new room to explored areas
-                for pos in self.current_room.get_all_positions():
-                    self.explored_positions.add((*pos, self.current_room.z))
+                
+                if new_room:
+                    # Moving into a room - update current room
+                    self.current_room = new_room
+                    # Add all positions in the new room to explored areas
+                    for pos in self.current_room.get_all_positions():
+                        self.explored_positions.add((*pos, self.current_room.z))
+                else:
+                    # Moving into a hallway - stay in the current conceptual room
+                    # Add the hallway position to explored areas
+                    self.explored_positions.add(new_pos)
+                
                 # Trigger any map effects at the new position
                 self._trigger_map_effects_at_current_position()
                 # Process monster AI after moving
@@ -487,6 +561,12 @@ class SeededGameEngine:
                 self._display_events()
                 self.look_around_simple()
                 return True
+            else:
+                # Invalid move - not a room or hallway
+                self.event_buffer.append(f"❌ You cannot move {direction.value}. There's no path there.")
+                self._log_action(f"Tried to move {direction.value} to invalid position {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                self._display_events()
+                return False
         
         self.event_buffer.append(f"❌ You cannot move {direction.value}.")
         self._log_action(f"Tried to move {direction.value} but failed - HP: {self.player.health}/{self.player.max_health}", self.player.position)
@@ -788,7 +868,7 @@ class SeededGameEngine:
 
     def process_monster_ai(self):
         """Process AI for all monsters in the dungeon."""
-        from .classes.enemy import Enemy
+        from .classes.new_enemy import Enemy
         from .classes.character import NonPlayerCharacter
         
         # Process each room for monster actions

@@ -50,11 +50,11 @@ class Room:
         return (self.x <= x < self.x + self.width and 
                 self.y <= y < self.y + self.height)
     
-    def get_center(self) -> Tuple[int, int]:
+    def get_center(self) -> Tuple[int, int, int]:
         """Get the center position of the room."""
         center_x = self.x + self.width // 2
         center_y = self.y + self.height // 2
-        return (center_x, center_y)
+        return (center_x, center_y, self.z)
     
     def get_all_positions(self) -> List[Tuple[int, int]]:
         """Get all positions within this room."""
@@ -183,14 +183,17 @@ class SeededDungeon:
             "garden": {"min_width": 3, "max_width": 6, "min_height": 3, "max_height": 4}
         }
         
-        # Create start room (entrance) near top of the grid
+        # Create start room - only floor 0 should have an entrance, other floors have generic start areas
         start_width = random.randint(3, 5)
         start_height = random.randint(3, 5)
         start_x = random.randint(2, 8)  # Near left edge
         start_y = random.randint(2, 8)  # Near top edge
         
-        start_room = Room(start_x, start_y, floor, start_width, start_height, "entrance")
-        start_room.description = "The entrance to this dungeon floor. A bright light comes from behind you."
+        room_type = "entrance" if floor == 0 else "hub"  # Only first floor has entrance
+        description = "The entrance to this dungeon floor. A bright light comes from behind you." if floor == 0 else "A central hub of this floor."
+        
+        start_room = Room(start_x, start_y, floor, start_width, start_height, room_type)
+        start_room.description = description
         self.rooms.append(start_room)
         
         # Mark grid cells as part of the start room
@@ -234,7 +237,7 @@ class SeededDungeon:
         start_center = start_room.get_center()
         end_center = end_room.get_center()
         
-        # Calculate distance to determine number of intermediate rooms
+        # Calculate distance to determine number of intermediate rooms (ignore z coordinate for distance)
         dist_x = abs(end_center[0] - start_center[0])
         dist_y = abs(end_center[1] - start_center[1])
         total_dist = dist_x + dist_y
@@ -247,7 +250,7 @@ class SeededDungeon:
         for i in range(num_intermediate):
             # Calculate target position closer to end room
             prev_center = prev_room.get_center()
-            target_x, target_y = end_center
+            target_x, target_y, target_z = end_center
             
             # Interpolate position along the path
             progress = (i + 1) / (num_intermediate + 1)
@@ -393,10 +396,27 @@ class SeededDungeon:
 
     def _assign_room_description(self, room: Room):
         """Assign a description to a room based on its type."""
-        room_templates = self.data_provider.get_room_templates()['room_templates']
-        room_template = next((template for template in room_templates if template['type'] == room.room_type), None)
+        room_templates_raw = self.data_provider.get_room_templates()
         
-        if room_template:
+        # Handle both dictionary and list formats for room templates
+        if isinstance(room_templates_raw, dict) and 'room_templates' in room_templates_raw:
+            # Dictionary format: {'room_templates': [...]}
+            room_templates = room_templates_raw['room_templates']
+        elif isinstance(room_templates_raw, list):
+            # List format: [...]
+            room_templates = room_templates_raw
+        else:
+            # Default to empty list if format is unexpected
+            room_templates = []
+        
+        # Find the template for this room type
+        room_template = None
+        for template in room_templates:
+            if isinstance(template, dict) and template.get('type') == room.room_type:
+                room_template = template
+                break
+        
+        if room_template and 'descriptions' in room_template and isinstance(room_template['descriptions'], list):
             room.description = random.choice(room_template['descriptions'])
         else:
             # Default descriptions
@@ -411,7 +431,9 @@ class SeededDungeon:
                 "kitchen": "A room with cooking facilities and food supplies.",
                 "library": "A room filled with books and scrolls.",
                 "workshop": "A workshop with tools and crafting materials.",
-                "garden": "A small garden with plants and herbs."
+                "garden": "A small garden with plants and herbs.",
+                "entrance": "The entrance to this dungeon floor. A bright light comes from behind you.",
+                "exit": "The exit of this dungeon floor. A bright light shines ahead."
             }
             room.description = defaults.get(room.room_type, f"A {room.room_type} room.")
 
@@ -421,8 +443,8 @@ class SeededDungeon:
         center1 = room1.get_center()
         center2 = room2.get_center()
         
-        start_x, start_y = center1
-        end_x, end_y = center2
+        start_x, start_y, start_z = center1
+        end_x, end_y, end_z = center2
         
         # Simple L-shaped hallway: go horizontal then vertical
         if random.choice([True, False]):  # Random choice of which direction to go first
@@ -455,20 +477,26 @@ class SeededDungeon:
                 room2.connections[Direction.SOUTH] = (start_x, start_y, floor)
 
     def _create_horizontal_hallway(self, start_x: int, end_x: int, y: int, floor: int):
-        """Create a horizontal hallway."""
+        """Create a horizontal hallway, avoiding rooms."""
         min_x, max_x = min(start_x, end_x), max(start_x, end_x)
         
         for x in range(min_x, max_x + 1):
-            if (x, y, floor) in self.grid:
-                self.grid[(x, y, floor)].cell_type = 'hallway'
+            pos = (x, y, floor)
+            if pos in self.grid:
+                # Only create hallway if the cell is empty (not part of a room)
+                if self.grid[pos].cell_type == 'empty':
+                    self.grid[pos].cell_type = 'hallway'
 
     def _create_vertical_hallway(self, start_y: int, end_y: int, x: int, floor: int):
-        """Create a vertical hallway."""
+        """Create a vertical hallway, avoiding rooms."""
         min_y, max_y = min(start_y, end_y), max(start_y, end_y)
         
         for y in range(min_y, max_y + 1):
-            if (x, y, floor) in self.grid:
-                self.grid[(x, y, floor)].cell_type = 'hallway'
+            pos = (x, y, floor)
+            if pos in self.grid:
+                # Only create hallway if the cell is empty (not part of a room)
+                if self.grid[pos].cell_type == 'empty':
+                    self.grid[pos].cell_type = 'hallway'
 
     def _add_special_features(self, floor: int):
         """Add special features like stairs, locked doors, etc. to a floor."""
