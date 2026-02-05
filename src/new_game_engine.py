@@ -787,11 +787,21 @@ class SeededGameEngine:
                         else:
                             grid[(x, y)] = '▫'  # Room without items
                 else:
-                    # Check if position was explored
-                    if pos in self.explored_positions:
-                        grid[(x, y)] = '·'  # Explored empty space
+                    # Check cell type first
+                    cell_type = self.dungeon.get_cell_type_at_position(pos)
+                    if cell_type == 'hallway':
+                        # Check if this hallway position has items
+                        # For hallways, we need to check surrounding rooms for items
+                        # This is trickier since hallways aren't tied to specific rooms anymore
+                        # For now, treat as hallway without items
+                        # TODO: Could check nearby rooms for items in hallways
+                        grid[(x, y)] = '∿'  # Hallway without items
                     else:
-                        grid[(x, y)] = '░'  # Unknown area
+                        # Check if position was explored
+                        if pos in self.explored_positions:
+                            grid[(x, y)] = '·'  # Explored empty space
+                        else:
+                            grid[(x, y)] = '░'  # Unknown area
     
         # Display grid
         for y in range(min_y, max_y + 1):  # Print from low Y to high Y so North (lower Y values) appears at top

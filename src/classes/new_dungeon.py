@@ -486,6 +486,7 @@ class SeededDungeon:
                 # Only create hallway if the cell is empty (not part of a room)
                 if self.grid[pos].cell_type == 'empty':
                     self.grid[pos].cell_type = 'hallway'
+                    self.grid[pos].room_ref = None  # Clear any room reference
 
     def _create_vertical_hallway(self, start_y: int, end_y: int, x: int, floor: int):
         """Create a vertical hallway, avoiding rooms."""
@@ -497,6 +498,7 @@ class SeededDungeon:
                 # Only create hallway if the cell is empty (not part of a room)
                 if self.grid[pos].cell_type == 'empty':
                     self.grid[pos].cell_type = 'hallway'
+                    self.grid[pos].room_ref = None  # Clear any room reference
 
     def _add_special_features(self, floor: int):
         """Add special features like stairs, locked doors, etc. to a floor."""
