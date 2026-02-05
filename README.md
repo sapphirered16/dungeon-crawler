@@ -60,6 +60,11 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - **Enhanced Navigation**: Makes it easier to find backtracked items
 - **Both Maps Supported**: Works on both full floor maps and local 5x5 maps
 
+### 🎨 Extended ASCII Map Characters
+- **Enhanced Visual Appeal**: Replaced simple ASCII characters with distinctive Unicode symbols
+- **Better Readability**: Uses symbols like ▫ (empty room), ◘ (room with items), ∿ (hallway), ≈ (hallway with items), ♀ (player), ░ (unknown area), · (explored empty space)
+- **Improved Map Clarity**: Each map element now has a visually distinct representation
+
 ### 🤖 Intelligent Enemy AI
 - Selective movement reporting: Only see enemy movements when in player's line of sight
 - Enemies patrol and hunt intelligently

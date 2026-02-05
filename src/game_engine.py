@@ -579,45 +579,47 @@ class SeededGameEngine:
             for x in range(min_x, max_x + 1):
                 pos = (x, y, floor)
                 if pos == (player_x, player_y, player_z):
-                    row += "@"
+                    row += "▲"  # Triangle pointing up for player
                 elif pos in self.dungeon.room_states:
                     room = self.dungeon.room_states[pos]
                     # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with '*'
+                    if room.items:  # If room has items, mark with filled square
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway with items
-                            row += "*"
+                            # Hallway with items - use crossed lines for hallway with items
+                            row += "╬"
                         else:
-                            # Regular room with items
-                            row += "*"
+                            # Regular room with items - use filled square for room with items
+                            row += "█"
                     else:
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway without items
-                            row += "="
+                            # Hallway without items - use horizontal line for hallway
+                            row += "─"
                         else:
-                            # Regular room without items
-                            row += "_"
+                            # Regular room without items - use outlined box for empty room
+                            row += "▭"
                 else:
-                    # Show unknown/void tiles as %
+                    # Show unknown/void tiles as ░
                     if pos in self.explored_positions:
-                        # If position was visited but has no room, show as empty
-                        row += "_"
+                        # If position was visited but has no room, show as empty space
+                        row += "·"  # Center dot for explored empty space
                     else:
-                        # Show unexplored void tiles as %
-                        row += "%"
+                        # Show unexplored void tiles as ░
+                        row += "▓"  # Medium shade for unknown areas
             print(row)
         
         # Show legend
         print("\nLegend:")
-        print("  _ = Room (no items)")
-        print("  * = Room/Hallway (with items)")
-        print("  = = Hallway (no items)")
-        print("  @ = Player Position")
-        print("  % = Unknown/Void Tile (can hide secret doors or void spaces)")
+        print("  ▭ = Room (no items)")
+        print("  █ = Room/Hallway (with items)")
+        print("  ─ = Hallway (no items)")
+        print("  ╬ = Hallway (with items)")
+        print("  ▲ = Player Position")
+        print("  ▓ = Unknown Area")
+        print("  · = Explored Empty Space")
         print("\nNote: Environmental hazards like traps, wet areas, etc. are not visible on this map")
         print("but will trigger when you step on those tiles.")
 
@@ -875,45 +877,47 @@ class SeededGameEngine:
                 pos = (x, y, player_z)
                 if pos == (player_x, player_y, player_z):
                     # Player position
-                    row += "@ "
+                    row += "♀ "
                 elif pos in self.dungeon.room_states:
                     room = self.dungeon.room_states[pos]
                     # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with '*'
+                    if room.items:  # If room has items, mark with special symbol
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway with items
-                            row += "* "
+                            # Hallway with items - use ≈ for winding path with items
+                            row += "≈ "
                         else:
-                            # Regular room with items
-                            row += "* "
+                            # Regular room with items - use ◘ for filled room with items
+                            row += "◘ "
                     else:
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway without items
-                            row += "= "
+                            # Hallway without items - use ∿ for corridor
+                            row += "∿ "
                         else:
-                            # Regular room without items
-                            row += "_ "
+                            # Regular room without items - use ▫ for empty room
+                            row += "▫ "
                 else:
-                    # Show unknown/void tiles as %
+                    # Show unknown/void tiles as ░
                     if pos in self.explored_positions:
-                        # If position was visited but has no room, show as empty
-                        row += "_ "
+                        # If position was visited but has no room, show as empty space
+                        row += "· "  # Center dot for explored empty space
                     else:
-                        # Show unexplored void tiles as %
-                        row += "% "
+                        # Show unexplored void tiles as ░
+                        row += "░ "  # Light shade for unknown areas
             print(row)
         
         # Show legend for full local map command
         print("\n🗺️  Legend:")
-        print("  @ = Player")
-        print("  _ = Room (no items)")
-        print("  * = Room/Hallway (with items)")
-        print("  = = Hallway (no items)")
-        print("  % = Unknown/Void Tile (can hide secret doors or void spaces)")
+        print("  ♀ = Player")
+        print("  ▫ = Room (no items)")
+        print("  ◘ = Room/Hallway (with items)")
+        print("  ∿ = Hallway (no items)")
+        print("  ≈ = Hallway (with items)")
+        print("  ░ = Unknown Area")
+        print("  · = Explored Empty Space")
 
     def show_local_map_no_legend(self):
         """Show a 5x5 map around the player's current position without legend."""
@@ -931,34 +935,34 @@ class SeededGameEngine:
                 pos = (x, y, player_z)
                 if pos == (player_x, player_y, player_z):
                     # Player position
-                    row += "@ "
+                    row += "♀ "
                 elif pos in self.dungeon.room_states:
                     room = self.dungeon.room_states[pos]
                     # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with '*'
+                    if room.items:  # If room has items, mark with special symbol
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway with items
-                            row += "* "
+                            # Hallway with items - use ≈ for winding path with items
+                            row += "≈ "
                         else:
-                            # Regular room with items
-                            row += "* "
+                            # Regular room with items - use ◘ for filled room with items
+                            row += "◘ "
                     else:
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway without items
-                            row += "= "
+                            # Hallway without items - use ∿ for corridor
+                            row += "∿ "
                         else:
-                            # Regular room without items
-                            row += "_ "
+                            # Regular room without items - use ▫ for empty room
+                            row += "▫ "
                 else:
-                    # Show unknown/void tiles as %
+                    # Show unknown/void tiles as ░
                     if pos in self.explored_positions:
-                        # If position was visited but has no room, show as empty
-                        row += "_ "
+                        # If position was visited but has no room, show as empty space
+                        row += "· "  # Center dot for explored empty space
                     else:
-                        # Show unexplored void tiles as %
-                        row += "% "
+                        # Show unexplored void tiles as ░
+                        row += "░ "  # Light shade for unknown areas
             print(row)
