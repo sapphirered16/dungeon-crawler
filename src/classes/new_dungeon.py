@@ -1,0 +1,794 @@
+"""New dungeon class with proper room-based layouts for the dungeon crawler game."""
+
+import random
+import sys
+import os
+from typing import Dict, List, Tuple, Any, Set
+
+# Add the parent directory to the path for imports
+current_dir = os.path.dirname(__file__)
+parent_dir = os.path.join(current_dir, '..')
+grandparent_dir = os.path.join(current_dir, '..', '..')
+sys.path.insert(0, os.path.abspath(grandparent_dir))
+
+from src.classes.room import RoomState
+from src.classes.item import Item
+from src.classes.base import ItemType, Direction
+from src.classes.map_effects import MapEffect, MapEffectType, MapEffectManager
+
+# Import data loader from the data module
+try:
+    from src.data.data_loader import DataProvider
+except ImportError:
+    # Fallback for when running in a different context
+    from ..data.data_loader import DataProvider
+
+
+class Room:
+    """Represents a room with actual dimensions and position."""
+    def __init__(self, x: int, y: int, z: int, width: int, height: int, room_type: str):
+        self.x = x  # Top-left corner x coordinate
+        self.y = y  # Top-left corner y coordinate
+        self.z = z  # Floor number
+        self.width = width
+        self.height = height
+        self.room_type = room_type
+        self.description = ""
+        self.items = []
+        self.entities = []
+        self.npcs = []
+        self.locked_doors = {}
+        self.blocked_passages = {}
+        self.has_stairs_up = False
+        self.has_stairs_down = False
+        self.stairs_up_target = None
+        self.stairs_down_target = None
+        self.connections = {}  # Direction -> (x, y, z) of connected room
+    
+    def contains_position(self, x: int, y: int) -> bool:
+        """Check if the given coordinates are inside this room."""
+        return (self.x <= x < self.x + self.width and 
+                self.y <= y < self.y + self.height)
+    
+    def get_center(self) -> Tuple[int, int]:
+        """Get the center position of the room."""
+        center_x = self.x + self.width // 2
+        center_y = self.y + self.height // 2
+        return (center_x, center_y)
+    
+    def get_all_positions(self) -> List[Tuple[int, int]]:
+        """Get all positions within this room."""
+        positions = []
+        for x in range(self.x, self.x + self.width):
+            for y in range(self.y, self.y + self.height):
+                positions.append((x, y))
+        return positions
+
+
+class GridCell:
+    """Represents a single cell in the dungeon grid."""
+    def __init__(self, cell_type='empty'):
+        self.cell_type = cell_type  # 'empty', 'room', 'hallway', 'wall'
+        self.room_ref = None  # Reference to the room object if this cell is part of a room
+        self.has_map_effect = False
+        self.map_effect = None
+
+
+class SeededDungeon:
+    def __init__(self, seed: int = None, grid_width: int = 50, grid_height: int = 50):
+        if seed is not None:
+            random.seed(seed)
+        self.seed = seed
+        self.grid_width = grid_width
+        self.grid_height = grid_height
+        self.rooms = []  # List of Room objects
+        self.grid = {}  # {(x, y, z): GridCell} - represents the actual dungeon grid
+        self.map_effects = MapEffectManager()
+        self.data_provider = DataProvider()
+        self.generate_dungeon()
+
+    def generate_dungeon(self):
+        """Generate the dungeon layout with proper rooms and hallways."""
+        # Load room templates
+        room_templates = self.data_provider.get_room_templates()
+        
+        # Determine number of floors based on room templates
+        num_floors = self._determine_number_of_floors(room_templates)
+        
+        # Generate rooms for multiple floors
+        for floor in range(num_floors):
+            self._generate_floor(floor)
+        
+        # Ensure stairs are properly connected between all floors
+        self._connect_stairs_properly()
+        
+        # After all rooms are placed, populate them with items and entities
+        self._populate_all_rooms()
+
+    def _determine_number_of_floors(self, room_templates):
+        """Determine number of floors based on room template constraints and content diversity."""
+        # Analyze the room templates and other data sources to determine appropriate number of floors
+        actual_templates = room_templates['room_templates']
+        
+        # Count different room types
+        room_types = set(template["type"] for template in actual_templates)
+        
+        # Count different themes
+        all_themes = set()
+        for template in actual_templates:
+            all_themes.update(template["themes"])
+        
+        # Based on the diversity of content, suggest an appropriate number of floors
+        content_diversity_score = len(room_types) + len(all_themes)
+        
+        # Calculate suggested floor count based on content diversity
+        if content_diversity_score >= 10:
+            suggested_floors = 7  # High diversity supports more floors
+        elif content_diversity_score >= 7:
+            suggested_floors = 5  # Medium diversity supports moderate floors
+        elif content_diversity_score >= 4:
+            suggested_floors = 3  # Lower diversity suggests fewer floors
+        else:
+            suggested_floors = 3  # Minimum recommended
+        
+        # Additionally, check enemy data for level progression suggestions
+        enemy_types_count = len(self.data_provider.get_enemies())
+        if enemy_types_count > 10:
+            # More enemy types suggest a longer dungeon progression
+            suggested_floors = max(suggested_floors, 5)
+        elif enemy_types_count > 5:
+            suggested_floors = max(suggested_floors, 4)
+        
+        # Limit to reasonable bounds
+        suggested_floors = max(3, min(10, suggested_floors))  # Between 3 and 10 floors
+        
+        return suggested_floors
+
+    def _generate_floor(self, floor: int):
+        """Generate a single floor with rooms and hallways."""
+        # Initialize the grid for this floor
+        for x in range(self.grid_width):
+            for y in range(self.grid_height):
+                self.grid[(x, y, floor)] = GridCell('empty')
+        
+        # Start with a central hub room
+        hub_width = random.randint(3, 5)
+        hub_height = random.randint(3, 5)
+        hub_x = self.grid_width // 2 - hub_width // 2
+        hub_y = self.grid_height // 2 - hub_height // 2
+        
+        # Create the hub room
+        hub_room = Room(hub_x, hub_y, floor, hub_width, hub_height, "hub")
+        hub_room.description = "A central hub of this floor."
+        self.rooms.append(hub_room)
+        
+        # Mark grid cells as part of the hub room
+        for x in range(hub_x, hub_x + hub_width):
+            for y in range(hub_y, hub_y + hub_height):
+                if (x, y, floor) in self.grid:
+                    self.grid[(x, y, floor)].cell_type = 'room'
+                    self.grid[(x, y, floor)].room_ref = hub_room
+        
+        # Generate additional rooms
+        self._generate_rooms_for_floor(floor)
+        
+        # Create hallways to connect rooms
+        self._create_hallways_for_floor(floor)
+        
+        # Add special features to the floor
+        self._add_special_features(floor)
+
+    def _generate_rooms_for_floor(self, floor: int):
+        """Generate rooms for a specific floor."""
+        # Define room types and their size ranges
+        room_configs = {
+            "empty": {"min_width": 2, "max_width": 4, "min_height": 2, "max_height": 4},
+            "treasure": {"min_width": 3, "max_width": 5, "min_height": 3, "max_height": 5},
+            "monster": {"min_width": 3, "max_width": 6, "min_height": 3, "max_height": 6},
+            "npc": {"min_width": 3, "max_width": 4, "min_height": 3, "max_height": 4},
+            "storage": {"min_width": 2, "max_width": 4, "min_height": 2, "max_height": 5},
+            "bunk": {"min_width": 2, "max_width": 3, "min_height": 2, "max_height": 4},
+            "kitchen": {"min_width": 3, "max_width": 5, "min_height": 2, "max_height": 4},
+            "library": {"min_width": 3, "max_width": 4, "min_height": 3, "max_height": 6},
+            "workshop": {"min_width": 3, "max_width": 5, "min_height": 2, "max_height": 5},
+            "garden": {"min_width": 3, "max_width": 6, "min_height": 3, "max_height": 4}
+        }
+        
+        # Generate a random number of rooms for this floor
+        num_rooms = random.randint(8, 15)
+        
+        for _ in range(num_rooms):
+            # Try to place a room, with retries to handle overlap issues
+            placed = False
+            attempts = 0
+            max_attempts = 50  # Prevent infinite loops
+            
+            while not placed and attempts < max_attempts:
+                # Select a random room type
+                room_type = random.choice(list(room_configs.keys()))
+                
+                # Determine room size based on configuration
+                config = room_configs[room_type]
+                width = random.randint(config["min_width"], config["max_width"])
+                height = random.randint(config["min_height"], config["max_height"])
+                
+                # Select a random position for the room
+                max_x = self.grid_width - width
+                max_y = self.grid_height - height
+                x = random.randint(0, max_x)
+                y = random.randint(0, max_y)
+                
+                # Check if the room overlaps with existing rooms
+                if not self._room_overlaps_existing(x, y, width, height, floor):
+                    # Create the room
+                    room = Room(x, y, floor, width, height, room_type)
+                    
+                    # Assign a description based on room type
+                    self._assign_room_description(room)
+                    
+                    # Add the room to our collection
+                    self.rooms.append(room)
+                    
+                    # Mark grid cells as part of the room
+                    for rx in range(x, x + width):
+                        for ry in range(y, y + height):
+                            if (rx, ry, floor) in self.grid:
+                                self.grid[(rx, ry, floor)].cell_type = 'room'
+                                self.grid[(rx, ry, floor)].room_ref = room
+                    
+                    placed = True
+                
+                attempts += 1
+
+    def _room_overlaps_existing(self, x: int, y: int, width: int, height: int, floor: int) -> bool:
+        """Check if a room at the given position overlaps with existing rooms."""
+        # Add some padding between rooms
+        padding = 2
+        
+        padded_x = x - padding
+        padded_y = y - padding
+        padded_width = width + 2 * padding
+        padded_height = height + 2 * padding
+        
+        # Check if any cell in the padded area is already occupied
+        for px in range(padded_x, padded_x + padded_width):
+            for py in range(padded_y, padded_y + padded_height):
+                if (px, py, floor) in self.grid:
+                    cell = self.grid[(px, py, floor)]
+                    if cell.cell_type == 'room':
+                        return True
+        
+        return False
+
+    def _assign_room_description(self, room: Room):
+        """Assign a description to a room based on its type."""
+        room_templates = self.data_provider.get_room_templates()['room_templates']
+        room_template = next((template for template in room_templates if template['type'] == room.room_type), None)
+        
+        if room_template:
+            room.description = random.choice(room_template['descriptions'])
+        else:
+            # Default descriptions
+            defaults = {
+                "hub": "A central hub of this floor.",
+                "empty": "An empty room with nothing of interest.",
+                "treasure": "A room filled with valuable treasures.",
+                "monster": "A room inhabited by dangerous creatures.",
+                "npc": "A room containing a non-player character.",
+                "storage": "A storage room with various supplies.",
+                "bunk": "A sleeping area with beds or resting spots.",
+                "kitchen": "A room with cooking facilities and food supplies.",
+                "library": "A room filled with books and scrolls.",
+                "workshop": "A workshop with tools and crafting materials.",
+                "garden": "A small garden with plants and herbs."
+            }
+            room.description = defaults.get(room.room_type, f"A {room.room_type} room.")
+
+    def _create_hallways_for_floor(self, floor: int):
+        """Create hallways connecting the rooms on a floor."""
+        floor_rooms = [room for room in self.rooms if room.z == floor]
+        
+        if len(floor_rooms) < 2:
+            return  # Need at least 2 rooms to connect
+        
+        # Create a spanning tree to connect all rooms
+        unconnected = set(range(len(floor_rooms)))
+        connected = {0}  # Start with the first room
+        unconnected.remove(0)
+        
+        while unconnected:
+            # Connect a random connected room to a random unconnected room
+            connected_idx = random.choice(list(connected))
+            unconnected_idx = random.choice(list(unconnected))
+            
+            # Create a hallway between the two rooms
+            self._create_hallway_between_rooms(
+                floor_rooms[connected_idx], 
+                floor_rooms[unconnected_idx], 
+                floor
+            )
+            
+            # Move the unconnected room to connected
+            connected.add(unconnected_idx)
+            unconnected.remove(unconnected_idx)
+
+    def _create_hallway_between_rooms(self, room1: Room, room2: Room, floor: int):
+        """Create a hallway between two rooms."""
+        # Get centers of both rooms
+        center1 = room1.get_center()
+        center2 = room2.get_center()
+        
+        start_x, start_y = center1
+        end_x, end_y = center2
+        
+        # Simple L-shaped hallway: go horizontal then vertical
+        if random.choice([True, False]):  # Random choice of which direction to go first
+            # Horizontal then vertical
+            self._create_horizontal_hallway(start_x, end_x, start_y, floor)
+            self._create_vertical_hallway(start_y, end_y, end_x, floor)
+        else:
+            # Vertical then horizontal
+            self._create_vertical_hallway(start_y, end_y, start_x, floor)
+            self._create_horizontal_hallway(start_x, end_x, end_y, floor)
+        
+        # Add connections between rooms
+        room1.connections[Direction.NORTH] = (end_x, end_y, floor)
+        room2.connections[Direction.SOUTH] = (start_x, start_y, floor)
+
+    def _create_horizontal_hallway(self, start_x: int, end_x: int, y: int, floor: int):
+        """Create a horizontal hallway."""
+        min_x, max_x = min(start_x, end_x), max(start_x, end_x)
+        
+        for x in range(min_x, max_x + 1):
+            if (x, y, floor) in self.grid:
+                self.grid[(x, y, floor)].cell_type = 'hallway'
+
+    def _create_vertical_hallway(self, start_y: int, end_y: int, x: int, floor: int):
+        """Create a vertical hallway."""
+        min_y, max_y = min(start_y, end_y), max(start_y, end_y)
+        
+        for y in range(min_y, max_y + 1):
+            if (x, y, floor) in self.grid:
+                self.grid[(x, y, floor)].cell_type = 'hallway'
+
+    def _add_special_features(self, floor: int):
+        """Add special features like stairs, locked doors, etc. to a floor."""
+        floor_rooms = [room for room in self.rooms if room.z == floor]
+        
+        # Add map effects to random positions in rooms
+        self._add_map_effects(floor)
+
+    def _connect_stairs_properly(self):
+        """Ensure stairs are properly connected between floors."""
+        all_floors = set(room.z for room in self.rooms)
+        max_floor = max(all_floors) if all_floors else 0
+        min_floor = min(all_floors) if all_floors else 0
+        
+        # Connect stairs between each consecutive pair of floors
+        for floor in range(max_floor):  # Connect floors 0->1, 1->2, ..., (n-1)->n
+            current_floor_rooms = [room for room in self.rooms if room.z == floor]
+            next_floor_rooms = [room for room in self.rooms if room.z == floor + 1]
+            
+            if current_floor_rooms and next_floor_rooms:
+                # Select a room from current floor to have stairs down
+                from_room = random.choice(current_floor_rooms)
+                # Select a room from next floor to have stairs up
+                to_room = random.choice(next_floor_rooms)
+                
+                # Connect them using room centers
+                from_center = from_room.get_center()
+                to_center = to_room.get_center()
+                
+                # Add stairs to the rooms
+                from_room.has_stairs_down = True
+                from_room.stairs_down_target = (*to_center, floor + 1)
+                to_room.has_stairs_up = True
+                to_room.stairs_up_target = (*from_center, floor)
+        
+        # Ensure there's a special artifact room on the deepest (highest-numbered) floor as the win condition
+        deepest_floor_rooms = [room for room in self.rooms if room.z == max_floor]
+        if deepest_floor_rooms:
+            # Select a room on the deepest floor to be the special artifact room
+            artifact_room = random.choice(deepest_floor_rooms)
+            
+            # Change this room to be an artifact room if it isn't already
+            artifact_room.room_type = "artifact"
+            artifact_room.description = "The ultimate treasure chamber. The final resting place of a powerful artifact."
+            
+            # Clear any existing items and ensure it has a proper artifact
+            artifact_room.items.clear()
+            artifact = self._generate_artifact()
+            artifact_room.items.append(artifact)
+
+    def _populate_all_rooms(self):
+        """Populate all rooms with items and entities."""
+        for room in self.rooms:
+            self._populate_room(room)
+
+    def _populate_room(self, room: Room):
+        """Populate a single room with items and entities based on its type."""
+        # Determine the lowest floor in the dungeon
+        all_floors = set(r.z for r in self.rooms)
+        lowest_floor = min(all_floors) if all_floors else 0
+        
+        # Add items based on room type
+        if room.room_type == "treasure":
+            # Add 1-3 treasure items
+            for _ in range(random.randint(1, 3)):
+                item = self._generate_random_item()
+                room.items.append(item)
+        elif room.room_type == "empty":
+            # Small chance to add an item in empty rooms
+            if random.random() < 0.2:
+                if random.random() < 0.5:
+                    item = self._generate_random_item()
+                    room.items.append(item)
+        elif room.room_type == "monster":
+            # Add monsters
+            num_monsters = random.randint(1, 3)
+            for _ in range(num_monsters):
+                monster = self._generate_random_enemy(room.z)
+                room.entities.append(monster)
+            # Maybe add a treasure item too
+            if random.random() < 0.3:
+                item = self._generate_random_item()
+                room.items.append(item)
+        elif room.room_type == "npc":
+            # Add an NPC
+            npc = self._generate_random_npc()
+            room.npcs.append(npc)
+        elif room.room_type == "artifact":
+            # Add a special artifact ONLY if this is the lowest floor
+            if room.z == lowest_floor:
+                artifact = self._generate_artifact()
+                room.items.append(artifact)
+        elif room.room_type == "storage":
+            # Add 1-3 storage-related items
+            for _ in range(random.randint(1, 3)):
+                item = self._generate_random_item()
+                room.items.append(item)
+        elif room.room_type == "bunk":
+            # Add 1-2 items related to rest/sleep
+            for _ in range(random.randint(1, 2)):
+                item = self._generate_random_item()
+                room.items.append(item)
+        elif room.room_type == "kitchen":
+            # Add food and cooking-related items
+            for _ in range(random.randint(1, 3)):
+                item = self._generate_random_item()
+                room.items.append(item)
+        elif room.room_type == "library":
+            # Add 1-2 knowledge-related items
+            for _ in range(random.randint(1, 2)):
+                item = self._generate_random_item()
+                room.items.append(item)
+        elif room.room_type == "workshop":
+            # Add 1-3 crafting/tool-related items
+            for _ in range(random.randint(1, 3)):
+                item = self._generate_random_item()
+                room.items.append(item)
+        elif room.room_type == "garden":
+            # Add 1-2 plant/herb-related items
+            for _ in range(random.randint(1, 2)):
+                item = self._generate_random_item()
+                room.items.append(item)
+
+    def _generate_random_item(self) -> Item:
+        """Generate a random item."""
+        items = self.data_provider.get_items()
+        # Filter out artifacts to avoid placing them in regular rooms
+        non_artifact_items = [item for item in items if item.get("type", "").lower() != "artifact"]
+        
+        if non_artifact_items:
+            item_data = random.choice(non_artifact_items)
+            return Item(
+                name=item_data["name"],
+                item_type=ItemType(item_data["type"]),
+                value=item_data.get("value", 0),
+                description=item_data.get("description", ""),
+                attack_bonus=item_data.get("attack_bonus", 0),
+                defense_bonus=item_data.get("defense_bonus", 0),
+                health_bonus=item_data.get("health_bonus", 0),
+                status_effects=item_data.get("status_effects", {}),
+                status_effect=item_data.get("status_effect"),
+                status_chance=item_data.get("status_chance", 0.0),
+                status_damage=item_data.get("status_damage", 0)
+            )
+        else:
+            # Fallback item
+            return Item("Health Potion", ItemType.CONSUMABLE, 20, "Restores 20 HP", status_effects={})
+
+    def _generate_random_enemy(self, floor: int):
+        """Generate a random enemy based on floor."""
+        from .enemy import Enemy
+        
+        # Scale enemy strength based on floor
+        enemies = self.data_provider.get_enemies()
+        if enemies:
+            # Filter enemies appropriate for floor level
+            suitable_enemies = [e for e in enemies if e.get("min_floor", 0) <= floor]
+            if not suitable_enemies:
+                suitable_enemies = enemies  # Use all if none match criteria
+            
+            enemy_data = random.choice(suitable_enemies)
+            
+            # Scale stats based on floor, using scaling parameters from enemy definition if available
+            # Default scaling factors if not specified in enemy data
+            health_scaling = enemy_data.get("health_scaling", 10)  # How much health increases per floor
+            attack_scaling = enemy_data.get("attack_scaling", 2)   # How much attack increases per floor
+            defense_scaling = enemy_data.get("defense_scaling", 1) # How much defense increases per floor
+            
+            health = enemy_data["health"] + (floor * health_scaling)
+            attack = enemy_data["attack"] + (floor * attack_scaling)
+            defense = enemy_data["defense"] + (floor * defense_scaling)
+            
+            enemy = Enemy(
+                name=enemy_data["name"],
+                health=health,
+                attack=attack,
+                defense=defense,
+                speed=enemy_data.get("speed", 10)
+            )
+            return enemy
+        else:
+            # Fallback enemy
+            return Enemy("Goblin", 20 + (floor * 5), 5 + floor, 2 + floor)
+
+    def _generate_random_npc(self):
+        """Generate a random NPC."""
+        from .character import NonPlayerCharacter
+        
+        npcs = self.data_provider.get_npcs()
+        if npcs:
+            npc_data = random.choice(npcs)
+            # Handle new NPC structure with quest system
+            if "dialogues" in npc_data and isinstance(npc_data["dialogues"], list):
+                # Use a random dialogue from the dialogues list
+                dialogue = [random.choice(npc_data["dialogues"])] if npc_data["dialogues"] else ["Hello, adventurer."]
+            else:
+                dialogue = npc_data.get("dialogue", ["Hello, adventurer."])
+            
+            return NonPlayerCharacter(
+                name=npc_data["name"],
+                health=npc_data["health"],
+                attack=npc_data.get("attack", 3),  # Default attack value
+                defense=npc_data.get("defense", 1),  # Default defense value
+                dialogue=dialogue
+            )
+        else:
+            # Fallback NPC
+            return NonPlayerCharacter("Friendly Merchant", 10, 3, 1, ["Welcome traveler!", "Need supplies?"])
+
+    def _generate_artifact(self) -> Item:
+        """Generate a special artifact item."""
+        # Get artifact items from data provider if available
+        items = self.data_provider.get_items()
+        artifact_items = [item for item in items if item.get("type") == "ARTIFACT"]
+        
+        if artifact_items:
+            artifact_data = random.choice(artifact_items)
+            return Item(
+                name=artifact_data["name"],
+                item_type=ItemType(artifact_data["type"]),
+                value=artifact_data.get("value", 0),
+                description=artifact_data.get("description", ""),
+                attack_bonus=artifact_data.get("attack_bonus", 0),
+                defense_bonus=artifact_data.get("defense_bonus", 0),
+                health_bonus=artifact_data.get("health_bonus", 0),
+                status_effects=artifact_data.get("status_effects", {}),
+                status_effect=artifact_data.get("status_effect"),
+                status_chance=artifact_data.get("status_chance", 0.0),
+                status_damage=artifact_data.get("status_damage", 0)
+            )
+        else:
+            # Fallback artifact
+            return Item("Ancient Relic", ItemType.ARTIFACT, 100, "An ancient magical relic", status_effects={})
+
+    def _add_map_effects(self, floor: int):
+        """Add various map effects throughout the dungeon floor."""
+        floor_rooms = [room for room in self.rooms if room.z == floor]
+        
+        # Add effects to random positions within rooms
+        for room in floor_rooms:
+            # Determine number of effects based on room size
+            num_effects = max(0, room.width * room.height // 10)  # Roughly 1 effect per 10 room tiles
+            
+            for _ in range(num_effects):
+                # Select a random position within the room
+                x = random.randint(room.x, room.x + room.width - 1)
+                y = random.randint(room.y, room.y + room.height - 1)
+                
+                # Randomly select an effect type
+                effect_type = random.choice(list(MapEffectType))
+                
+                # Define properties based on effect type
+                if effect_type == MapEffectType.TRAP:
+                    # Traps have a high chance to trigger when stepped on
+                    trigger_chance = 0.8
+                    effect_strength = random.randint(5, 15)  # Damage amount
+                    description = "This area seems dangerous - there might be hidden traps nearby."
+                elif effect_type == MapEffectType.WET_AREA:
+                    # Wet areas don't trigger damage but provide environmental flavor
+                    trigger_chance = 0.0
+                    effect_strength = 0
+                    description = "The ground is wet and soggy here."
+                elif effect_type == MapEffectType.POISONOUS_AREA:
+                    # Poisonous areas can cause damage and status effects
+                    trigger_chance = 0.6
+                    effect_strength = random.randint(3, 8)  # Poison damage
+                    description = "A toxic mist lingers in the air, making this area hazardous."
+                elif effect_type == MapEffectType.ICY_SURFACE:
+                    # Icy surfaces affect movement
+                    trigger_chance = 0.3
+                    effect_strength = 2  # Speed reduction amount
+                    description = "The floor is covered in ice, making it treacherous to walk on."
+                elif effect_type == MapEffectType.DARK_CORNER:
+                    # Dark corners affect visibility (currently just descriptive)
+                    trigger_chance = 0.0
+                    effect_strength = 0
+                    description = "Deep shadows obscure vision in this area."
+                elif effect_type == MapEffectType.SLIPPERY_FLOOR:
+                    # Slippery floors can cause movement issues
+                    trigger_chance = 0.2
+                    effect_strength = 1  # Minor effect
+                    description = "The floor here is unusually slippery."
+                elif effect_type == MapEffectType.LOUD_FLOOR:
+                    # Loud floors alert enemies
+                    trigger_chance = 0.0
+                    effect_strength = 0
+                    description = "The floor creaks and groans underfoot, echoing through the dungeon."
+                elif effect_type == MapEffectType.MAGNETIC_FIELD:
+                    # Magnetic fields affect metal items
+                    trigger_chance = 0.0
+                    effect_strength = 0
+                    description = "A strange magnetic field tugs at metallic objects."
+                
+                # Create and add the map effect to the grid cell
+                effect = MapEffect(
+                    effect_type=effect_type,
+                    position=(x, y, floor),
+                    trigger_chance=trigger_chance,
+                    description=description,
+                    effect_strength=effect_strength
+                )
+                
+                # Mark the grid cell as having a map effect
+                if (x, y, floor) in self.grid:
+                    self.grid[(x, y, floor)].has_map_effect = True
+                    self.grid[(x, y, floor)].map_effect = effect
+                
+                # Also add to the map effects manager
+                self.map_effects.add_effect(effect)
+
+    def get_room_at_position(self, pos: Tuple[int, int, int]) -> Room:
+        """Get the room at a given position."""
+        x, y, z = pos
+        
+        # Check if the position is in the grid
+        if (x, y, z) in self.grid:
+            cell = self.grid[(x, y, z)]
+            if cell.room_ref:
+                return cell.room_ref
+        
+        # If not in a room, return None
+        return None
+
+    def get_cell_type_at_position(self, pos: Tuple[int, int, int]) -> str:
+        """Get the cell type at a given position."""
+        if pos in self.grid:
+            return self.grid[pos].cell_type
+        return 'empty'
+
+    def get_map_effect_at_position(self, pos: Tuple[int, int, int]) -> MapEffect:
+        """Get the map effect at a given position."""
+        if pos in self.grid and self.grid[pos].has_map_effect:
+            return self.grid[pos].map_effect
+        return None
+
+    def get_all_rooms_on_floor(self, floor: int) -> List[Room]:
+        """Get all rooms on a specific floor."""
+        return [room for room in self.rooms if room.z == floor]
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert dungeon to dictionary for saving."""
+        # For now, we'll serialize the room information
+        room_data = []
+        for room in self.rooms:
+            room_data.append({
+                'x': room.x,
+                'y': room.y,
+                'z': room.z,
+                'width': room.width,
+                'height': room.height,
+                'room_type': room.room_type,
+                'description': room.description,
+                'items': [item.to_dict() for item in room.items],
+                'entities': [entity.to_dict() if hasattr(entity, 'to_dict') else str(entity) for entity in room.entities],
+                'npcs': [npc.to_dict() if hasattr(npc, 'to_dict') else str(npc) for npc in room.npcs],
+                'locked_doors': room.locked_doors,
+                'blocked_passages': room.blocked_passages,
+                'has_stairs_up': room.has_stairs_up,
+                'has_stairs_down': room.has_stairs_down,
+                'stairs_up_target': room.stairs_up_target,
+                'stairs_down_target': room.stairs_down_target,
+                'connections': {k.value: v for k, v in room.connections.items()}  # Convert Direction enums to values
+            })
+        
+        return {
+            "seed": self.seed,
+            "grid_width": self.grid_width,
+            "grid_height": self.grid_height,
+            "rooms": room_data,
+            "map_effects": self.map_effects.to_dict(),
+            # Serialize grid state as needed
+        }
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Create dungeon from dictionary for loading."""
+        # This is a simplified implementation - a full implementation would need
+        # to reconstruct the grid and all the relationships
+        dungeon = cls(data["seed"], data["grid_width"], data["grid_height"])
+        
+        # Reconstruct rooms
+        dungeon.rooms = []
+        for room_data in data["rooms"]:
+            room = Room(
+                room_data['x'],
+                room_data['y'],
+                room_data['z'],
+                room_data['width'],
+                room_data['height'],
+                room_data['room_type']
+            )
+            room.description = room_data['description']
+            
+            # Reconstruct items
+            from .item import Item
+            for item_data in room_data['items']:
+                item = Item.from_dict(item_data)
+                room.items.append(item)
+            
+            # Reconstruct entities (simplified)
+            room.entities = room_data['entities']
+            
+            # Reconstruct NPCs (simplified)
+            room.npcs = room_data['npcs']
+            
+            # Restore other properties
+            room.locked_doors = room_data['locked_doors']
+            room.blocked_passages = room_data['blocked_passages']
+            room.has_stairs_up = room_data['has_stairs_up']
+            room.has_stairs_down = room_data['has_stairs_down']
+            room.stairs_up_target = room_data['stairs_up_target']
+            room.stairs_down_target = room_data['stairs_down_target']
+            
+            # Restore connections (convert values back to Direction enums)
+            from .base import Direction
+            for dir_val, target in room_data['connections'].items():
+                try:
+                    direction_enum = Direction(dir_val)
+                    room.connections[direction_enum] = target
+                except ValueError:
+                    # If the value doesn't correspond to a valid Direction, skip it
+                    continue
+            
+            dungeon.rooms.append(room)
+        
+        # Rebuild the grid based on rooms
+        for room in dungeon.rooms:
+            for x in range(room.x, room.x + room.width):
+                for y in range(room.y, room.y + room.height):
+                    pos = (x, y, room.z)
+                    if pos not in dungeon.grid:
+                        dungeon.grid[pos] = GridCell('room')
+                        dungeon.grid[pos].room_ref = room
+        
+        # Load map effects if they exist
+        if "map_effects" in data:
+            dungeon.map_effects = MapEffectManager.from_dict(data["map_effects"])
+        else:
+            # For backward compatibility, create a new map effects manager
+            dungeon.map_effects = MapEffectManager()
+        
+        return dungeon

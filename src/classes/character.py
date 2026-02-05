@@ -47,6 +47,7 @@ class Player(Entity):
         self.inventory = []
         self.position = (0, 0, 0)  # x, y, z (floor)
         self.victory = False  # Track if player has won the game
+        self.temporary_buffs = {}  # Store temporary stat buffs with their remaining turns
 
     def gain_exp(self, amount: int):
         """Gain experience points and level up if enough exp."""
@@ -90,17 +91,23 @@ class Player(Entity):
             self.inventory.remove(item)
 
     def get_total_attack(self) -> int:
-        """Get total attack including equipped weapon."""
+        """Get total attack including equipped weapon and temporary buffs."""
         total = self.attack
         if self.equipped_weapon:
             total += self.equipped_weapon.attack_bonus
+        # Add temporary attack buffs
+        if 'attack' in self.temporary_buffs:
+            total += self.temporary_buffs['attack']
         return total
 
     def get_total_defense(self) -> int:
-        """Get total defense including equipped armor."""
+        """Get total defense including equipped armor and temporary buffs."""
         total = self.defense
         if self.equipped_armor:
             total += self.equipped_armor.defense_bonus
+        # Add temporary defense buffs
+        if 'defense' in self.temporary_buffs:
+            total += self.temporary_buffs['defense']
         return total
 
     def travel_to(self, new_position: tuple):
@@ -118,10 +125,71 @@ class Player(Entity):
             if new_z + 1 > self.floors_explored:
                 self.floors_explored = new_z + 1
 
+    def use_item(self, item: Item) -> str:
+        """Use a consumable item to apply its effects."""
+        if item.item_type != ItemType.CONSUMABLE:
+            return f"{item.name} is not a consumable item."
+        
+        # Apply the item's effects
+        result_parts = [f"You consumed {item.name}."]
+        
+        # Apply health bonus if present
+        if item.health_bonus > 0:
+            old_health = self.health
+            self.heal(item.health_bonus)
+            gained_health = self.health - old_health
+            result_parts.append(f"Healed {gained_health} HP.")
+        
+        # Apply temporary attack and defense buffs
+        if item.attack_bonus > 0:
+            # Add temporary attack buff for 3 turns (configurable based on item)
+            self.temporary_buffs['attack'] = self.temporary_buffs.get('attack', 0) + item.attack_bonus
+            self.temporary_buffs['attack_turns'] = 3  # Default duration
+            result_parts.append(f"Gained +{item.attack_bonus} attack for 3 turns.")
+        
+        if item.defense_bonus > 0:
+            # Add temporary defense buff for 3 turns (configurable based on item)
+            self.temporary_buffs['defense'] = self.temporary_buffs.get('defense', 0) + item.defense_bonus
+            self.temporary_buffs['defense_turns'] = 3  # Default duration
+            result_parts.append(f"Gained +{item.defense_bonus} defense for 3 turns.")
+        
+        # Apply any status effects from the item
+        if item.status_effects:
+            for effect, duration in item.status_effects.items():
+                self.active_status_effects[effect] = duration
+            result_parts.append(f"Status effects applied: {', '.join(item.status_effects.keys())}.")
+        
+        # Remove the item from inventory after use
+        self.inventory.remove(item)
+        
+        return " ".join(result_parts)
+
     def heal_percentage(self, percentage: float):
         """Heal a percentage of max health."""
         heal_amount = int(self.max_health * percentage)
         return self.heal(heal_amount)
+
+    def update_temporary_buffs(self):
+        """Update temporary buffs at the end of each turn."""
+        buffs_to_update = []
+        
+        # Update attack buff
+        if 'attack_turns' in self.temporary_buffs and self.temporary_buffs['attack_turns'] > 0:
+            self.temporary_buffs['attack_turns'] -= 1
+            if self.temporary_buffs['attack_turns'] <= 0:
+                # Remove the buff when duration expires
+                if 'attack' in self.temporary_buffs:
+                    del self.temporary_buffs['attack']
+                del self.temporary_buffs['attack_turns']
+        
+        # Update defense buff
+        if 'defense_turns' in self.temporary_buffs and self.temporary_buffs['defense_turns'] > 0:
+            self.temporary_buffs['defense_turns'] -= 1
+            if self.temporary_buffs['defense_turns'] <= 0:
+                # Remove the buff when duration expires
+                if 'defense' in self.temporary_buffs:
+                    del self.temporary_buffs['defense']
+                del self.temporary_buffs['defense_turns']
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert player to dictionary for saving."""

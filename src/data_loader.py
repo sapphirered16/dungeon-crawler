@@ -124,6 +124,27 @@ class DataProvider:
                 return npc
         return None
 
+    def get_items(self) -> List[Dict[str, Any]]:
+        """Return all items combined from all categories"""
+        all_items = []
+        for category in ["weapons", "armor", "consumables", "keys", "triggers", "artifacts"]:
+            items = self.items_data.get(category, [])
+            all_items.extend(items)
+        return all_items
+
+    def get_enemies(self) -> List[Dict[str, Any]]:
+        """Return all enemies combined from all categories"""
+        all_enemies = []
+        all_enemies.extend(self.get_common_enemies())
+        all_enemies.extend(self.get_mid_level_enemies())
+        all_enemies.extend(self.get_boss_enemies())
+        all_enemies.extend(self.get_themed_enemies())
+        return all_enemies
+
+    def get_npcs(self) -> List[Dict[str, Any]]:
+        """Return all NPC definitions"""
+        return self.npcs_data.get("npc_types", [])
+
 
 # Global data provider instance
 data_provider = DataProvider()

@@ -1,16 +1,29 @@
-"""Main game engine for the dungeon crawler game."""
+"""New game engine for the dungeon crawler game with proper room-based layouts."""
 
 import json
 import os
 import random
+import sys
 from datetime import datetime
 from typing import Tuple, List, Dict, Any
-from .classes.dungeon import SeededDungeon
-from .classes.character import Player
-from .classes.room import RoomState
-from .classes.base import Direction, Entity
-from .classes.map_effects import MapEffectType
-from .data.data_loader import DataProvider
+
+# Add the parent directory to the path for imports
+current_dir = os.path.dirname(__file__)
+grandparent_dir = os.path.join(current_dir, '..', '..')
+sys.path.insert(0, os.path.abspath(grandparent_dir))
+
+from src.classes.new_dungeon import SeededDungeon, Room
+from src.classes.character import Player
+from src.classes.room import RoomState
+from src.classes.base import Direction, Entity
+from src.classes.map_effects import MapEffectType
+
+# Import data loader from the data module
+try:
+    from src.data.data_loader import DataProvider
+except ImportError:
+    # Fallback for when running in a different context
+    from ..data.data_loader import DataProvider
 
 
 class SeededGameEngine:
@@ -18,13 +31,15 @@ class SeededGameEngine:
         self.seed = seed
         self.dungeon = SeededDungeon(seed)
         self.player = Player()
-        self.current_room_state = self._find_starting_room()
+        self.current_room = self._find_starting_room()
         self.data_provider = DataProvider()
         
         # Track explored areas for visualization
         self.explored_positions = set()
-        if self.current_room_state:
-            self.explored_positions.add(self.current_room_state.pos)
+        if self.current_room:
+            # Add all positions in the current room to explored set
+            for pos in self.current_room.get_all_positions():
+                self.explored_positions.add((*pos, self.current_room.z))
         
         # Initialize logging
         self.log_file = f"dungeon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
@@ -47,19 +62,28 @@ class SeededGameEngine:
         
         # Show final room state
         self.look_around_simple()
-        
+    
     def _find_starting_room(self):
         """Find the starting room (z=0 floor)."""
-        for pos, room in self.dungeon.room_states.items():
-            if pos[2] == 0:  # First floor
-                self.player.travel_to(pos)
+        # Find a room on floor 0 that is suitable as a starting room
+        for room in self.dungeon.rooms:
+            if room.z == 0 and room.room_type == "hub":
+                # Set player position to the center of the hub room
+                center_x, center_y = room.get_center()
+                self.player.travel_to((center_x, center_y, 0))
                 return room
-        # If no room found on floor 0, create one
-        start_pos = (12, 12, 0)
-        start_room = self.dungeon.room_states[start_pos]
-        self.player.travel_to(start_pos)
-        return start_room
-
+        
+        # If no hub room found on floor 0, use the first room on floor 0
+        for room in self.dungeon.rooms:
+            if room.z == 0:
+                center_x, center_y = room.get_center()
+                self.player.travel_to((center_x, center_y, 0))
+                room.description = "The entrance to the dungeon. A safe starting area."
+                return room
+        
+        # If no room found on floor 0, this shouldn't happen but just in case
+        raise Exception("No starting room found on floor 0")
+    
     def show_stats(self):
         """Display player statistics."""
         print("\n--- 🦸 Hero's Stats ---")
@@ -115,7 +139,7 @@ class SeededGameEngine:
 
     def look_around(self):
         """Look around the current room."""
-        print(f"\n--- {self.current_room_state.description} ---")
+        print(f"\n--- {self.current_room.description} ---")
         
         # Show environmental features from map effects
         current_pos = self.player.position
@@ -126,15 +150,15 @@ class SeededGameEngine:
                 print(f"  • {desc}")
         
         # Show items in room (only if there are items)
-        if self.current_room_state.items:
+        if self.current_room.items:
             print("\nItems in the room:")
-            for i, item in enumerate(self.current_room_state.items, 1):
+            for i, item in enumerate(self.current_room.items, 1):
                 print(f"  {i}. {item.name} (Value: {item.value})")
         
         # Show creatures in room (excluding NPCs, only if there are creatures)
         from .classes.character import NonPlayerCharacter
         creatures = []
-        for e in self.current_room_state.entities:
+        for e in self.current_room.entities:
             if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
                 creatures.append(e)
         
@@ -145,8 +169,8 @@ class SeededGameEngine:
         
         # Show NPCs in room (only if there are NPCs)
         npcs = []
-        for e in self.current_room_state.entities:
-            if isinstance(e, NonPlayerCharacter) and e.is_alive():
+        for e in self.current_room.npcs:
+            if e.is_alive():
                 npcs.append(e)
         
         if npcs:
@@ -157,10 +181,12 @@ class SeededGameEngine:
         # Show available movement directions as a single sentence
         available_directions = []
         for direction in Direction:
-            if direction in self.current_room_state.connections:
+            if direction in self.current_room.connections:
                 available_directions.append(direction.value)
-            elif direction in [Direction.UP, Direction.DOWN] and ((direction == Direction.UP and self.current_room_state.has_stairs_up) or (direction == Direction.DOWN and self.current_room_state.has_stairs_down)):
-                available_directions.append(direction.value)
+            elif direction in [Direction.UP, Direction.DOWN]:
+                if (direction == Direction.UP and self.current_room.has_stairs_up) or \
+                   (direction == Direction.DOWN and self.current_room.has_stairs_down):
+                    available_directions.append(direction.value)
         
         if available_directions:
             directions_str = ", ".join(available_directions).replace("north", "North").replace("south", "South").replace("east", "East").replace("west", "West").replace("up", "Up").replace("down", "Down")
@@ -177,7 +203,7 @@ class SeededGameEngine:
 
     def look_around_simple(self):
         """Look around the current room without the mini-map (for use during turn processing)."""
-        print(f"\n--- {self.current_room_state.description} ---")
+        print(f"\n--- {self.current_room.description} ---")
         
         # Show environmental features from map effects
         current_pos = self.player.position
@@ -188,15 +214,15 @@ class SeededGameEngine:
                 print(f"  • {desc}")
         
         # Show items in room (only if there are items)
-        if self.current_room_state.items:
+        if self.current_room.items:
             print("\nItems in the room:")
-            for i, item in enumerate(self.current_room_state.items, 1):
+            for i, item in enumerate(self.current_room.items, 1):
                 print(f"  {i}. {item.name} (Value: {item.value})")
         
         # Show creatures in room (excluding NPCs, only if there are creatures)
         from .classes.character import NonPlayerCharacter
         creatures = []
-        for e in self.current_room_state.entities:
+        for e in self.current_room.entities:
             if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
                 creatures.append(e)
         
@@ -207,8 +233,8 @@ class SeededGameEngine:
         
         # Show NPCs in room (only if there are NPCs)
         npcs = []
-        for e in self.current_room_state.entities:
-            if isinstance(e, NonPlayerCharacter) and e.is_alive():
+        for e in self.current_room.npcs:
+            if e.is_alive():
                 npcs.append(e)
         
         if npcs:
@@ -219,10 +245,12 @@ class SeededGameEngine:
         # Show available movement directions as a single sentence
         available_directions = []
         for direction in Direction:
-            if direction in self.current_room_state.connections:
+            if direction in self.current_room.connections:
                 available_directions.append(direction.value)
-            elif direction in [Direction.UP, Direction.DOWN] and ((direction == Direction.UP and self.current_room_state.has_stairs_up) or (direction == Direction.DOWN and self.current_room_state.has_stairs_down)):
-                available_directions.append(direction.value)
+            elif direction in [Direction.UP, Direction.DOWN]:
+                if (direction == Direction.UP and self.current_room.has_stairs_up) or \
+                   (direction == Direction.DOWN and self.current_room.has_stairs_down):
+                    available_directions.append(direction.value)
         
         if available_directions:
             directions_str = ", ".join(available_directions).replace("north", "North").replace("south", "South").replace("east", "East").replace("west", "West").replace("up", "Up").replace("down", "Down")
@@ -256,10 +284,7 @@ class SeededGameEngine:
         from .classes.base import ItemType
         
         # Get all NPCs in the room
-        npcs = []
-        for e in self.current_room_state.entities:
-            if isinstance(e, NonPlayerCharacter) and e.is_alive():
-                npcs.append(e)
+        npcs = self.current_room.npcs
         
         if not npcs:
             print("There are no NPCs here to talk to.")
@@ -299,7 +324,7 @@ class SeededGameEngine:
                             
                             if has_required_item:
                                 # Player has the required item, offer to complete quest
-                                print(f"\\n🎁 {npc.name} recognizes the {required_item_name}!")
+                                print(f"\n🎁 {npc.name} recognizes the {required_item_name}!")
                                 print(f"Quest: {quest['name']}")
                                 print(f"Description: {quest['description']}")
                                 
@@ -327,7 +352,7 @@ class SeededGameEngine:
                                 break
                             else:
                                 # Player doesn't have the required item, give hint about the quest
-                                print(f"\\n📜 {npc.name} has a quest for you:")
+                                print(f"\n📜 {npc.name} has a quest for you:")
                                 print(f"Quest: {quest['name']}")
                                 print(f"Required: {required_item_name}")
                                 print(f"Reward: {quest['reward']['name']}")
@@ -354,14 +379,15 @@ class SeededGameEngine:
         # Start a new turn by clearing the event buffer
         self.event_buffer = []
         
-        if direction in self.current_room_state.locked_doors:
-            key_name = self.current_room_state.locked_doors[direction]
+        # Check if the direction is locked
+        if direction in self.current_room.locked_doors:
+            key_name = self.current_room.locked_doors[direction]
             self.event_buffer.append(f"🔒 This way is locked by a magical barrier. You need a {key_name} to proceed.")
             # Check if player has the key
             for item in self.player.inventory:
                 if item.name == key_name and item.item_type.value == "key":
                     self.event_buffer.append(f"✨ You use the {key_name} to unlock the magical barrier!")
-                    del self.current_room_state.locked_doors[direction]
+                    del self.current_room.locked_doors[direction]
                     self._log_action(f"Used {key_name} to unlock door - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                     break
             else:
@@ -371,14 +397,15 @@ class SeededGameEngine:
                 self._display_events()
                 return False
 
-        if direction in self.current_room_state.blocked_passages:
-            trigger_name = self.current_room_state.blocked_passages[direction]
+        # Check if the direction is blocked
+        if direction in self.current_room.blocked_passages:
+            trigger_name = self.current_room.blocked_passages[direction]
             self.event_buffer.append(f"🚧 This way is blocked by ancient magic. You need a {trigger_name} to proceed.")
             # Check if player has the trigger item
             for item in self.player.inventory:
                 if item.name == trigger_name:
                     self.event_buffer.append(f"✨ You use the {trigger_name} to dispel the magical blockage!")
-                    del self.current_room_state.blocked_passages[direction]
+                    del self.current_room.blocked_passages[direction]
                     self._log_action(f"Used {trigger_name} to unblock passage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                     break
             else:
@@ -389,64 +416,77 @@ class SeededGameEngine:
                 return False
 
         # Handle special directions (stairs)
-        if direction == Direction.UP and self.current_room_state.has_stairs_up:
-            target_pos = self.current_room_state.stairs_up_target
+        if direction == Direction.UP and self.current_room.has_stairs_up:
+            target_pos = self.current_room.stairs_up_target
             if target_pos:
                 old_pos = self.player.position
-                self.current_room_state = self.dungeon.room_states[target_pos]
-                self.player.travel_to(target_pos)
-                # Add new position to explored areas
-                self.explored_positions.add(target_pos)
-                self.event_buffer.append("⬆️  You climb up the stairs...")
-                self._log_action(f"Moved UP from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
-                # Trigger any map effects at the new position
-                self._trigger_map_effects_at_current_position()
-                # Process monster AI after moving
-                self.process_monster_ai()
-                # Update temporary buffs
-                self.player.update_temporary_buffs()
-                # Display all events and final state after moving
-                self._display_events()
-                self.look_around_simple()
-                return True
-        elif direction == Direction.DOWN and self.current_room_state.has_stairs_down:
-            target_pos = self.current_room_state.stairs_down_target
+                # Find the room at the target position
+                target_room = self.dungeon.get_room_at_position(target_pos)
+                if target_room:
+                    self.current_room = target_room
+                    self.player.travel_to(target_pos)
+                    # Add all positions in the new room to explored areas
+                    for pos in self.current_room.get_all_positions():
+                        self.explored_positions.add((*pos, self.current_room.z))
+                    self.event_buffer.append("⬆️  You climb up the stairs...")
+                    self._log_action(f"Moved UP from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                    # Trigger any map effects at the new position
+                    self._trigger_map_effects_at_current_position()
+                    # Process monster AI after moving
+                    self.process_monster_ai()
+                    # Update temporary buffs
+                    self.player.update_temporary_buffs()
+                    # Display all events and final state after moving
+                    self._display_events()
+                    self.look_around_simple()
+                    return True
+        elif direction == Direction.DOWN and self.current_room.has_stairs_down:
+            target_pos = self.current_room.stairs_down_target
             if target_pos:
                 old_pos = self.player.position
-                self.current_room_state = self.dungeon.room_states[target_pos]
-                self.player.travel_to(target_pos)
-                # Add new position to explored areas
-                self.explored_positions.add(target_pos)
-                self.event_buffer.append("⬇️  You descend down the stairs...")
-                # Trigger any map effects at the new position
-                self._trigger_map_effects_at_current_position()
-                # Process monster AI after moving
-                self.process_monster_ai()
-                # Update temporary buffs
-                self.player.update_temporary_buffs()
-                self._log_action(f"Moved DOWN from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
-                # Display all events and final state after moving
-                self._display_events()
-                self.look_around_simple()
-                return True
-        elif direction in self.current_room_state.connections:
-            new_pos = self.current_room_state.connections[direction]
+                # Find the room at the target position
+                target_room = self.dungeon.get_room_at_position(target_pos)
+                if target_room:
+                    self.current_room = target_room
+                    self.player.travel_to(target_pos)
+                    # Add all positions in the new room to explored areas
+                    for pos in self.current_room.get_all_positions():
+                        self.explored_positions.add((*pos, self.current_room.z))
+                    self.event_buffer.append("⬇️  You descend down the stairs...")
+                    # Trigger any map effects at the new position
+                    self._trigger_map_effects_at_current_position()
+                    # Process monster AI after moving
+                    self.process_monster_ai()
+                    # Update temporary buffs
+                    self.player.update_temporary_buffs()
+                    self._log_action(f"Moved DOWN from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                    # Display all events and final state after moving
+                    self._display_events()
+                    self.look_around_simple()
+                    return True
+        elif direction in self.current_room.connections:
+            new_pos = self.current_room.connections[direction]
             old_pos = self.player.position
-            self.current_room_state = self.dungeon.room_states[new_pos]
-            self.player.travel_to(new_pos)
-            # Add new position to explored areas
-            self.explored_positions.add(new_pos)
-            # Trigger any map effects at the new position
-            self._trigger_map_effects_at_current_position()
-            # Process monster AI after moving
-            self.process_monster_ai()
-            # Update temporary buffs
-            self.player.update_temporary_buffs()
-            self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
-            # Display all events and final state after moving
-            self._display_events()
-            self.look_around_simple()
-            return True
+            
+            # Find the room at the new position
+            new_room = self.dungeon.get_room_at_position(new_pos)
+            if new_room:
+                self.current_room = new_room
+                self.player.travel_to(new_pos)
+                # Add all positions in the new room to explored areas
+                for pos in self.current_room.get_all_positions():
+                    self.explored_positions.add((*pos, self.current_room.z))
+                # Trigger any map effects at the new position
+                self._trigger_map_effects_at_current_position()
+                # Process monster AI after moving
+                self.process_monster_ai()
+                # Update temporary buffs
+                self.player.update_temporary_buffs()
+                self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                # Display all events and final state after moving
+                self._display_events()
+                self.look_around_simple()
+                return True
         
         self.event_buffer.append(f"❌ You cannot move {direction.value}.")
         self._log_action(f"Tried to move {direction.value} but failed - HP: {self.player.health}/{self.player.max_health}", self.player.position)
@@ -462,7 +502,7 @@ class SeededGameEngine:
         from .classes.character import NonPlayerCharacter
         
         living_enemies = []
-        for e in self.current_room_state.entities:
+        for e in self.current_room.entities:
             if (e.is_alive() and 
                 e.name != "Player" and 
                 not isinstance(e, NonPlayerCharacter)):  # Exclude NPCs from combat
@@ -526,7 +566,7 @@ class SeededGameEngine:
                 # Process loot drops based on enemy's defined drops
                 dropped_items = self._process_loot_drops(enemy)
                 for dropped_item in dropped_items:
-                    self.current_room_state.items.append(dropped_item)
+                    self.current_room.items.append(dropped_item)
                     self.event_buffer.append(f"The {enemy.name} dropped: {dropped_item.name}!")
                 # Process monster AI after combat
                 self.process_monster_ai()
@@ -564,8 +604,8 @@ class SeededGameEngine:
         # Adjust item_index since the game displays items starting from 1
         adjusted_index = item_index - 1
         
-        if 0 <= adjusted_index < len(self.current_room_state.items):
-            item = self.current_room_state.items[adjusted_index]
+        if 0 <= adjusted_index < len(self.current_room.items):
+            item = self.current_room.items[adjusted_index]
             print(f"You take the {item.name}.")
             self.player.take_item(item)
             
@@ -575,14 +615,14 @@ class SeededGameEngine:
                 print("✨ Your journey through the dungeon has ended in triumph!")
                 print("🏆 You have achieved victory!")
                 self.player.victory = True  # Mark player as having won
-                print(f"\\n📊 FINAL SCORE: {self.player.score}")
+                print(f"\n📊 FINAL SCORE: {self.player.score}")
                 print(f"⚔️  ENEMIES DEFEATED: {self.player.enemies_defeated}")
                 print(f"💎 TREASURES COLLECTED: {self.player.treasures_collected}")
-                print("\\n🙏 Thanks for playing the dungeon crawler!")
+                print("\n🙏 Thanks for playing the dungeon crawler!")
                 self._log_action(f"WON GAME by taking {item.name} (artifact) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 return True  # Return early to indicate game completion
             
-            self.current_room_state.items.remove(item)
+            self.current_room.items.remove(item)
             # Process monster AI after taking an item (noise might attract attention)
             self.process_monster_ai()
             # Update temporary buffs
@@ -624,69 +664,74 @@ class SeededGameEngine:
         
         print(f"\n--- FLOOR {floor + 1} VISUALIZATION (Seed: {self.seed}) ---")
         
-        # Get all positions on this floor
-        floor_positions = {pos: room for pos, room in self.dungeon.room_states.items() if pos[2] == floor}
+        # Get all rooms on this floor
+        floor_rooms = self.dungeon.get_all_rooms_on_floor(floor)
         
-        if not floor_positions:
+        if not floor_rooms:
             print("No rooms on this floor.")
             return
         
-        # Determine bounds
-        xs = [pos[0] for pos in floor_positions.keys()]
-        ys = [pos[1] for pos in floor_positions.keys()]
-        
-        min_x, max_x = min(xs), max(xs)
-        min_y, max_y = min(ys), max(ys)
+        # Determine bounds based on room positions
+        min_x = min(room.x for room in floor_rooms)
+        max_x = max(room.x + room.width - 1 for room in floor_rooms)
+        min_y = min(room.y for room in floor_rooms)
+        max_y = max(room.y + room.height - 1 for room in floor_rooms)
         
         # Player position
         player_x, player_y, player_z = self.player.position
         
+        # Create grid representation
+        grid = {}
+        for y in range(min_y, max_y + 1):
+            for x in range(min_x, max_x + 1):
+                pos = (x, y, floor)
+                grid[(x, y)] = ' '
+                
+                # Check if this position is part of a room
+                room_at_pos = self.dungeon.get_room_at_position(pos)
+                if room_at_pos:
+                    # Check if it's part of a hallway
+                    cell_type = self.dungeon.get_cell_type_at_position(pos)
+                    if cell_type == 'hallway':
+                        # Check if this hallway position has items
+                        # For hallways, check if any room in the area has items
+                        has_items = any(item for item in room_at_pos.items)
+                        if has_items:
+                            grid[(x, y)] = '≈'  # Hallway with items
+                        else:
+                            grid[(x, y)] = '∿'  # Hallway without items
+                    else:  # It's part of a room
+                        # Check if this room has items
+                        if room_at_pos.items:
+                            grid[(x, y)] = '◘'  # Room with items
+                        else:
+                            grid[(x, y)] = '▫'  # Room without items
+                else:
+                    # Check if position was explored
+                    if pos in self.explored_positions:
+                        grid[(x, y)] = '·'  # Explored empty space
+                    else:
+                        grid[(x, y)] = '░'  # Unknown area
+    
         # Display grid
         for y in range(min_y, max_y + 1):  # Print from low Y to high Y so North (lower Y values) appears at top
             row = ""
             for x in range(min_x, max_x + 1):
-                pos = (x, y, floor)
-                if pos == (player_x, player_y, player_z):
-                    row += "▲"  # Triangle pointing up for player
-                elif pos in self.dungeon.room_states:
-                    room = self.dungeon.room_states[pos]
-                    # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with filled square
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections == 2:
-                            # Hallway with items - use crossed lines for hallway with items
-                            row += "╬"
-                        else:
-                            # Regular room with items - use filled square for room with items
-                            row += "█"
-                    else:
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections == 2:
-                            # Hallway without items - use horizontal line for hallway
-                            row += "─"
-                        else:
-                            # Regular room without items - use outlined box for empty room
-                            row += "▭"
+                pos = (x, y)
+                if x == player_x and y == player_y and player_z == floor:
+                    row += "♀"  # Female symbol for player
                 else:
-                    # Show unknown/void tiles as ░
-                    if pos in self.explored_positions:
-                        # If position was visited but has no room, show as empty space
-                        row += "·"  # Center dot for explored empty space
-                    else:
-                        # Show unexplored void tiles as ░
-                        row += "▓"  # Medium shade for unknown areas
+                    row += grid[pos]
             print(row)
         
         # Show legend
         print("\nLegend:")
-        print("  ▭ = Room (no items)")
-        print("  █ = Room/Hallway (with items)")
-        print("  ─ = Hallway (no items)")
-        print("  ╬ = Hallway (with items)")
-        print("  ▲ = Player Position")
-        print("  ▓ = Unknown Area")
+        print("  ♀ = Player Position")
+        print("  ◘ = Room/Hallway (with items)")
+        print("  ▫ = Room (no items)")
+        print("  ∿ = Hallway (no items)")
+        print("  ≈ = Hallway (with items)")
+        print("  ░ = Unknown Area")
         print("  · = Explored Empty Space")
         print("\nNote: Environmental hazards like traps, wet areas, etc. are not visible on this map")
         print("but will trigger when you step on those tiles.")
@@ -720,7 +765,7 @@ class SeededGameEngine:
         
         # Set current room based on player position
         current_pos = tuple(game_state["current_room_pos"])
-        self.current_room_state = self.dungeon.room_states[current_pos]
+        self.current_room = self.dungeon.get_room_at_position(current_pos)
         
         print(f"📂 Game loaded from {filename}")
 
@@ -747,7 +792,7 @@ class SeededGameEngine:
         from .classes.character import NonPlayerCharacter
         
         # Process each room for monster actions
-        for pos, room in self.dungeon.room_states.items():
+        for room in self.dungeon.rooms:
             # Create a copy of entities list to iterate over safely
             entities_copy = room.entities[:]
             
@@ -762,28 +807,30 @@ class SeededGameEngine:
                 # Handle enemies with their own AI logic
                 if isinstance(entity, Enemy):
                     # Only report movements if enemy is in player's line of sight
-                    is_in_line_of_sight = self._is_in_line_of_sight(room.pos, self.player.position)
+                    is_in_line_of_sight = self._is_in_line_of_sight(room.get_center(), self.player.position)
                     
                     # Let the enemy decide its action
                     action_result = entity.take_turn(room, self.dungeon, self.player)
                     
-                    if action_result["moved"] and action_result["new_position"] != pos:
+                    if action_result["moved"] and action_result["new_position"] != room.get_center():
                         # Move the entity to the new room
-                        old_pos = pos
+                        old_pos = room.get_center()
                         new_pos = action_result["new_position"]
                         
-                        # Remove from current room
-                        if entity in room.entities:
-                            room.entities.remove(entity)
-                        
-                        # Add to new room
-                        new_room = self.dungeon.room_states[new_pos]
-                        if entity not in new_room.entities:
-                            new_room.entities.append(entity)
-                        
-                        # Only add action description to event buffer if enemy is in line of sight of player
-                        if action_result["action_description"] and is_in_line_of_sight:
-                            self.event_buffer.append(action_result["action_description"])
+                        # Find the room at the new position
+                        new_room = self.dungeon.get_room_at_position(new_pos)
+                        if new_room:
+                            # Remove from current room
+                            if entity in room.entities:
+                                room.entities.remove(entity)
+                            
+                            # Add to new room
+                            if entity not in new_room.entities:
+                                new_room.entities.append(entity)
+                            
+                            # Only add action description to event buffer if enemy is in line of sight of player
+                            if action_result["action_description"] and is_in_line_of_sight:
+                                self.event_buffer.append(action_result["action_description"])
                         # Don't log enemy movements - only log player interactions
                         # self._log_action(f"Enemy {entity.name} moved from {old_pos} to {new_pos}", self.player.position)
                     
@@ -824,10 +871,8 @@ class SeededGameEngine:
                             for dropped_item in dropped_items:
                                 room.items.append(dropped_item)
                                 # Only add drop to event buffer if player is in same room
-                                if room.pos == self.player.position:
+                                if room.contains_position(self.player.position[0], self.player.position[1]):
                                     self.event_buffer.append(f"掉落 The {entity.name} dropped: {dropped_item.name}!")
-    
-    # Helper methods removed as they are now handled in the Enemy class
 
     def _is_in_line_of_sight(self, pos1: Tuple[int, int, int], pos2: Tuple[int, int, int]) -> bool:
         """Check if there's a clear line of sight between two positions (same floor)."""
@@ -864,7 +909,7 @@ class SeededGameEngine:
             current_pos = (x, y, z1)
             
             # If this position doesn't exist in the dungeon, there's no line of sight
-            if current_pos not in self.dungeon.room_states:
+            if current_pos not in self.dungeon.grid:
                 return False
                 
             # If we've reached the destination, continue checking
@@ -873,10 +918,6 @@ class SeededGameEngine:
                 
         # If we've made it through all intermediate positions without hitting a wall, there's line of sight
         return True
-
-    def _get_adjacent_positions(self, pos: Tuple[int, int, int]) -> List[Tuple[int, int, int]]:
-        """Get adjacent positions to a given position."""
-        return self.dungeon.get_adjacent_positions(pos)
 
     def _process_loot_drops(self, enemy) -> List:
         """Process loot drops based on enemy's defined drops."""
@@ -989,28 +1030,29 @@ class SeededGameEngine:
                 pos = (x, y, player_z)
                 if pos == (player_x, player_y, player_z):
                     # Player position
-                    row += "▲ "
-                elif pos in self.dungeon.room_states:
-                    room = self.dungeon.room_states[pos]
-                    # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with filled square
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections == 2:
-                            # Hallway with items
-                            row += "╬ "
+                    row += "♀ "
+                elif pos in self.dungeon.grid:
+                    cell_type = self.dungeon.get_cell_type_at_position(pos)
+                    if cell_type == 'room':
+                        # Check if this room has items
+                        room_at_pos = self.dungeon.get_room_at_position(pos)
+                        if room_at_pos and room_at_pos.items:
+                            row += "◘ "  # Room with items
                         else:
-                            # Regular room with items
-                            row += "█ "
+                            row += "▫ "  # Room without items
+                    elif cell_type == 'hallway':
+                        # Check if this hallway has items
+                        room_at_pos = self.dungeon.get_room_at_position(pos)
+                        if room_at_pos and room_at_pos.items:
+                            row += "≈ "  # Hallway with items
+                        else:
+                            row += "∿ "  # Hallway without items
                     else:
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections == 2:
-                            # Hallway without items
-                            row += "─ "
+                        # Check if position was explored
+                        if pos in self.explored_positions:
+                            row += "· "  # Explored empty space
                         else:
-                            # Regular room without items
-                            row += "▭ "
+                            row += "░ "  # Unknown area
                 else:
                     # Show unknown/void tiles as ░
                     if pos in self.explored_positions:
@@ -1018,17 +1060,17 @@ class SeededGameEngine:
                         row += "· "  # Center dot for explored empty space
                     else:
                         # Show unexplored void tiles as ░
-                        row += "▓ "  # Medium shade for unknown areas
+                        row += "░ "  # Medium shade for unknown areas
             print(row)
         
         # Show legend for full local map command
         print("\n🗺️  Legend:")
-        print("  ▲ = Player")
-        print("  ▭ = Room (no items)")
-        print("  █ = Room/Hallway (with items)")
-        print("  ─ = Hallway (no items)")
-        print("  ╬ = Hallway (with items)")
-        print("  ▓ = Unknown Area")
+        print("  ♀ = Player")
+        print("  ◘ = Room/Hallway (with items)")
+        print("  ▫ = Room (no items)")
+        print("  ∿ = Hallway (no items)")
+        print("  ≈ = Hallway (with items)")
+        print("  ░ = Unknown Area")
         print("  · = Explored Empty Space")
 
     def show_local_map_no_legend(self):
@@ -1047,28 +1089,29 @@ class SeededGameEngine:
                 pos = (x, y, player_z)
                 if pos == (player_x, player_y, player_z):
                     # Player position
-                    row += "▲ "
-                elif pos in self.dungeon.room_states:
-                    room = self.dungeon.room_states[pos]
-                    # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with filled square
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections == 2:
-                            # Hallway with items
-                            row += "╬ "
+                    row += "♀ "
+                elif pos in self.dungeon.grid:
+                    cell_type = self.dungeon.get_cell_type_at_position(pos)
+                    if cell_type == 'room':
+                        # Check if this room has items
+                        room_at_pos = self.dungeon.get_room_at_position(pos)
+                        if room_at_pos and room_at_pos.items:
+                            row += "◘ "  # Room with items
                         else:
-                            # Regular room with items
-                            row += "█ "
+                            row += "▫ "  # Room without items
+                    elif cell_type == 'hallway':
+                        # Check if this hallway has items
+                        room_at_pos = self.dungeon.get_room_at_position(pos)
+                        if room_at_pos and room_at_pos.items:
+                            row += "≈ "  # Hallway with items
+                        else:
+                            row += "∿ "  # Hallway without items
                     else:
-                        # Check if it's a hallway (connection to multiple rooms)
-                        connections = len(room.connections)
-                        if connections == 2:
-                            # Hallway without items
-                            row += "─ "
+                        # Check if position was explored
+                        if pos in self.explored_positions:
+                            row += "· "  # Explored empty space
                         else:
-                            # Regular room without items
-                            row += "▭ "
+                            row += "░ "  # Unknown area
                 else:
                     # Show unknown/void tiles as ░
                     if pos in self.explored_positions:
@@ -1076,5 +1119,5 @@ class SeededGameEngine:
                         row += "· "  # Center dot for explored empty space
                     else:
                         # Show unexplored void tiles as ░
-                        row += "▓ "  # Medium shade for unknown areas
+                        row += "░ "  # Medium shade for unknown areas
             print(row)

@@ -11,6 +11,9 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - **Floor-Specific Requirements**: Floor-specific room placement ensuring proper dungeon flow (staircase up only on floors > 0, staircase down only on non-last floors)
 - **Seed-Based Generation**: Deterministic dungeon generation based on a seed value for efficient saving
 - **Strategic Connections**: Rooms are connected via L-shaped hallways creating authentic dungeon feel
+- **NEW: Proper Room Dimensions**: Rooms now have actual dimensions (e.g., a library might be 3x5 tiles) instead of single tiles
+- **NEW: Spaced Room Placement**: Rooms are placed with minimum spacing between them on a large grid (like 30x30)
+- **NEW: Hallway Connections**: Rooms connect via hallways rather than directly touching, creating authentic dungeon feel
 
 ### ⚡ Map Effects System
 - **Hidden Traps**: Environmental hazards that trigger when stepped on, causing damage
@@ -140,6 +143,10 @@ python src/dungeon_visualizer.py 12345 0  # Visualize only floor 0
 dungeon-game/
 ├── src/
 │   ├── seeded_game_engine.py     # Main game engine with seed-based generation
+│   ├── new_game_engine.py        # Updated game engine with proper room-based layouts
+│   ├── classes/
+│   │   ├── new_dungeon.py       # New dungeon system with proper room dimensions
+│   │   └── ...                  # Other class files
 │   ├── batch_processor.py        # Batch command execution
 │   ├── dungeon_visualizer.py     # Dungeon visualization tool
 │   └── data_loader.py           # External data loading system

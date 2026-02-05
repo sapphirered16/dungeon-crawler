@@ -1,7 +1,7 @@
-"""Dungeon class for the dungeon crawler game."""
+"""Dungeon class for the dungeon crawler game with proper room-based layouts."""
 
 import random
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Set
 from .room import RoomState
 from .item import Item
 from .base import ItemType, Direction
@@ -9,34 +9,126 @@ from .map_effects import MapEffect, MapEffectType, MapEffectManager
 from ..data.data_loader import DataProvider
 
 
+class Rect:
+    """Rectangle class to represent rooms with dimensions."""
+    def __init__(self, x: int, y: int, width: int, height: int):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    
+    @property
+    def left(self):
+        return self.x
+    
+    @property
+    def right(self):
+        return self.x + self.width
+    
+    @property
+    def top(self):
+        return self.y
+    
+    @property
+    def bottom(self):
+        return self.y + self.height
+    
+    def center(self) -> Tuple[int, int]:
+        return (self.x + self.width // 2, self.y + self.height // 2)
+    
+    def intersects(self, other) -> bool:
+        """Check if this rectangle intersects with another."""
+        return (
+            self.left < other.right and
+            self.right > other.left and
+            self.top < other.bottom and
+            self.bottom > other.top
+        )
+
+
+class Room:
+    """Represents a room with dimensions and position."""
+    def __init__(self, rect: Rect, room_type: str = "empty", floor: int = 0):
+        self.rect = rect
+        self.room_type = room_type
+        self.floor = floor
+        self.center_x, self.center_y = rect.center()
+        self.id = f"{self.center_x}_{self.center_y}_{floor}"  # Unique identifier
+    
+    def contains(self, x: int, y: int) -> bool:
+        """Check if coordinates are inside this room."""
+        return (self.rect.x <= x < self.rect.x + self.rect.width and 
+                self.rect.y <= y < self.rect.y + self.rect.height)
+
+
+class Hallway:
+    """Represents a hallway connection between two rooms."""
+    def __init__(self, start_pos: Tuple[int, int], end_pos: Tuple[int, int], floor: int = 0):
+        self.start_pos = start_pos
+        self.end_pos = end_pos
+        self.floor = floor
+        self.path = self._calculate_path()
+    
+    def _calculate_path(self) -> List[Tuple[int, int]]:
+        """Calculate L-shaped path between two points."""
+        start_x, start_y = self.start_pos
+        end_x, end_y = self.end_pos
+        
+        path = []
+        # Horizontal segment
+        if start_x < end_x:
+            for x in range(start_x, end_x + 1):
+                path.append((x, start_y))
+        else:
+            for x in range(start_x, end_x - 1, -1):
+                path.append((x, start_y))
+        
+        # Vertical segment
+        if start_y != end_y:
+            # Start from the end of horizontal segment
+            intermediate_x = end_x
+            if start_y < end_y:
+                for y in range(start_y + 1, end_y + 1):
+                    path.append((intermediate_x, y))
+            else:
+                for y in range(start_y - 1, end_y - 1, -1):
+                    path.append((intermediate_x, y))
+        
+        return path
+
+
 class SeededDungeon:
-    def __init__(self, seed: int = None):
+    def __init__(self, seed: int = None, grid_width: int = 30, grid_height: int = 30, min_spacing: int = 1):
         if seed is not None:
             random.seed(seed)
         self.seed = seed
+        self.grid_width = grid_width
+        self.grid_height = grid_height
+        self.min_spacing = min_spacing  # Minimum space between rooms
         self.room_states = {}  # {(x, y, z): RoomState}
+        self.rooms_by_id = {}  # {room_id: Room}
+        self.hallways = []  # List of Hallway objects
         self.map_effects = MapEffectManager()
         self.data_provider = DataProvider()
         self.generate_dungeon()
 
     def generate_dungeon(self):
-        """Generate the dungeon layout."""
+        """Generate the dungeon layout with actual room dimensions and hallways."""
         # Load room templates
         room_templates = self.data_provider.get_room_templates()
         
         # Determine number of floors based on room templates
-        # Analyze room templates to determine how many floors are needed
         num_floors = self._determine_number_of_floors(room_templates)
         
-        # Create a basic layout with a starting room
-        start_pos = (12, 12, 0)  # Starting position
-        start_room = RoomState(start_pos, "starting")
-        start_room.description = "The entrance to the dungeon. A safe starting area."
-        self.room_states[start_pos] = start_room
-        
         # Generate rooms for multiple floors
-        for floor in range(num_floors):  # Generate floors based on room templates
-            self._generate_floor(floor, start_pos if floor == 0 else None)
+        for floor in range(num_floors):
+            self._generate_floor(floor, floor == 0)  # Mark first floor as starting floor
+        
+        # Connect rooms with hallways
+        self._connect_rooms_with_hallways()
+        
+        # Establish tile-to-tile connections for movement
+        self._establish_tile_connections()
         
         # Ensure stairs are properly connected between all floors
         self._connect_stairs_properly()
@@ -130,99 +222,187 @@ class SeededDungeon:
             artifact = self._generate_artifact()
             artifact_room.add_item(artifact)
     
-    def _generate_floor(self, floor: int, starting_pos: Tuple[int, int, int] = None):
-        """Generate a single floor of the dungeon."""
-        # Determine starting position for this floor
-        if floor == 0 and starting_pos:
-            current_pos = starting_pos
-        else:
-            # Offset for new floor
-            current_pos = (12, 12, floor)
+    def _generate_floor(self, floor: int, is_starting_floor: bool = False):
+        """Generate a single floor with actual dimensional rooms."""
+        # Create a list of rooms for this floor
+        rooms = []
         
-        # Generate room clusters
-        num_rooms = random.randint(20, 40)
+        # Generate room dimensions and positions
+        num_rooms = random.randint(15, 25)  # Fewer rooms due to larger size
         
-        # Create a central hub for the floor
-        if current_pos not in self.room_states:
-            hub_room = RoomState(current_pos, "hub")
-            hub_room.description = "A central hub of this floor."
-            self.room_states[current_pos] = hub_room
+        # Define possible room dimensions (width, height)
+        room_sizes = [(3, 3), (4, 3), (3, 4), (4, 4), (5, 4), (4, 5), (5, 5), (6, 4), (4, 6)]
         
-        # Generate rooms radiating from the hub
-        generated_positions = {current_pos}
+        # First, create the starting/hub room if this is the starting floor
+        if is_starting_floor:
+            start_width, start_height = random.choice([(4, 4), (5, 4), (4, 5)])
+            start_x = self.grid_width // 2 - start_width // 2
+            start_y = self.grid_height // 2 - start_height // 2
+            start_rect = Rect(start_x, start_y, start_width, start_height)
+            start_room = Room(start_rect, "hub", floor)
+            rooms.append(start_room)
+            self.rooms_by_id[start_room.id] = start_room
         
-        for _ in range(num_rooms - 1):
-            # Find a position adjacent to an existing room
-            existing_pos = random.choice(list(generated_positions))
-            direction = random.choice(list(Direction))
+        # Generate remaining rooms
+        attempts = 0
+        max_attempts = 1000  # Prevent infinite loops
+        
+        while len(rooms) < num_rooms and attempts < max_attempts:
+            attempts += 1
             
-            # Calculate new position
-            x, y, z = existing_pos
-            if direction == Direction.NORTH:
-                new_pos = (x, y - 1, z)
-            elif direction == Direction.SOUTH:
-                new_pos = (x, y + 1, z)
-            elif direction == Direction.EAST:
-                new_pos = (x + 1, y, z)
-            elif direction == Direction.WEST:
-                new_pos = (x - 1, y, z)
-            else:
-                continue  # Skip up/down for now
+            # Choose room dimensions
+            width, height = random.choice(room_sizes)
             
-            # Skip if position already exists
-            if new_pos in self.room_states:
-                continue
+            # Try to place the room randomly on the grid
+            max_x = self.grid_width - width - self.min_spacing * 2
+            max_y = self.grid_height - height - self.min_spacing * 2
+            
+            if max_x <= 0 or max_y <= 0:
+                continue  # Grid too small for this room size
                 
-            # Create new room with all available room types including fillers
-            # BUT exclude "artifact" room type during initial generation since 
-            # the special artifact room is created separately in _connect_stairs_properly
-            room_types = ["empty", "treasure", "monster", "trap", "npc", 
-                         "storage", "bunk", "kitchen", "library", "workshop", "garden"]
-            room_type = random.choice(room_types)
+            x = random.randint(self.min_spacing, max_x)
+            y = random.randint(self.min_spacing, max_y)
             
-            new_room = RoomState(new_pos, room_type)
-            self.room_states[new_pos] = new_room
-            generated_positions.add(new_pos)
+            new_rect = Rect(x, y, width, height)
             
-            # Connect the rooms
-            self._connect_rooms(existing_pos, new_pos)
+            # Check if this rectangle intersects with any existing room
+            valid_placement = True
+            for existing_room in rooms:
+                # Calculate expanded rectangles to account for minimum spacing
+                expanded_new = Rect(
+                    new_rect.x - self.min_spacing,
+                    new_rect.y - self.min_spacing,
+                    new_rect.width + 2 * self.min_spacing,
+                    new_rect.height + 2 * self.min_spacing
+                )
+                
+                if expanded_new.intersects(existing_room.rect):
+                    valid_placement = False
+                    break
+            
+            if valid_placement:
+                # Determine room type (avoid "artifact" for initial generation)
+                room_types = ["empty", "treasure", "monster", "trap", "npc", 
+                             "storage", "bunk", "kitchen", "library", "workshop", "garden"]
+                room_type = random.choice(room_types)
+                
+                new_room = Room(new_rect, room_type, floor)
+                rooms.append(new_room)
+                self.rooms_by_id[new_room.id] = new_room
+        
+        # Create RoomState objects for each tile in each room
+        for room in rooms:
+            for x in range(room.rect.x, room.rect.x + room.rect.width):
+                for y in range(room.rect.y, room.rect.y + room.rect.height):
+                    pos = (x, y, floor)
+                    room_state = RoomState(pos, room.room_type)
+                    room_state.description = self._get_room_description(room.room_type)
+                    self.room_states[pos] = room_state
         
         # Add special features to the floor
         self._add_special_features(floor)
+
+    def _get_room_description(self, room_type: str) -> str:
+        """Generate a description for a room based on its type."""
+        descriptions = {
+            "hub": "A central hub of this floor.",
+            "empty": "An empty, quiet room.",
+            "treasure": "A room filled with treasures and valuable items.",
+            "monster": "A room that houses dangerous creatures.",
+            "trap": "A room that seems to contain hidden dangers.",
+            "npc": "A room occupied by a non-player character.",
+            "storage": "A storage area filled with various items.",
+            "bunk": "A sleeping area with beds and personal belongings.",
+            "kitchen": "A kitchen with cooking utensils and ingredients.",
+            "library": "A library filled with books and scrolls.",
+            "workshop": "A workshop with tools and crafting materials.",
+            "garden": "A garden with plants and herbs growing in it."
+        }
+        return descriptions.get(room_type, "An unremarkable room.")
     
-    def _connect_rooms(self, pos1: Tuple[int, int, int], pos2: Tuple[int, int, int]):
-        """Connect two adjacent rooms."""
-        x1, y1, z1 = pos1
-        x2, y2, z2 = pos2
+    def _connect_rooms_with_hallways(self):
+        """Connect rooms with hallways using minimum spanning tree approach."""
+        # Get all rooms grouped by floor
+        rooms_by_floor = {}
+        for room_id, room in self.rooms_by_id.items():
+            if room.floor not in rooms_by_floor:
+                rooms_by_floor[room.floor] = []
+            rooms_by_floor[room.floor].append(room)
         
-        # Determine direction from pos1 to pos2
-        if x2 == x1 + 1 and y2 == y1 and z2 == z1:
-            direction = Direction.EAST
-            opposite = Direction.WEST
-        elif x2 == x1 - 1 and y2 == y1 and z2 == z1:
-            direction = Direction.WEST
-            opposite = Direction.EAST
-        elif x2 == x1 and y2 == y1 + 1 and z2 == z1:
-            direction = Direction.SOUTH
-            opposite = Direction.NORTH
-        elif x2 == x1 and y2 == y1 - 1 and z2 == z1:
-            direction = Direction.NORTH
-            opposite = Direction.SOUTH
-        else:
-            return  # Not adjacent
-        
-        # Connect the rooms
-        if pos1 in self.room_states:
-            self.room_states[pos1].connections[direction] = pos2
-        if pos2 in self.room_states:
-            self.room_states[pos2].connections[opposite] = pos1
+        # For each floor, connect rooms
+        for floor, rooms in rooms_by_floor.items():
+            if len(rooms) < 2:
+                continue  # Need at least 2 rooms to connect
+            
+            # Create a list of all possible connections with their costs
+            connections = []
+            for i, room1 in enumerate(rooms):
+                for j, room2 in enumerate(rooms[i+1:], i+1):
+                    center1 = room1.rect.center()
+                    center2 = room2.rect.center()
+                    cost = abs(center1[0] - center2[0]) + abs(center1[1] - center2[1])  # Manhattan distance
+                    connections.append((cost, room1, room2))
+            
+            # Sort connections by cost (first element of tuple)
+            connections.sort(key=lambda x: x[0])
+            
+            # Use Union-Find to create minimum spanning tree
+            parent = {room.id: room.id for room in rooms}
+            
+            def find_parent(room_id):
+                if parent[room_id] != room_id:
+                    parent[room_id] = find_parent(parent[room_id])
+                return parent[room_id]
+            
+            def union(room1_id, room2_id):
+                root1 = find_parent(room1_id)
+                root2 = find_parent(room2_id)
+                if root1 != root2:
+                    parent[root1] = root2
+                    return True
+                return False
+            
+            # Add connections to form MST
+            connected_count = 1
+            for cost, room1, room2 in connections:
+                if union(room1.id, room2.id):
+                    hallway = Hallway(room1.rect.center(), room2.rect.center(), floor)
+                    self.hallways.append(hallway)
+                    
+                    # Add hallway tiles to the dungeon map
+                    for x, y in hallway.path:
+                        pos = (x, y, floor)
+                        if pos not in self.room_states:
+                            hallway_room = RoomState(pos, "hallway")
+                            hallway_room.description = "A narrow hallway connecting different parts of the dungeon."
+                            self.room_states[pos] = hallway_room
+                    
+                    connected_count += 1
+                    if connected_count == len(rooms):
+                        break  # All rooms are connected
+
+    def _establish_tile_connections(self):
+        """Establish directional connections between adjacent tiles."""
+        # For each position in the dungeon, check its neighbors and create connections
+        for pos, room_state in self.room_states.items():
+            x, y, z = pos
+            
+            # Check all 4 directions (North, South, East, West)
+            potential_neighbors = [
+                ((x, y - 1, z), Direction.NORTH),  # North
+                ((x, y + 1, z), Direction.SOUTH),  # South
+                ((x + 1, y, z), Direction.EAST),   # East
+                ((x - 1, y, z), Direction.WEST),   # West
+            ]
+            
+            for neighbor_pos, direction in potential_neighbors:
+                if neighbor_pos in self.room_states:
+                    # Establish bidirectional connection
+                    room_state.connections[direction] = neighbor_pos
 
     def _add_special_features(self, floor: int):
-        """Add special features like stairs, locked doors, etc. to a floor."""
+        """Add special features like locked doors, etc. to a floor."""
         positions = [pos for pos in self.room_states.keys() if pos[2] == floor]
-        
-        # Note: Stairs between floors are handled in _connect_stairs_properly method
-        # which is called after all floors are generated
         
         # Add 3-5 filler rooms to each floor
         filler_room_types = ["storage", "bunk", "kitchen", "library", "workshop", "garden"]
@@ -246,178 +426,8 @@ class SeededDungeon:
         # Add map effects to random positions
         self._add_map_effects(floor)
         
-        # Populate rooms with items and entities BEFORE adding obstacles
-        # This ensures items are available before any obstacles are placed
+        # Populate rooms with items and entities
         self._populate_floor_rooms(floor)
-        
-        # Now add obstacles but in a logical way ensuring required items are available
-        # First, sort positions by distance from starting area to create a logical flow
-        # Find the actual starting room (the one that was originally created at (12, 12, 0))
-        start_positions = [pos for pos in positions if pos == (12, 12, 0)]
-        
-        if start_positions:
-            start_pos = start_positions[0]
-            # Calculate distances from start to create logical progression
-            distances = {}
-            queue = [(start_pos, 0)]
-            visited = set()
-            
-            while queue:
-                current_pos, dist = queue.pop(0)
-                if current_pos in visited:
-                    continue
-                visited.add(current_pos)
-                distances[current_pos] = dist
-                
-                # Add connected rooms to queue
-                for direction, connected_pos in self.room_states[current_pos].connections.items():
-                    if connected_pos not in visited:
-                        queue.append((connected_pos, dist + 1))
-        else:
-            # If no start position found, just use all positions with arbitrary distances
-            distances = {pos: i for i, pos in enumerate(positions)}
-        
-        # Sort positions by distance to create progression from early to late areas
-        sorted_positions = sorted(positions, key=lambda pos: distances.get(pos, 0))
-        
-        # Add locked doors and blocked passages in a logical progression
-        # Place obstacles only between rooms where required items already exist in earlier rooms
-        for pos in sorted_positions:
-            # For locked doors, only place them if we can ensure the key exists in an earlier room
-            if random.random() < 0.1:  # 10% chance
-                available_dirs = [d for d in Direction if d not in [Direction.UP, Direction.DOWN] and 
-                                 d in self.room_states[pos].connections]
-                if available_dirs:
-                    direction = random.choice(available_dirs)
-                    
-                    # Check if a key exists in earlier rooms in the progression
-                    current_dist = distances.get(pos, 0)
-                    key_exists = False
-                    
-                    # Check if any room with a key is earlier in the progression
-                    for check_pos in sorted_positions:
-                        if distances.get(check_pos, 0) < current_dist:
-                            # Check if this room has a key item
-                            for item in self.room_states[check_pos].items:
-                                if "Key" in item.name:
-                                    key_exists = True
-                                    break
-                        if key_exists:
-                            break
-                    
-                    # If no key exists in earlier rooms, add one to an earlier room
-                    if not key_exists:
-                        # Add a key to an earlier room in the progression
-                        earlier_rooms = [p for p in sorted_positions if distances.get(p, 0) < current_dist]
-                        if earlier_rooms:
-                            key_room = random.choice(earlier_rooms)
-                            
-                            # Add a key to this room - get from data provider
-                            from .item import Item
-                            from .base import ItemType
-                            
-                            # Get available keys from data provider
-                            available_keys = [item for item in self.data_provider.get_items() if item.get("type", "").upper() == "KEY"]
-                            if available_keys:
-                                key_data = random.choice(available_keys)
-                                # Add the key to the earlier room
-                                key_item = Item(
-                                    name=key_data["name"],
-                                    item_type=ItemType.KEY,
-                                    value=key_data.get("value", 0),
-                                    description=key_data.get("description", f"Unlocks doors that require a {key_data['name']}"),
-                                    attack_bonus=key_data.get("attack_bonus", 0),
-                                    defense_bonus=key_data.get("defense_bonus", 0),
-                                    status_effects=key_data.get("status_effects", {})
-                                )
-                                self.room_states[key_room].add_item(key_item)
-                            else:
-                                # Fallback to hardcoded values
-                                key_options = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key"]
-                                key_name = random.choice(key_options)
-                                
-                                # Add the key to the earlier room
-                                key_item = Item(
-                                    name=key_name,
-                                    item_type=ItemType.KEY,
-                                    value={"Iron Key": 10, "Silver Key": 15, "Golden Key": 25, "Ancient Key": 50}[key_name],
-                                    description=f"Unlocks doors that require a {key_name}"
-                                )
-                                self.room_states[key_room].add_item(key_item)
-                    
-                    # Add locked door requiring a key - get from data provider
-                    available_keys = [item["name"] for item in self.data_provider.get_items() if item.get("type", "").upper() == "KEY"]
-                    if available_keys:
-                        key_name = random.choice(available_keys)
-                        self.room_states[pos].locked_doors[direction] = key_name
-                    else:
-                        self.room_states[pos].locked_doors[direction] = "Silver Key"  # Fallback
-            
-            # Similar logic for blocked passages
-            if random.random() < 0.05:  # 5% chance
-                available_dirs = [d for d in Direction if d not in [Direction.UP, Direction.DOWN] and 
-                                 d in self.room_states[pos].connections]
-                if available_dirs:
-                    direction = random.choice(available_dirs)
-                    
-                    # Check if a trigger item exists in earlier rooms in the progression
-                    current_dist = distances.get(pos, 0)
-                    trigger_exists = False
-                    
-                    # Check if any room with a trigger item is earlier in the progression
-                    for check_pos in sorted_positions:
-                        if distances.get(check_pos, 0) < current_dist:
-                            # Check if this room has a trigger item
-                            for item in self.room_states[check_pos].items:
-                                if item.item_type.value in ["trigger", "key"]:
-                                    trigger_exists = True
-                                    break
-                        if trigger_exists:
-                            break
-                    
-                    # If no trigger exists in earlier rooms, add one to an earlier room
-                    if not trigger_exists:
-                        # Add a trigger to an earlier room in the progression
-                        earlier_rooms = [p for p in sorted_positions if distances.get(p, 0) < current_dist]
-                        if earlier_rooms:
-                            trigger_room = random.choice(earlier_rooms)
-                            
-                            # Add a trigger item to this room - get from data provider
-                            from .item import Item
-                            from .base import ItemType
-                            
-                            # Get available triggers from data provider
-                            available_triggers = [item for item in self.data_provider.get_items() if item.get("type", "").upper() == "TRIGGER"]
-                            if available_triggers:
-                                trigger_data = random.choice(available_triggers)
-                                # Add the trigger to the earlier room
-                                trigger_item = Item(
-                                    name=trigger_data["name"],
-                                    item_type=ItemType.TRIGGER,
-                                    value=trigger_data.get("value", 0),
-                                    description=trigger_data.get("description", f"Can be used to clear blocked passages"),
-                                    attack_bonus=trigger_data.get("attack_bonus", 0),
-                                    defense_bonus=trigger_data.get("defense_bonus", 0),
-                                    status_effects=trigger_data.get("status_effects", {})
-                                )
-                                self.room_states[trigger_room].add_item(trigger_item)
-                            else:
-                                # Fallback to hardcoded values
-                                trigger_item = Item(
-                                    name="Power Rune",
-                                    item_type=ItemType.TRIGGER,
-                                    value=5,
-                                    description="Can be used to clear blocked passages"
-                                )
-                                self.room_states[trigger_room].add_item(trigger_item)
-                    
-                    # Add blocked passage requiring a trigger item - get from data provider
-                    available_triggers = [item["name"] for item in self.data_provider.get_items() if item.get("type", "").upper() == "TRIGGER"]
-                    if available_triggers:
-                        trigger_name = random.choice(available_triggers)
-                        self.room_states[pos].blocked_passages[direction] = trigger_name
-                    else:
-                        self.room_states[pos].blocked_passages[direction] = "Power Rune"  # Fallback
 
     def _populate_floor_rooms(self, floor: int):
         """Populate rooms on a floor with items and entities."""
@@ -458,7 +468,7 @@ class SeededDungeon:
                 room.add_npc(npc)
             elif room.room_type == "trap":
                 # Convert trap rooms to other types, since we now have map effects for traps
-                other_types = ["empty", "treasure", "monster", "npc"]  # Removed "artifact" to prevent artifact rooms elsewhere
+                other_types = ["empty", "treasure", "monster", "npc"]
                 room.room_type = random.choice(other_types)
             elif room.room_type == "artifact":
                 # Add a special artifact ONLY if this is the lowest floor
@@ -469,8 +479,6 @@ class SeededDungeon:
                     # If this is not the lowest floor, convert to a different room type
                     other_types = ["empty", "treasure", "monster", "npc"]
                     room.room_type = random.choice(other_types)
-                    # Repopulate with the new room type logic
-                    continue  # Continue to the next room to be repopulated with the new type
             elif room.room_type == "storage":
                 # Add 1-3 storage-related items
                 for _ in range(random.randint(1, 3)):
@@ -501,6 +509,11 @@ class SeededDungeon:
                 for _ in range(random.randint(1, 2)):
                     item = self._generate_random_item()
                     room.add_item(item)
+            elif room.room_type == "hallway":
+                # Hallways generally remain empty, but occasionally add minor items
+                if random.random() < 0.05:  # 5% chance
+                    item = self._generate_random_item()
+                    room.add_item(item)
     
     def _generate_random_item(self) -> Item:
         """Generate a random item."""
@@ -517,6 +530,7 @@ class SeededDungeon:
                 description=item_data.get("description", ""),
                 attack_bonus=item_data.get("attack_bonus", 0),
                 defense_bonus=item_data.get("defense_bonus", 0),
+                health_bonus=item_data.get("health_bonus", 0),
                 status_effects=item_data.get("status_effects", {}),
                 status_effect=item_data.get("status_effect"),
                 status_chance=item_data.get("status_chance", 0.0),
@@ -612,6 +626,7 @@ class SeededDungeon:
                 description=artifact_data.get("description", ""),
                 attack_bonus=artifact_data.get("attack_bonus", 0),
                 defense_bonus=artifact_data.get("defense_bonus", 0),
+                health_bonus=artifact_data.get("health_bonus", 0),
                 status_effects=artifact_data.get("status_effects", {}),
                 status_effect=artifact_data.get("status_effect"),
                 status_chance=artifact_data.get("status_chance", 0.0),
@@ -692,6 +707,45 @@ class SeededDungeon:
         """Get the room at a given position."""
         return self.room_states.get(pos)
 
+    def get_room_info(self, pos: Tuple[int, int, int]) -> Dict[str, Any]:
+        """Get detailed information about a room at a given position."""
+        room_state = self.get_room_at(pos)
+        if not room_state:
+            return None
+        
+        # Find which dimensional room this position belongs to
+        room_id = f"{pos[0]}_{pos[1]}_{pos[2]}"
+        dimensional_room = None
+        for room in self.rooms_by_id.values():
+            if room.floor == pos[2] and room.contains(pos[0], pos[1]):
+                dimensional_room = room
+                break
+        
+        return {
+            "room_state": room_state,
+            "dimensional_room": dimensional_room,
+            "is_hallway": room_state.room_type == "hallway"
+        }
+
+    def get_adjacent_positions(self, pos: Tuple[int, int, int]) -> List[Tuple[int, int, int]]:
+        """Get all adjacent positions to a given position."""
+        x, y, z = pos
+        adjacent = []
+        
+        # Check all 4 directions (North, South, East, West)
+        potential_moves = [
+            (x, y - 1, z),  # North
+            (x, y + 1, z),  # South
+            (x + 1, y, z),  # East
+            (x - 1, y, z),  # West
+        ]
+        
+        for adj_pos in potential_moves:
+            if adj_pos in self.room_states:
+                adjacent.append(adj_pos)
+        
+        return adjacent
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert dungeon to dictionary for saving."""
         return {
@@ -712,6 +766,7 @@ class SeededDungeon:
         
         # Load map effects if they exist
         if "map_effects" in data:
+            from .map_effects import MapEffectManager
             dungeon.map_effects = MapEffectManager.from_dict(data["map_effects"])
         else:
             # For backward compatibility, create a new map effects manager

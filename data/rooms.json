@@ -12,7 +12,8 @@
       ],
       "possible_items": ["Gold Coin", "Health Potion", "Greater Health Potion", "Iron Sword", "Steel Sword", "Leather Armor", "Chain Mail", "Iron Key", "Silver Key", "Golden Key"],
       "possible_enemies": ["Goblin", "Skeleton", "Zombie"],
-      "rarity_weight": 0.1
+      "rarity_weight": 0.1,
+      "size": {"min_width": 3, "max_width": 5, "min_height": 3, "max_height": 4}
     },
     {
       "type": "monster",
@@ -26,7 +27,8 @@
       ],
       "possible_items": ["Health Potion", "Mana Potion"],
       "possible_enemies": ["Goblin", "Skeleton", "Zombie", "Spider", "Orc", "Ogre"],
-      "rarity_weight": 0.2
+      "rarity_weight": 0.2,
+      "size": {"min_width": 3, "max_width": 4, "min_height": 2, "max_height": 3}
     },
     {
       "type": "trap",
@@ -40,7 +42,8 @@
       ],
       "possible_items": ["Iron Key", "Power Rune", "Power Crystal"],
       "possible_enemies": [],
-      "rarity_weight": 0.1
+      "rarity_weight": 0.1,
+      "size": {"min_width": 2, "max_width": 3, "min_height": 2, "max_height": 4}
     },
     {
       "type": "npc",
@@ -54,7 +57,8 @@
       ],
       "possible_items": [],
       "possible_enemies": [],
-      "rarity_weight": 0.05
+      "rarity_weight": 0.05,
+      "size": {"min_width": 2, "max_width": 3, "min_height": 2, "max_height": 2}
     },
     {
       "type": "artifact",
@@ -68,7 +72,8 @@
       ],
       "possible_items": ["Ancient Relic", "Crystal of Power", "Orb of Destiny"],
       "possible_enemies": ["Ancient Guardian", "Ghost Knight"],
-      "rarity_weight": 0.02
+      "rarity_weight": 0.02,
+      "size": {"min_width": 4, "max_width": 5, "min_height": 4, "max_height": 5}
     },
     {
       "type": "empty",
@@ -82,7 +87,8 @@
       ],
       "possible_items": ["Health Potion"],
       "possible_enemies": [],
-      "rarity_weight": 0.55
+      "rarity_weight": 0.55,
+      "size": {"min_width": 2, "max_width": 3, "min_height": 2, "max_height": 3}
     },
     {
       "type": "hallway",
@@ -96,7 +102,8 @@
       ],
       "possible_items": [],
       "possible_enemies": ["Goblin", "Spider"],
-      "rarity_weight": 1.0
+      "rarity_weight": 1.0,
+      "size": {"min_width": 1, "max_width": 2, "min_height": 1, "max_height": 3}
     },
     {
       "type": "storage",
@@ -115,7 +122,8 @@
       ],
       "possible_items": ["Health Potion", "Mana Potion", "Iron Key", "Rope", "Torch", "Lockpick", "Bandages", "Rations", "Oil Flask"],
       "possible_enemies": ["Giant Rat", "Spider", "Skeleton"],
-      "rarity_weight": 0.15
+      "rarity_weight": 0.15,
+      "size": {"min_width": 3, "max_width": 4, "min_height": 3, "max_height": 4}
     },
     {
       "type": "bunk",
@@ -134,7 +142,8 @@
       ],
       "possible_items": ["Bedroll", "Sleeping Bag", "Pillow", "Blanket", "Candle", "Matches", "Personal Item", "Food Ration", "Torch"],
       "possible_enemies": ["Goblin", "Zombie", "Skeleton"],
-      "rarity_weight": 0.12
+      "rarity_weight": 0.12,
+      "size": {"min_width": 3, "max_width": 5, "min_height": 3, "max_height": 4}
     },
     {
       "type": "kitchen",
@@ -153,7 +162,8 @@
       ],
       "possible_items": ["Food Ration", "Cooked Meal", "Apple", "Bread", "Wine", "Cooking Utensil", "Salt", "Herbs", "Water Flask"],
       "possible_enemies": ["Giant Rat", "Spider", "Goblin"],
-      "rarity_weight": 0.08
+      "rarity_weight": 0.08,
+      "size": {"min_width": 3, "max_width": 4, "min_height": 2, "max_height": 3}
     },
     {
       "type": "library",
@@ -172,7 +182,8 @@
       ],
       "possible_items": ["Scroll of Knowledge", "Spell Tome", "Quill", "Ink Vial", "Parchment", "Reading Glasses", "Magnifying Glass", "Ancient Text", "Map"],
       "possible_enemies": ["Ghost", "Specter", "Animated Book"],
-      "rarity_weight": 0.06
+      "rarity_weight": 0.06,
+      "size": {"min_width": 3, "max_width": 4, "min_height": 4, "max_height": 6}
     },
     {
       "type": "workshop",
@@ -191,7 +202,8 @@
       ],
       "possible_items": ["Iron Ore", "Steel Ingot", "Hammer", "Tongs", "Anvil", "Gear", "Metal Scraps", "Crafting Kit", "Tool"],
       "possible_enemies": ["Goblin", "Animated Tool", "Construct"],
-      "rarity_weight": 0.07
+      "rarity_weight": 0.07,
+      "size": {"min_width": 3, "max_width": 4, "min_height": 3, "max_height": 4}
     },
     {
       "type": "garden",
@@ -210,7 +222,8 @@
       ],
       "possible_items": ["Healing Herb", "Poison Ivy", "Medicinal Plant", "Berry", "Fruit", "Seeds", "Flower", "Mushroom", "Potion Ingredient"],
       "possible_enemies": ["Poisonous Plant", "Thorny Vine", "Plant Creature"],
-      "rarity_weight": 0.05
+      "rarity_weight": 0.05,
+      "size": {"min_width": 4, "max_width": 5, "min_height": 4, "max_height": 5}
     }
   ],
   "themed_rooms": {

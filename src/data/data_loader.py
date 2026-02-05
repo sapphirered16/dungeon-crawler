@@ -2,7 +2,17 @@
 
 import json
 import os
+from enum import Enum
 from typing import List, Dict, Any
+
+
+class ItemType(Enum):
+    WEAPON = "weapon"
+    ARMOR = "armor"
+    CONSUMABLE = "consumable"
+    KEY = "key"
+    TRIGGER = "trigger"
+    ARTIFACT = "artifact"
 
 
 class DataProvider:
@@ -168,6 +178,89 @@ class DataProvider:
         for enemy in self.enemies:
             if enemy["name"] == name:
                 return enemy
+        return None
+
+    def get_weapons(self) -> List[Dict[str, Any]]:
+        """Return all weapon definitions"""
+        return [item for item in self.items if item.get("type", "").lower() == "weapon"]
+
+    def get_armor(self) -> List[Dict[str, Any]]:
+        """Return all armor definitions"""
+        return [item for item in self.items if item.get("type", "").lower() == "armor"]
+
+    def get_consumables(self) -> List[Dict[str, Any]]:
+        """Return all consumable item definitions"""
+        return [item for item in self.items if item.get("type", "").lower() == "consumable"]
+
+    def get_keys(self) -> List[Dict[str, Any]]:
+        """Return all key definitions"""
+        return [item for item in self.items if item.get("type", "").lower() == "key"]
+
+    def get_triggers(self) -> List[Dict[str, Any]]:
+        """Return all trigger item definitions"""
+        return [item for item in self.items if item.get("type", "").lower() == "trigger"]
+
+    def get_common_enemies(self) -> List[Dict[str, Any]]:
+        """Return common enemy definitions"""
+        return [enemy for enemy in self.enemies if enemy.get("min_floor", 0) == 0]
+
+    def get_mid_level_enemies(self) -> List[Dict[str, Any]]:
+        """Return mid-level enemy definitions"""
+        return [enemy for enemy in self.enemies if enemy.get("min_floor", 0) >= 1 and enemy.get("min_floor", 0) < 3]
+
+    def get_boss_enemies(self) -> List[Dict[str, Any]]:
+        """Return boss enemy definitions"""
+        return [enemy for enemy in self.enemies if enemy.get("min_floor", 0) >= 3]
+
+    def get_themed_enemies(self) -> List[Dict[str, Any]]:
+        """Return themed enemy definitions"""
+        # For now, return enemies that have theme property
+        return [enemy for enemy in self.enemies if "theme" in enemy]
+
+    def get_all_enemies(self) -> List[Dict[str, Any]]:
+        """Return all enemy definitions combined"""
+        return self.enemies
+
+    def get_npc_types(self) -> List[Dict[str, Any]]:
+        """Return all NPC type definitions"""
+        return self.npcs
+
+    def get_all_items(self) -> Dict[str, List[Dict[str, Any]]]:
+        """Return all item definitions organized by type"""
+        items_by_type = {
+            "weapons": self.get_weapons(),
+            "armor": self.get_armor(),
+            "consumables": self.get_consumables(),
+            "keys": self.get_keys(),
+            "triggers": self.get_triggers(),
+            "artifacts": [item for item in self.items if item.get("type", "").lower() == "artifact"]
+        }
+        return items_by_type
+
+    def get_themed_rooms(self) -> Dict[str, Any]:
+        """Return themed room definitions"""
+        # Return rooms that are themed, if any
+        return {}
+
+    def get_item_by_name(self, name: str):
+        """Find an item definition by name"""
+        for item in self.items:
+            if item.get("name", "").lower() == name.lower():
+                return item
+        return None
+
+    def get_enemy_by_name(self, name: str):
+        """Find an enemy definition by name"""
+        for enemy in self.enemies:
+            if enemy.get("name", "").lower() == name.lower():
+                return enemy
+        return None
+
+    def get_npc_by_name(self, name: str):
+        """Find an NPC definition by name"""
+        for npc in self.npcs:
+            if npc.get("name", "").lower() == name.lower():
+                return npc
         return None
 
     def refresh_data(self):

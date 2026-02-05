@@ -3,7 +3,7 @@
 
 import sys
 import argparse
-from .game_engine import SeededGameEngine
+from .new_game_engine import SeededGameEngine
 from .command_processor import CommandProcessor
 
 
