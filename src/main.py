@@ -29,7 +29,6 @@ def main():
     command_processor = CommandProcessor(game)
     
     # Show initial room
-    print("You enter the dungeon...")
     command_processor.process_command('look')
     print()
     
@@ -47,7 +46,7 @@ def main():
             print("\n\n👋 Game interrupted. Goodbye!")
             break
         except EOFError:
-            print("\n\n👋 End of input. Goodbye!")
+            break
             break
     
     # Game over message
@@ -59,7 +58,7 @@ def main():
         else:
             print(f"\nFinal Score: {game.player.score}")
     else:
-        print("\n👋 Thanks for playing! Goodbye!")
+        pass
 
 
 if __name__ == "__main__":

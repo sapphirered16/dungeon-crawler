@@ -33,7 +33,6 @@ def main():
     print()
     
     # Show initial room
-    print('You enter the dungeon...')
     processor.process_command('look')
     print()
     
@@ -52,18 +51,14 @@ def main():
             print()  # Extra line for readability
             
         except KeyboardInterrupt:
-            print('\\n\\n👋 Thanks for playing! Goodbye!')
             break
         except EOFError:
-            print('\\n\\n👋 Thanks for playing! Goodbye!')
             break
     
     if game.player.victory:
         print('\\n🎉 CONGRATULATIONS! You have conquered the dungeon! 🏆')
     elif not game.player.is_alive():
         print('\\n💀 You have been defeated... Better luck next time! 😵')
-    else:
-        print('\\n👋 Thanks for playing! Come back anytime!')
 
 if __name__ == '__main__':
     main()
@@ -89,7 +84,6 @@ def main():
     print()
     
     # Show initial room
-    print('You enter the dungeon...')
     processor.process_command('look')
     print()
     
@@ -108,18 +102,14 @@ def main():
             print()  # Extra line for readability
             
         except KeyboardInterrupt:
-            print('\\n\\n👋 Thanks for playing! Goodbye!')
             break
         except EOFError:
-            print('\\n\\n👋 Thanks for playing! Goodbye!')
             break
     
     if game.player.victory:
         print('\\n🎉 CONGRATULATIONS! You have conquered the dungeon! 🏆')
     elif not game.player.is_alive():
         print('\\n💀 You have been defeated... Better luck next time! 😵')
-    else:
-        print('\\n👋 Thanks for playing! Come back anytime!')
 
 if __name__ == '__main__':
     main()

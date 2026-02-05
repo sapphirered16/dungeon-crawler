@@ -2286,7 +2286,7 @@ def main():
     command = ' '.join(args).strip().lower()
     
     if command == "quit":
-        print("Thanks for playing!")
+        pass
     elif command == "look":
         game.look_around()
     elif command == "inventory":

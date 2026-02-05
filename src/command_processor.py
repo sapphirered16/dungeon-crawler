@@ -252,7 +252,6 @@ class CommandProcessor:
 
     def quit_command(self, args: List[str]) -> bool:
         """Quit the game."""
-        print("👋 Thanks for playing! Goodbye!")
         return False  # Return False to indicate game should exit
 
     def talk_command(self, args: List[str]) -> bool:

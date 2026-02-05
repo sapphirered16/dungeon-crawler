@@ -698,7 +698,6 @@ class SeededGameEngine:
                 print(f"\n📊 FINAL SCORE: {self.player.score}")
                 print(f"⚔️  ENEMIES DEFEATED: {self.player.enemies_defeated}")
                 print(f"💎 TREASURES COLLECTED: {self.player.treasures_collected}")
-                print("\n🙏 Thanks for playing the dungeon crawler!")
                 self._log_action(f"WON GAME by taking {item.name} (artifact) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 return True  # Return early to indicate game completion
             
