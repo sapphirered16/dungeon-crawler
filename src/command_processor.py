@@ -196,22 +196,8 @@ class CommandProcessor:
         
         try:
             item_num = int(args[0])
-            if 1 <= item_num <= len(self.game_engine.player.inventory):
-                item = self.game_engine.player.inventory[item_num - 1]
-                if item.item_type == 'consumable':
-                    # Use consumable (for example, healing potions)
-                    if "health" in item.description.lower() or "potion" in item.name.lower():
-                        heal_amount = min(item.value, self.game_engine.player.max_health - self.game_engine.player.health)
-                        self.game_engine.player.heal(heal_amount)
-                        print(f"🧪 Used {item.name}, healed {heal_amount} HP.")
-                        # Remove used item
-                        self.game_engine.player.inventory.remove(item)
-                    else:
-                        print(f"🧪 Used {item.name}.")
-                else:
-                    print(f"❌ You can't use {item.name} directly. Try equipping it instead.")
-            else:
-                print(f"❌ Invalid item number: {item_num}.")
+            success = self.game_engine.use_item(item_num)
+            # The use_item method already handles success/failure messages
         except ValueError:
             print(f"❌ Invalid item number: {args[0]}.")
         

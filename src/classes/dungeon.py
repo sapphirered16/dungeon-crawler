@@ -312,25 +312,46 @@ class SeededDungeon:
                         if earlier_rooms:
                             key_room = random.choice(earlier_rooms)
                             
-                            # Add a key to this room
+                            # Add a key to this room - get from data provider
                             from .item import Item
                             from .base import ItemType
                             
-                            # Choose an appropriate key
-                            key_options = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key"]
-                            key_name = random.choice(key_options)
-                            
-                            # Add the key to the earlier room
-                            key_item = Item(
-                                name=key_name,
-                                item_type=ItemType.KEY,
-                                value={"Iron Key": 10, "Silver Key": 15, "Golden Key": 25, "Ancient Key": 50}[key_name],
-                                description=f"Unlocks doors that require a {key_name}"
-                            )
-                            self.room_states[key_room].add_item(key_item)
+                            # Get available keys from data provider
+                            available_keys = [item for item in self.data_provider.get_items() if item.get("type", "").upper() == "KEY"]
+                            if available_keys:
+                                key_data = random.choice(available_keys)
+                                # Add the key to the earlier room
+                                key_item = Item(
+                                    name=key_data["name"],
+                                    item_type=ItemType.KEY,
+                                    value=key_data.get("value", 0),
+                                    description=key_data.get("description", f"Unlocks doors that require a {key_data['name']}"),
+                                    attack_bonus=key_data.get("attack_bonus", 0),
+                                    defense_bonus=key_data.get("defense_bonus", 0),
+                                    status_effects=key_data.get("status_effects", {})
+                                )
+                                self.room_states[key_room].add_item(key_item)
+                            else:
+                                # Fallback to hardcoded values
+                                key_options = ["Iron Key", "Silver Key", "Golden Key", "Ancient Key"]
+                                key_name = random.choice(key_options)
+                                
+                                # Add the key to the earlier room
+                                key_item = Item(
+                                    name=key_name,
+                                    item_type=ItemType.KEY,
+                                    value={"Iron Key": 10, "Silver Key": 15, "Golden Key": 25, "Ancient Key": 50}[key_name],
+                                    description=f"Unlocks doors that require a {key_name}"
+                                )
+                                self.room_states[key_room].add_item(key_item)
                     
-                    # Add locked door requiring a key
-                    self.room_states[pos].locked_doors[direction] = "Silver Key"  # Use Silver Key as default
+                    # Add locked door requiring a key - get from data provider
+                    available_keys = [item["name"] for item in self.data_provider.get_items() if item.get("type", "").upper() == "KEY"]
+                    if available_keys:
+                        key_name = random.choice(available_keys)
+                        self.room_states[pos].locked_doors[direction] = key_name
+                    else:
+                        self.room_states[pos].locked_doors[direction] = "Silver Key"  # Fallback
             
             # Similar logic for blocked passages
             if random.random() < 0.05:  # 5% chance
@@ -361,21 +382,42 @@ class SeededDungeon:
                         if earlier_rooms:
                             trigger_room = random.choice(earlier_rooms)
                             
-                            # Add a trigger item to this room
+                            # Add a trigger item to this room - get from data provider
                             from .item import Item
                             from .base import ItemType
                             
-                            # Add a Power Rune as a trigger item
-                            trigger_item = Item(
-                                name="Power Rune",
-                                item_type=ItemType.TRIGGER,
-                                value=5,
-                                description="Can be used to clear blocked passages"
-                            )
-                            self.room_states[trigger_room].add_item(trigger_item)
+                            # Get available triggers from data provider
+                            available_triggers = [item for item in self.data_provider.get_items() if item.get("type", "").upper() == "TRIGGER"]
+                            if available_triggers:
+                                trigger_data = random.choice(available_triggers)
+                                # Add the trigger to the earlier room
+                                trigger_item = Item(
+                                    name=trigger_data["name"],
+                                    item_type=ItemType.TRIGGER,
+                                    value=trigger_data.get("value", 0),
+                                    description=trigger_data.get("description", f"Can be used to clear blocked passages"),
+                                    attack_bonus=trigger_data.get("attack_bonus", 0),
+                                    defense_bonus=trigger_data.get("defense_bonus", 0),
+                                    status_effects=trigger_data.get("status_effects", {})
+                                )
+                                self.room_states[trigger_room].add_item(trigger_item)
+                            else:
+                                # Fallback to hardcoded values
+                                trigger_item = Item(
+                                    name="Power Rune",
+                                    item_type=ItemType.TRIGGER,
+                                    value=5,
+                                    description="Can be used to clear blocked passages"
+                                )
+                                self.room_states[trigger_room].add_item(trigger_item)
                     
-                    # Add blocked passage requiring a trigger item
-                    self.room_states[pos].blocked_passages[direction] = "Power Rune"  # Use Power Rune as default
+                    # Add blocked passage requiring a trigger item - get from data provider
+                    available_triggers = [item["name"] for item in self.data_provider.get_items() if item.get("type", "").upper() == "TRIGGER"]
+                    if available_triggers:
+                        trigger_name = random.choice(available_triggers)
+                        self.room_states[pos].blocked_passages[direction] = trigger_name
+                    else:
+                        self.room_states[pos].blocked_passages[direction] = "Power Rune"  # Fallback
 
     def _populate_floor_rooms(self, floor: int):
         """Populate rooms on a floor with items and entities."""
@@ -475,13 +517,14 @@ class SeededDungeon:
                 description=item_data.get("description", ""),
                 attack_bonus=item_data.get("attack_bonus", 0),
                 defense_bonus=item_data.get("defense_bonus", 0),
+                status_effects=item_data.get("status_effects", {}),
                 status_effect=item_data.get("status_effect"),
                 status_chance=item_data.get("status_chance", 0.0),
                 status_damage=item_data.get("status_damage", 0)
             )
         else:
             # Fallback item
-            return Item("Health Potion", ItemType.CONSUMABLE, 20, "Restores 20 HP")
+            return Item("Health Potion", ItemType.CONSUMABLE, 20, "Restores 20 HP", status_effects={})
 
     def _generate_random_enemy(self, floor: int):
         """Generate a random enemy based on floor."""
@@ -497,10 +540,15 @@ class SeededDungeon:
             
             enemy_data = random.choice(suitable_enemies)
             
-            # Scale stats based on floor
-            health = enemy_data["health"] + (floor * 10)
-            attack = enemy_data["attack"] + (floor * 2)
-            defense = enemy_data["defense"] + floor
+            # Scale stats based on floor, using scaling parameters from enemy definition if available
+            # Default scaling factors if not specified in enemy data
+            health_scaling = enemy_data.get("health_scaling", 10)  # How much health increases per floor
+            attack_scaling = enemy_data.get("attack_scaling", 2)   # How much attack increases per floor
+            defense_scaling = enemy_data.get("defense_scaling", 1) # How much defense increases per floor
+            
+            health = enemy_data["health"] + (floor * health_scaling)
+            attack = enemy_data["attack"] + (floor * attack_scaling)
+            defense = enemy_data["defense"] + (floor * defense_scaling)
             
             enemy = Enemy(
                 name=enemy_data["name"],
@@ -553,7 +601,7 @@ class SeededDungeon:
         """Generate a special artifact item."""
         # Get artifact items from data provider if available
         items = self.data_provider.get_items()
-        artifact_items = [item for item in items if item.get("type") == "artifact"]
+        artifact_items = [item for item in items if item.get("type") == "ARTIFACT"]
         
         if artifact_items:
             artifact_data = random.choice(artifact_items)
@@ -564,13 +612,14 @@ class SeededDungeon:
                 description=artifact_data.get("description", ""),
                 attack_bonus=artifact_data.get("attack_bonus", 0),
                 defense_bonus=artifact_data.get("defense_bonus", 0),
+                status_effects=artifact_data.get("status_effects", {}),
                 status_effect=artifact_data.get("status_effect"),
                 status_chance=artifact_data.get("status_chance", 0.0),
                 status_damage=artifact_data.get("status_damage", 0)
             )
         else:
             # Fallback artifact
-            return Item("Ancient Relic", ItemType.ARTIFACT, 100, "An ancient magical relic")
+            return Item("Ancient Relic", ItemType.ARTIFACT, 100, "An ancient magical relic", status_effects={})
 
     def _add_map_effects(self, floor: int):
         """Add various map effects throughout the dungeon floor."""

@@ -87,6 +87,25 @@ class SeededGameEngine:
         else:
             print("Armor: None equipped")
         
+        # Show active temporary buffs
+        if self.player.temporary_buffs:
+            temp_buffs_info = []
+            if 'attack' in self.player.temporary_buffs:
+                attack_buff = self.player.temporary_buffs['attack']
+                attack_turns = self.player.temporary_buffs.get('attack_turns', 0)
+                temp_buffs_info.append(f"+{attack_buff} attack ({attack_turns} turns)")
+            if 'defense' in self.player.temporary_buffs:
+                defense_buff = self.player.temporary_buffs['defense']
+                defense_turns = self.player.temporary_buffs.get('defense_turns', 0)
+                temp_buffs_info.append(f"+{defense_buff} defense ({defense_turns} turns)")
+            if temp_buffs_info:
+                print(f"⚡ Active Buffs: {', '.join(temp_buffs_info)}")
+        
+        # Show active status effects
+        if self.player.active_status_effects:
+            status_effects = [f"{effect}({duration})" for effect, duration in self.player.active_status_effects.items()]
+            print(f"🌀 Status Effects: {', '.join(status_effects)}")
+        
         # Show keys in inventory
         keys = [item.name for item in self.player.inventory if item.item_type.value == "key"]
         if keys:
@@ -384,6 +403,8 @@ class SeededGameEngine:
                 self._trigger_map_effects_at_current_position()
                 # Process monster AI after moving
                 self.process_monster_ai()
+                # Update temporary buffs
+                self.player.update_temporary_buffs()
                 # Display all events and final state after moving
                 self._display_events()
                 self.look_around_simple()
@@ -401,6 +422,8 @@ class SeededGameEngine:
                 self._trigger_map_effects_at_current_position()
                 # Process monster AI after moving
                 self.process_monster_ai()
+                # Update temporary buffs
+                self.player.update_temporary_buffs()
                 self._log_action(f"Moved DOWN from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
                 # Display all events and final state after moving
                 self._display_events()
@@ -417,6 +440,8 @@ class SeededGameEngine:
             self._trigger_map_effects_at_current_position()
             # Process monster AI after moving
             self.process_monster_ai()
+            # Update temporary buffs
+            self.player.update_temporary_buffs()
             self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
             # Display all events and final state after moving
             self._display_events()
@@ -480,17 +505,33 @@ class SeededGameEngine:
             
             if not enemy.is_alive():
                 self.event_buffer.append(f"You defeated the {enemy.name}!")
-                self.player.gain_exp(enemy.max_health // 2)  # Gain EXP based on enemy size
-                self.player.gold += random.randint(5, 20)  # Drop some gold
+                # Get enemy definition to determine rewards
+                enemy_data = self.data_provider.get_enemy_by_name(enemy.name)
+                if enemy_data:
+                    # Use EXP reward from enemy definition
+                    exp_reward = enemy_data.get("exp_reward", enemy.max_health // 2)
+                    self.player.gain_exp(exp_reward)
+                    
+                    # Use gold reward from enemy definition
+                    gold_min = enemy_data.get("gold_min", 5)
+                    gold_max = enemy_data.get("gold_max", 20)
+                    gold_reward = random.randint(gold_min, gold_max)
+                    self.player.gold += gold_reward
+                else:
+                    # Fallback values if no enemy data found
+                    self.player.gain_exp(enemy.max_health // 2)
+                    self.player.gold += random.randint(5, 20)
                 self.player.enemies_defeated += 1
                 self.player.score += enemy.max_health  # Score based on enemy difficulty
-                # Potentially drop an item
-                if random.random() < 0.3:  # 30% chance to drop an item
-                    dropped_item = self.dungeon._generate_random_item()
+                # Process loot drops based on enemy's defined drops
+                dropped_items = self._process_loot_drops(enemy)
+                for dropped_item in dropped_items:
                     self.current_room_state.items.append(dropped_item)
                     self.event_buffer.append(f"The {enemy.name} dropped: {dropped_item.name}!")
                 # Process monster AI after combat
                 self.process_monster_ai()
+                # Update temporary buffs
+                self.player.update_temporary_buffs()
                 self._log_action(f"Defeated {enemy.name}, dealt {enemy_damage} damage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 self._display_events()
                 self.look_around_simple()
@@ -507,6 +548,8 @@ class SeededGameEngine:
             
             # Process monster AI after combat
             self.process_monster_ai()
+            # Update temporary buffs
+            self.player.update_temporary_buffs()
             self._display_events()
             self.look_around_simple()
             return True
@@ -542,11 +585,36 @@ class SeededGameEngine:
             self.current_room_state.items.remove(item)
             # Process monster AI after taking an item (noise might attract attention)
             self.process_monster_ai()
+            # Update temporary buffs
+            self.player.update_temporary_buffs()
             self._log_action(f"Took item {item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
             return True
         else:
             print("Invalid item selection.")
             self._log_action("Invalid item selection", self.player.position)
+            return False
+
+    def use_item(self, item_index: int) -> bool:
+        """Use an item from the player's inventory."""
+        # Adjust item_index since the game displays inventory starting from 1
+        adjusted_index = item_index - 1
+        
+        if 0 <= adjusted_index < len(self.player.inventory):
+            item = self.player.inventory[adjusted_index]
+            
+            # Use the item
+            result = self.player.use_item(item)
+            print(result)
+            
+            # Process monster AI after using an item (might attract attention)
+            self.process_monster_ai()
+            # Update temporary buffs
+            self.player.update_temporary_buffs()
+            self._log_action(f"Used item {item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+            return True
+        else:
+            print("Invalid inventory item selection.")
+            self._log_action("Invalid inventory item selection", self.player.position)
             return False
 
     def visualize_floor(self, floor: int = None):
@@ -730,15 +798,30 @@ class SeededGameEngine:
                             if entity in room.entities:
                                 room.entities.remove(entity)
                             
-                            # Update player stats
-                            self.player.gain_exp(entity.max_health // 2)
-                            self.player.gold += random.randint(5, 20)
+                            # Get enemy definition to determine rewards
+                            enemy_data = self.data_provider.get_enemy_by_name(entity.name)
+                            
+                            if enemy_data:
+                                # Use EXP reward from enemy definition
+                                exp_reward = enemy_data.get("exp_reward", entity.max_health // 2)
+                                self.player.gain_exp(exp_reward)
+                                
+                                # Use gold reward from enemy definition
+                                gold_min = enemy_data.get("gold_min", 5)
+                                gold_max = enemy_data.get("gold_max", 20)
+                                gold_reward = random.randint(gold_min, gold_max)
+                                self.player.gold += gold_reward
+                            else:
+                                # Fallback values if no enemy data found
+                                self.player.gain_exp(entity.max_health // 2)
+                                self.player.gold += random.randint(5, 20)
+                            
                             self.player.enemies_defeated += 1
                             self.player.score += entity.max_health
                             
-                            # Enemy may drop an item
-                            if random.random() < 0.3:  # 30% chance to drop an item
-                                dropped_item = self.dungeon._generate_random_item()
+                            # Process loot drops based on enemy's defined drops
+                            dropped_items = self._process_loot_drops(entity)
+                            for dropped_item in dropped_items:
                                 room.items.append(dropped_item)
                                 # Only add drop to event buffer if player is in same room
                                 if room.pos == self.player.position:
@@ -802,6 +885,43 @@ class SeededGameEngine:
                 adjacent.append(new_pos)
         
         return adjacent
+
+    def _process_loot_drops(self, enemy) -> List:
+        """Process loot drops based on enemy's defined drops."""
+        from .classes.item import Item
+        from .classes.base import ItemType
+        
+        dropped_items = []
+        
+        # Get enemy definition from data provider
+        enemy_data = self.data_provider.get_enemy_by_name(enemy.name)
+        
+        if enemy_data and "drops" in enemy_data:
+            for drop in enemy_data["drops"]:
+                # Roll for drop chance
+                if random.random() < drop["chance"]:
+                    # Get item definition from data provider
+                    item_data = self.data_provider.get_item_by_name(drop["item_name"])
+                    
+                    if item_data:
+                        # Create item based on definition
+                        item = Item(
+                            name=item_data["name"],
+                            item_type=ItemType(item_data["type"]),
+                            value=item_data.get("value", 0),
+                            description=f"Dropped by {enemy.name}",
+                            attack_bonus=item_data.get("attack_bonus", 0),
+                            defense_bonus=item_data.get("defense_bonus", 0),
+                            status_effects=item_data.get("status_effects", {})
+                        )
+                        dropped_items.append(item)
+        else:
+            # Fallback: random drop with 30% chance if no specific drops defined
+            if random.random() < 0.3:
+                dropped_item = self.dungeon._generate_random_item()
+                dropped_items.append(dropped_item)
+        
+        return dropped_items
 
     def _log_action(self, action: str, position: Tuple[int, int, int] = None):
         """Log an action to the game log."""
@@ -877,28 +997,28 @@ class SeededGameEngine:
                 pos = (x, y, player_z)
                 if pos == (player_x, player_y, player_z):
                     # Player position
-                    row += "♀ "
+                    row += "▲ "
                 elif pos in self.dungeon.room_states:
                     room = self.dungeon.room_states[pos]
                     # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with special symbol
+                    if room.items:  # If room has items, mark with filled square
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway with items - use ≈ for winding path with items
-                            row += "≈ "
+                            # Hallway with items
+                            row += "╬ "
                         else:
-                            # Regular room with items - use ◘ for filled room with items
-                            row += "◘ "
+                            # Regular room with items
+                            row += "█ "
                     else:
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway without items - use ∿ for corridor
-                            row += "∿ "
+                            # Hallway without items
+                            row += "─ "
                         else:
-                            # Regular room without items - use ▫ for empty room
-                            row += "▫ "
+                            # Regular room without items
+                            row += "▭ "
                 else:
                     # Show unknown/void tiles as ░
                     if pos in self.explored_positions:
@@ -906,17 +1026,17 @@ class SeededGameEngine:
                         row += "· "  # Center dot for explored empty space
                     else:
                         # Show unexplored void tiles as ░
-                        row += "░ "  # Light shade for unknown areas
+                        row += "▓ "  # Medium shade for unknown areas
             print(row)
         
         # Show legend for full local map command
         print("\n🗺️  Legend:")
-        print("  ♀ = Player")
-        print("  ▫ = Room (no items)")
-        print("  ◘ = Room/Hallway (with items)")
-        print("  ∿ = Hallway (no items)")
-        print("  ≈ = Hallway (with items)")
-        print("  ░ = Unknown Area")
+        print("  ▲ = Player")
+        print("  ▭ = Room (no items)")
+        print("  █ = Room/Hallway (with items)")
+        print("  ─ = Hallway (no items)")
+        print("  ╬ = Hallway (with items)")
+        print("  ▓ = Unknown Area")
         print("  · = Explored Empty Space")
 
     def show_local_map_no_legend(self):
@@ -935,28 +1055,28 @@ class SeededGameEngine:
                 pos = (x, y, player_z)
                 if pos == (player_x, player_y, player_z):
                     # Player position
-                    row += "♀ "
+                    row += "▲ "
                 elif pos in self.dungeon.room_states:
                     room = self.dungeon.room_states[pos]
                     # Check if this room has items and add indicator
-                    if room.items:  # If room has items, mark with special symbol
+                    if room.items:  # If room has items, mark with filled square
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway with items - use ≈ for winding path with items
-                            row += "≈ "
+                            # Hallway with items
+                            row += "╬ "
                         else:
-                            # Regular room with items - use ◘ for filled room with items
-                            row += "◘ "
+                            # Regular room with items
+                            row += "█ "
                     else:
                         # Check if it's a hallway (connection to multiple rooms)
                         connections = len(room.connections)
                         if connections == 2:
-                            # Hallway without items - use ∿ for corridor
-                            row += "∿ "
+                            # Hallway without items
+                            row += "─ "
                         else:
-                            # Regular room without items - use ▫ for empty room
-                            row += "▫ "
+                            # Regular room without items
+                            row += "▭ "
                 else:
                     # Show unknown/void tiles as ░
                     if pos in self.explored_positions:
@@ -964,5 +1084,5 @@ class SeededGameEngine:
                         row += "· "  # Center dot for explored empty space
                     else:
                         # Show unexplored void tiles as ░
-                        row += "░ "  # Light shade for unknown areas
+                        row += "▓ "  # Medium shade for unknown areas
             print(row)
