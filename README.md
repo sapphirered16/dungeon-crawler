@@ -7,15 +7,31 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 ### 🏰 Enhanced Room-Based Dungeon Generation
 - **Authentic Room Layouts**: Instead of single-tile rooms, the dungeon now features actual rectangular room areas (4x4 to 8x8 tiles) connected by narrow hallways
 - **Strategic Floor Layout**: Each floor has specific required rooms - Floor 1 has the starting room and stairs down, upper floors have stairs up and down with appropriate room distributions
-- **Thematic Variety**: Different room types including starting rooms, treasure rooms, monster rooms, trap rooms, NPC rooms, and staircase rooms
+- **Thematic Variety**: Different room types including starting rooms, treasure rooms, monster rooms, NPC rooms, and staircase rooms
 - **Floor-Specific Requirements**: Floor-specific room placement ensuring proper dungeon flow (staircase up only on floors > 0, staircase down only on non-last floors)
 - **Seed-Based Generation**: Deterministic dungeon generation based on a seed value for efficient saving
 - **Strategic Connections**: Rooms are connected via L-shaped hallways creating authentic dungeon feel
+
+### ⚡ Map Effects System
+- **Hidden Traps**: Environmental hazards that trigger when stepped on, causing damage
+- **Wet Areas**: Environmental features that provide flavor text
+- **Poisonous Areas**: Hazardous zones that cause damage and status effects
+- **Icy Surfaces**: Areas that affect movement and speed
+- **Dark Corners**: Environmental features affecting visibility
+- **Slippery Floors**: Areas that cause movement issues
+- **Loud Floors**: Areas that alert nearby creatures
+- **Magnetic Fields**: Areas that affect metal objects
+- **Scattered Throughout Floors**: Approximately 1 effect per 5 rooms
+- **Not Visible on Main Map**: Preserves navigational clarity while adding environmental hazards
+- **Environmental Descriptions**: Effects appear in room descriptions when present
+- **Triggerable Effects**: Some effects activate when player steps on affected tiles
 
 ### ⚔️ Advanced Gameplay Elements
 - **NPC Quest System**: Interact with NPCs who offer quests for rewards
 - **Status Effects**: Weapons can inflict status effects like burn, poison, chill, shock, and stun
 - **Locked Doors & Blocked Passages**: Puzzle elements requiring specific keys or items to proceed
+- **Map Effects System**: Environmental hazards like traps, wet areas, poisonous zones, etc. scattered throughout dungeon floors that trigger when stepped on
+- **Environmental Features**: Various environmental effects that appear in room descriptions
 - **Detailed Statistics**: Track score, enemies defeated, treasures collected, floors explored, rooms explored, and distance traveled
 
 ### 📋 Batch Command Processing

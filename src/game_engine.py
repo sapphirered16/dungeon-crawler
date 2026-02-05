@@ -9,6 +9,7 @@ from .classes.dungeon import SeededDungeon
 from .classes.character import Player
 from .classes.room import RoomState
 from .classes.base import Direction, Entity
+from .classes.map_effects import MapEffectType
 from .data.data_loader import DataProvider
 
 
@@ -28,7 +29,24 @@ class SeededGameEngine:
         # Initialize logging
         self.log_file = f"dungeon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
         self.log_actions = []
+        
+        # Initialize event buffer for turn-based event logging
+        self.event_buffer = []
+        
         self._log_action("Game started", self.player.position)
+    
+    def _display_events(self):
+        """Display all buffered events for the turn."""
+        for event in self.event_buffer:
+            print(event)
+    
+    def _finish_turn_display(self):
+        """Finish the turn by displaying events and final state."""
+        # Display all collected events
+        self._display_events()
+        
+        # Show final room state
+        self.look_around_simple()
         
     def _find_starting_room(self):
         """Find the starting room (z=0 floor)."""
@@ -80,6 +98,14 @@ class SeededGameEngine:
         """Look around the current room."""
         print(f"\n--- {self.current_room_state.description} ---")
         
+        # Show environmental features from map effects
+        current_pos = self.player.position
+        effect_descriptions = self.dungeon.map_effects.get_effect_descriptions_at_position(current_pos)
+        if effect_descriptions:
+            print("\nEnvironmental features:")
+            for desc in effect_descriptions:
+                print(f"  • {desc}")
+        
         # Show items in room (only if there are items)
         if self.current_room_state.items:
             print("\nItems in the room:")
@@ -129,6 +155,80 @@ class SeededGameEngine:
         # Show local map (mini-map) when looking around
         print("\n📍 Local Map:")
         self.show_local_map_no_legend()
+
+    def look_around_simple(self):
+        """Look around the current room without the mini-map (for use during turn processing)."""
+        print(f"\n--- {self.current_room_state.description} ---")
+        
+        # Show environmental features from map effects
+        current_pos = self.player.position
+        effect_descriptions = self.dungeon.map_effects.get_effect_descriptions_at_position(current_pos)
+        if effect_descriptions:
+            print("\nEnvironmental features:")
+            for desc in effect_descriptions:
+                print(f"  • {desc}")
+        
+        # Show items in room (only if there are items)
+        if self.current_room_state.items:
+            print("\nItems in the room:")
+            for i, item in enumerate(self.current_room_state.items, 1):
+                print(f"  {i}. {item.name} (Value: {item.value})")
+        
+        # Show creatures in room (excluding NPCs, only if there are creatures)
+        from .classes.character import NonPlayerCharacter
+        creatures = []
+        for e in self.current_room_state.entities:
+            if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
+                creatures.append(e)
+        
+        if creatures:
+            print("\nCreatures in the room:")
+            for i, entity in enumerate(creatures, 1):
+                print(f"  {i}. {entity.name} (HP: {entity.health}/{entity.max_health}, Attack: {entity.attack}, Defense: {entity.defense})")
+        
+        # Show NPCs in room (only if there are NPCs)
+        npcs = []
+        for e in self.current_room_state.entities:
+            if isinstance(e, NonPlayerCharacter) and e.is_alive():
+                npcs.append(e)
+        
+        if npcs:
+            print("\nNPCs in the room:")
+            for i, npc in enumerate(npcs, 1):
+                print(f"  {i}. {npc.name}")
+        
+        # Show available movement directions as a single sentence
+        available_directions = []
+        for direction in Direction:
+            if direction in self.current_room_state.connections:
+                available_directions.append(direction.value)
+            elif direction in [Direction.UP, Direction.DOWN] and ((direction == Direction.UP and self.current_room_state.has_stairs_up) or (direction == Direction.DOWN and self.current_room_state.has_stairs_down)):
+                available_directions.append(direction.value)
+        
+        if available_directions:
+            directions_str = ", ".join(available_directions).replace("north", "North").replace("south", "South").replace("east", "East").replace("west", "West").replace("up", "Up").replace("down", "Down")
+            if len(available_directions) == 1:
+                print(f"\nYou are able to move {directions_str}.")
+            else:
+                print(f"\nYou are able to move {directions_str}.")
+        else:
+            print("\nYou cannot move in any direction.")
+
+    def _trigger_map_effects_at_current_position(self):
+        """Trigger any map effects at the current player position."""
+        current_pos = self.player.position
+        effects_triggered = self.dungeon.map_effects.trigger_effects_at_position(current_pos, self.player)
+        
+        for effect_desc in effects_triggered:
+            self.event_buffer.append(f"⚠️  {effect_desc}")
+        
+        # Check if player died due to effects
+        if not self.player.is_alive():
+            self.event_buffer.append("💀 You have succumbed to environmental hazards...")
+        
+        # Log the effect trigger
+        if effects_triggered:
+            self._log_action(f"Triggered map effects: {', '.join(effects_triggered)} - HP: {self.player.health}/{self.player.max_health}", current_pos)
 
     def talk_to_npc(self, npc_index: int) -> bool:
         """Talk to an NPC in the current room."""
@@ -232,36 +332,41 @@ class SeededGameEngine:
 
     def move_player(self, direction: Direction):
         """Move the player in a direction if possible."""
+        # Start a new turn by clearing the event buffer
+        self.event_buffer = []
+        
         if direction in self.current_room_state.locked_doors:
             key_name = self.current_room_state.locked_doors[direction]
-            print(f"🔒 This way is locked by a magical barrier. You need a {key_name} to proceed.")
+            self.event_buffer.append(f"🔒 This way is locked by a magical barrier. You need a {key_name} to proceed.")
             # Check if player has the key
             for item in self.player.inventory:
                 if item.name == key_name and item.item_type.value == "key":
-                    print(f"✨ You use the {key_name} to unlock the magical barrier!")
+                    self.event_buffer.append(f"✨ You use the {key_name} to unlock the magical barrier!")
                     del self.current_room_state.locked_doors[direction]
                     self._log_action(f"Used {key_name} to unlock door - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                     break
             else:
-                print(f"🔑 You don't have the required key: {key_name}")
-                print(f"💡 Hint: Look for {key_name}s in earlier areas of the dungeon.")
+                self.event_buffer.append(f"🔑 You don't have the required key: {key_name}")
+                self.event_buffer.append(f"💡 Hint: Look for {key_name}s in earlier areas of the dungeon.")
                 self._log_action(f"Failed to unlock door - no {key_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                self._display_events()
                 return False
 
         if direction in self.current_room_state.blocked_passages:
             trigger_name = self.current_room_state.blocked_passages[direction]
-            print(f"🚧 This way is blocked by ancient magic. You need a {trigger_name} to proceed.")
+            self.event_buffer.append(f"🚧 This way is blocked by ancient magic. You need a {trigger_name} to proceed.")
             # Check if player has the trigger item
             for item in self.player.inventory:
                 if item.name == trigger_name:
-                    print(f"✨ You use the {trigger_name} to dispel the magical blockage!")
+                    self.event_buffer.append(f"✨ You use the {trigger_name} to dispel the magical blockage!")
                     del self.current_room_state.blocked_passages[direction]
                     self._log_action(f"Used {trigger_name} to unblock passage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                     break
             else:
-                print(f"🔮 You don't have the required item: {trigger_name}")
-                print(f"💡 Hint: Search for {trigger_name}s in rooms before reaching this area.")
+                self.event_buffer.append(f"🔮 You don't have the required item: {trigger_name}")
+                self.event_buffer.append(f"💡 Hint: Search for {trigger_name}s in rooms before reaching this area.")
                 self._log_action(f"Failed to unblock passage - no {trigger_name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                self._display_events()
                 return False
 
         # Handle special directions (stairs)
@@ -273,10 +378,15 @@ class SeededGameEngine:
                 self.player.travel_to(target_pos)
                 # Add new position to explored areas
                 self.explored_positions.add(target_pos)
-                print("⬆️  You climb up the stairs...")
+                self.event_buffer.append("⬆️  You climb up the stairs...")
                 self._log_action(f"Moved UP from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
-                # Automatically look around after moving
-                self.look_around()
+                # Trigger any map effects at the new position
+                self._trigger_map_effects_at_current_position()
+                # Process monster AI after moving
+                self.process_monster_ai()
+                # Display all events and final state after moving
+                self._display_events()
+                self.look_around_simple()
                 return True
         elif direction == Direction.DOWN and self.current_room_state.has_stairs_down:
             target_pos = self.current_room_state.stairs_down_target
@@ -286,12 +396,15 @@ class SeededGameEngine:
                 self.player.travel_to(target_pos)
                 # Add new position to explored areas
                 self.explored_positions.add(target_pos)
-                print("⬇️  You descend down the stairs...")
+                self.event_buffer.append("⬇️  You descend down the stairs...")
+                # Trigger any map effects at the new position
+                self._trigger_map_effects_at_current_position()
                 # Process monster AI after moving
                 self.process_monster_ai()
                 self._log_action(f"Moved DOWN from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
-                # Automatically look around after moving
-                self.look_around()
+                # Display all events and final state after moving
+                self._display_events()
+                self.look_around_simple()
                 return True
         elif direction in self.current_room_state.connections:
             new_pos = self.current_room_state.connections[direction]
@@ -300,19 +413,26 @@ class SeededGameEngine:
             self.player.travel_to(new_pos)
             # Add new position to explored areas
             self.explored_positions.add(new_pos)
+            # Trigger any map effects at the new position
+            self._trigger_map_effects_at_current_position()
             # Process monster AI after moving
             self.process_monster_ai()
             self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
-            # Automatically look around after moving
-            self.look_around()
+            # Display all events and final state after moving
+            self._display_events()
+            self.look_around_simple()
             return True
         
-        print(f"❌ You cannot move {direction.value}.")
+        self.event_buffer.append(f"❌ You cannot move {direction.value}.")
         self._log_action(f"Tried to move {direction.value} but failed - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+        self._display_events()
         return False
 
     def attack_enemy(self, enemy_index: int) -> bool:
         """Attack an enemy in the current room."""
+        # Start a new turn by clearing the event buffer
+        self.event_buffer = []
+        
         # Filter for living enemies only (excluding NPCs)
         from .classes.character import NonPlayerCharacter
         
@@ -324,8 +444,9 @@ class SeededGameEngine:
                 living_enemies.append(e)
         
         if not living_enemies:
-            print("There are no enemies here to attack.")
+            self.event_buffer.append("There are no enemies here to attack.")
             self._log_action("Tried to attack but no enemies present", self.player.position)
+            self._display_events()
             return False
         
         # Adjust enemy_index since the game displays enemies starting from 1
@@ -333,7 +454,7 @@ class SeededGameEngine:
         
         if 0 <= adjusted_index < len(living_enemies):
             enemy = living_enemies[adjusted_index]
-            print(f"You attack the {enemy.name}!")
+            self.event_buffer.append(f"You attack the {enemy.name}!")
             
             # Calculate damage considering player's equipment
             player_attack = self.player.get_total_attack()
@@ -344,21 +465,21 @@ class SeededGameEngine:
             enemy_damage = enemy.take_damage(damage_to_enemy)
             self.player.take_damage(damage_taken)
             
-            print(f"You deal {enemy_damage} damage to the {enemy.name}.")
-            print(f"The {enemy.name} hits you for {damage_taken} damage.")
+            self.event_buffer.append(f"You deal {enemy_damage} damage to the {enemy.name}.")
+            self.event_buffer.append(f"The {enemy.name} hits you for {damage_taken} damage.")
             
             # Apply status effects from equipped weapon
             if self.player.equipped_weapon:
                 for effect, duration in self.player.equipped_weapon.status_effects.items():
                     if effect not in enemy.active_status_effects:
                         enemy.active_status_effects[effect] = duration
-                        print(f"The {enemy.name} is affected by {effect}!")
+                        self.event_buffer.append(f"The {enemy.name} is affected by {effect}!")
             
             # Apply enemy status effects to player
             enemy.apply_status_effects()
             
             if not enemy.is_alive():
-                print(f"You defeated the {enemy.name}!")
+                self.event_buffer.append(f"You defeated the {enemy.name}!")
                 self.player.gain_exp(enemy.max_health // 2)  # Gain EXP based on enemy size
                 self.player.gold += random.randint(5, 20)  # Drop some gold
                 self.player.enemies_defeated += 1
@@ -367,26 +488,32 @@ class SeededGameEngine:
                 if random.random() < 0.3:  # 30% chance to drop an item
                     dropped_item = self.dungeon._generate_random_item()
                     self.current_room_state.items.append(dropped_item)
-                    print(f"The {enemy.name} dropped: {dropped_item.name}!")
+                    self.event_buffer.append(f"The {enemy.name} dropped: {dropped_item.name}!")
                 # Process monster AI after combat
                 self.process_monster_ai()
                 self._log_action(f"Defeated {enemy.name}, dealt {enemy_damage} damage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
+                self._display_events()
+                self.look_around_simple()
                 return True
             else:
-                print(f"The {enemy.name} has {enemy.health}/{enemy.max_health} HP remaining.")
+                self.event_buffer.append(f"The {enemy.name} has {enemy.health}/{enemy.max_health} HP remaining.")
                 self._log_action(f"Attacked {enemy.name}, dealt {enemy_damage} damage, took {damage_taken} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 
             if not self.player.is_alive():
-                print("You have been defeated...")
+                self.event_buffer.append("You have been defeated...")
                 self._log_action("Player defeated in combat - HP: 0/" + str(self.player.max_health), self.player.position)
+                self._display_events()
                 return False
             
             # Process monster AI after combat
             self.process_monster_ai()
+            self._display_events()
+            self.look_around_simple()
             return True
         else:
-            print("Invalid enemy selection.")
+            self.event_buffer.append("Invalid enemy selection.")
             self._log_action("Invalid enemy selection", self.player.position)
+            self._display_events()
             return False
 
     def take_item(self, item_index: int) -> bool:
@@ -485,6 +612,8 @@ class SeededGameEngine:
         print("  = = Hallway")
         print("  @ = Player Position")
         print("  % = Unknown/Void Tile (can hide secret doors or void spaces)")
+        print("\nNote: Environmental hazards like traps, wet areas, etc. are not visible on this map")
+        print("but will trigger when you step on those tiles.")
 
     def save_game(self, filename: str = "savegame.json"):
         """Save the current game state."""
@@ -576,16 +705,16 @@ class SeededGameEngine:
                         if entity not in new_room.entities:
                             new_room.entities.append(entity)
                         
-                        # Only print action description if enemy is in line of sight of player
+                        # Only add action description to event buffer if enemy is in line of sight of player
                         if action_result["action_description"] and is_in_line_of_sight:
-                            print(action_result["action_description"])
+                            self.event_buffer.append(action_result["action_description"])
                         # Don't log enemy movements - only log player interactions
                         # self._log_action(f"Enemy {entity.name} moved from {old_pos} to {new_pos}", self.player.position)
                     
                     elif action_result["attacked"]:
-                        # Always print attack actions since they affect the player
+                        # Always add attack actions to event buffer since they affect the player
                         if action_result["action_description"]:
-                            print(action_result["action_description"])
+                            self.event_buffer.append(action_result["action_description"])
                         
                         # Check if enemy died after combat
                         if not entity.is_alive():
@@ -603,9 +732,9 @@ class SeededGameEngine:
                             if random.random() < 0.3:  # 30% chance to drop an item
                                 dropped_item = self.dungeon._generate_random_item()
                                 room.items.append(dropped_item)
-                                # Only print drop if player is in same room
+                                # Only add drop to event buffer if player is in same room
                                 if room.pos == self.player.position:
-                                    print(f"掉落 The {entity.name} dropped: {dropped_item.name}!")
+                                    self.event_buffer.append(f"掉落 The {entity.name} dropped: {dropped_item.name}!")
     
     # Helper methods removed as they are now handled in the Enemy class
 

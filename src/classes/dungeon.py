@@ -5,6 +5,7 @@ from typing import Dict, List, Tuple, Any
 from .room import RoomState
 from .item import Item
 from .base import ItemType, Direction
+from .map_effects import MapEffect, MapEffectType, MapEffectManager
 from ..data.data_loader import DataProvider
 
 
@@ -14,6 +15,7 @@ class SeededDungeon:
             random.seed(seed)
         self.seed = seed
         self.room_states = {}  # {(x, y, z): RoomState}
+        self.map_effects = MapEffectManager()
         self.data_provider = DataProvider()
         self.generate_dungeon()
 
@@ -170,8 +172,9 @@ class SeededDungeon:
             if new_pos in self.room_states:
                 continue
                 
-            # Create new room
-            room_types = ["empty", "treasure", "monster", "trap", "npc", "artifact"]
+            # Create new room with all available room types including fillers
+            room_types = ["empty", "treasure", "monster", "trap", "npc", "artifact", 
+                         "storage", "bunk", "kitchen", "library", "workshop", "garden"]
             room_type = random.choice(room_types)
             
             new_room = RoomState(new_pos, room_type)
@@ -218,6 +221,25 @@ class SeededDungeon:
         # Note: Stairs between floors are handled in _connect_stairs_properly method
         # which is called after all floors are generated
         
+        # Add 3-5 filler rooms to each floor
+        filler_room_types = ["storage", "bunk", "kitchen", "library", "workshop", "garden"]
+        num_filler_rooms = random.randint(3, 5)
+        
+        # Select random positions to convert to filler rooms
+        selected_positions = random.sample(positions, min(num_filler_rooms, len(positions)))
+        
+        for pos in selected_positions:
+            # Choose a random filler room type
+            filler_type = random.choice(filler_room_types)
+            self.room_states[pos].room_type = filler_type
+            
+            # Get a random description for the chosen room type
+            room_templates = self.data_provider.get_room_templates()['room_templates']
+            room_template = next((template for template in room_templates if template['type'] == filler_type), None)
+            if room_template:
+                description = random.choice(room_template['descriptions'])
+                self.room_states[pos].description = description
+        
         # Add locked doors and blocked passages
         for pos in positions:
             # Random chance to add locked door
@@ -237,6 +259,9 @@ class SeededDungeon:
                     direction = random.choice(available_dirs)
                     # Add blocked passage requiring a trigger item
                     self.room_states[pos].blocked_passages[direction] = "Rune"
+        
+        # Add map effects to random positions
+        self._add_map_effects(floor)
         
         # Populate rooms with items and entities
         self._populate_floor_rooms(floor)
@@ -275,14 +300,43 @@ class SeededDungeon:
                 npc = self._generate_random_npc()
                 room.add_npc(npc)
             elif room.room_type == "trap":
-                # Add a trap item that might be useful
-                if random.random() < 0.5:
-                    item = self._generate_trap_item()
-                    room.add_item(item)
+                # Convert trap rooms to other types, since we now have map effects for traps
+                other_types = ["empty", "treasure", "monster", "npc", "artifact"]
+                room.room_type = random.choice(other_types)
             elif room.room_type == "artifact":
                 # Add a special artifact
                 artifact = self._generate_artifact()
                 room.add_item(artifact)
+            elif room.room_type == "storage":
+                # Add 1-3 storage-related items
+                for _ in range(random.randint(1, 3)):
+                    item = self._generate_random_item()
+                    room.add_item(item)
+            elif room.room_type == "bunk":
+                # Add 1-2 items related to rest/sleep
+                for _ in range(random.randint(1, 2)):
+                    item = self._generate_random_item()
+                    room.add_item(item)
+            elif room.room_type == "kitchen":
+                # Add food and cooking-related items
+                for _ in range(random.randint(1, 3)):
+                    item = self._generate_random_item()
+                    room.add_item(item)
+            elif room.room_type == "library":
+                # Add 1-2 knowledge-related items
+                for _ in range(random.randint(1, 2)):
+                    item = self._generate_random_item()
+                    room.add_item(item)
+            elif room.room_type == "workshop":
+                # Add 1-3 crafting/tool-related items
+                for _ in range(random.randint(1, 3)):
+                    item = self._generate_random_item()
+                    room.add_item(item)
+            elif room.room_type == "garden":
+                # Add 1-2 plant/herb-related items
+                for _ in range(random.randint(1, 2)):
+                    item = self._generate_random_item()
+                    room.add_item(item)
     
     def _generate_random_item(self) -> Item:
         """Generate a random item."""
@@ -393,6 +447,73 @@ class SeededDungeon:
             # Fallback artifact
             return Item("Ancient Relic", ItemType.ARTIFACT, 100, "An ancient magical relic")
 
+    def _add_map_effects(self, floor: int):
+        """Add various map effects throughout the dungeon floor."""
+        positions = [pos for pos in self.room_states.keys() if pos[2] == floor]
+        
+        # Determine number of effects based on floor size
+        num_effects = max(1, len(positions) // 5)  # Roughly 1 effect per 5 rooms
+        
+        for _ in range(num_effects):
+            # Select a random position
+            pos = random.choice(positions)
+            
+            # Randomly select an effect type
+            effect_type = random.choice(list(MapEffectType))
+            
+            # Define properties based on effect type
+            if effect_type == MapEffectType.TRAP:
+                # Traps have a high chance to trigger when stepped on
+                trigger_chance = 0.8
+                effect_strength = random.randint(5, 15)  # Damage amount
+                description = "This area seems dangerous - there might be hidden traps nearby."
+            elif effect_type == MapEffectType.WET_AREA:
+                # Wet areas don't trigger damage but provide environmental flavor
+                trigger_chance = 0.0
+                effect_strength = 0
+                description = "The ground is wet and soggy here."
+            elif effect_type == MapEffectType.POISONOUS_AREA:
+                # Poisonous areas can cause damage and status effects
+                trigger_chance = 0.6
+                effect_strength = random.randint(3, 8)  # Poison damage
+                description = "A toxic mist lingers in the air, making this area hazardous."
+            elif effect_type == MapEffectType.ICY_SURFACE:
+                # Icy surfaces affect movement
+                trigger_chance = 0.3
+                effect_strength = 2  # Speed reduction amount
+                description = "The floor is covered in ice, making it treacherous to walk on."
+            elif effect_type == MapEffectType.DARK_CORNER:
+                # Dark corners affect visibility (currently just descriptive)
+                trigger_chance = 0.0
+                effect_strength = 0
+                description = "Deep shadows obscure vision in this area."
+            elif effect_type == MapEffectType.SLIPPERY_FLOOR:
+                # Slippery floors can cause movement issues
+                trigger_chance = 0.2
+                effect_strength = 1  # Minor effect
+                description = "The floor here is unusually slippery."
+            elif effect_type == MapEffectType.LOUD_FLOOR:
+                # Loud floors alert enemies
+                trigger_chance = 0.0
+                effect_strength = 0
+                description = "The floor creaks and groans underfoot, echoing through the dungeon."
+            elif effect_type == MapEffectType.MAGNETIC_FIELD:
+                # Magnetic fields affect metal items
+                trigger_chance = 0.0
+                effect_strength = 0
+                description = "A strange magnetic field tugs at metallic objects."
+            
+            # Create and add the map effect
+            effect = MapEffect(
+                effect_type=effect_type,
+                position=pos,
+                trigger_chance=trigger_chance,
+                description=description,
+                effect_strength=effect_strength
+            )
+            
+            self.map_effects.add_effect(effect)
+
     def get_room_at(self, pos: Tuple[int, int, int]) -> RoomState:
         """Get the room at a given position."""
         return self.room_states.get(pos)
@@ -401,7 +522,8 @@ class SeededDungeon:
         """Convert dungeon to dictionary for saving."""
         return {
             "seed": self.seed,
-            "room_states": {str(pos): room.to_dict() for pos, room in self.room_states.items()}
+            "room_states": {str(pos): room.to_dict() for pos, room in self.room_states.items()},
+            "map_effects": self.map_effects.to_dict()
         }
 
     @classmethod
@@ -413,5 +535,12 @@ class SeededDungeon:
         for pos_str, room_data in data["room_states"].items():
             pos = tuple(int(x) for x in pos_str.strip('()').split(','))
             dungeon.room_states[pos] = RoomState.from_dict(room_data)
+        
+        # Load map effects if they exist
+        if "map_effects" in data:
+            dungeon.map_effects = MapEffectManager.from_dict(data["map_effects"])
+        else:
+            # For backward compatibility, create a new map effects manager
+            dungeon.map_effects = MapEffectManager()
         
         return dungeon

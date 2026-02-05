@@ -97,6 +97,120 @@
       "possible_items": [],
       "possible_enemies": ["Goblin", "Spider"],
       "rarity_weight": 1.0
+    },
+    {
+      "type": "storage",
+      "themes": ["GENERIC", "CASTLE", "CAVERN", "FOREST", "MAGICAL"],
+      "descriptions": [
+        "A storage room filled with boxes and crates.",
+        "A warehouse with shelves stacked high with supplies.",
+        "A bunker room packed with provisions.",
+        "A supply closet with miscellaneous items.",
+        "A storage chamber with barrels and containers.",
+        "A warehouse with rows of stacked materials.",
+        "A storage area with wooden crates and bags.",
+        "A depot filled with useful supplies.",
+        "A storage room with organized racks.",
+        "A warehouse with supplies for long expeditions."
+      ],
+      "possible_items": ["Health Potion", "Mana Potion", "Iron Key", "Rope", "Torch", "Lockpick", "Bandages", "Rations", "Oil Flask"],
+      "possible_enemies": ["Giant Rat", "Spider", "Skeleton"],
+      "rarity_weight": 0.15
+    },
+    {
+      "type": "bunk",
+      "themes": ["GENERIC", "CASTLE", "CAVERN", "FOREST", "MAGICAL"],
+      "descriptions": [
+        "A bunk room with sleeping quarters.",
+        "A barracks with beds and personal belongings.",
+        "A dormitory with simple cots.",
+        "A sleeping area with straw mattresses.",
+        "A quarters room with hammocks.",
+        "A military-style bunk room.",
+        "A resting area with crude sleeping arrangements.",
+        "A crew cabin with personal storage.",
+        "A hostel with basic sleeping facilities.",
+        "A shelter with beds for weary travelers."
+      ],
+      "possible_items": ["Bedroll", "Sleeping Bag", "Pillow", "Blanket", "Candle", "Matches", "Personal Item", "Food Ration", "Torch"],
+      "possible_enemies": ["Goblin", "Zombie", "Skeleton"],
+      "rarity_weight": 0.12
+    },
+    {
+      "type": "kitchen",
+      "themes": ["GENERIC", "CASTLE", "CAVERN", "FOREST"],
+      "descriptions": [
+        "A kitchen with cooking utensils and ingredients.",
+        "A food preparation area with pots and pans.",
+        "A mess hall with cooking stations.",
+        "A pantry with food stores and spices.",
+        "A kitchen with a large hearth and ovens.",
+        "A dining prep area with cutting boards.",
+        "A cookhouse with various cooking tools.",
+        "A kitchen with barrels of food and drink.",
+        "A scullery with washing stations.",
+        "A culinary workshop with exotic ingredients."
+      ],
+      "possible_items": ["Food Ration", "Cooked Meal", "Apple", "Bread", "Wine", "Cooking Utensil", "Salt", "Herbs", "Water Flask"],
+      "possible_enemies": ["Giant Rat", "Spider", "Goblin"],
+      "rarity_weight": 0.08
+    },
+    {
+      "type": "library",
+      "themes": ["GENERIC", "CASTLE", "MAGICAL"],
+      "descriptions": [
+        "A library with dusty tomes and scrolls.",
+        "A study hall filled with ancient books.",
+        "A reading room with manuscripts.",
+        "A scholarly collection of knowledge.",
+        "A book chamber with scrolls and tablets.",
+        "A scriptorium with writing materials.",
+        "An archive with historical records.",
+        "A reading nook with comfortable seating.",
+        "A research chamber with academic texts.",
+        "A knowledge vault with forbidden lore."
+      ],
+      "possible_items": ["Scroll of Knowledge", "Spell Tome", "Quill", "Ink Vial", "Parchment", "Reading Glasses", "Magnifying Glass", "Ancient Text", "Map"],
+      "possible_enemies": ["Ghost", "Specter", "Animated Book"],
+      "rarity_weight": 0.06
+    },
+    {
+      "type": "workshop",
+      "themes": ["GENERIC", "CASTLE", "CAVERN", "MAGICAL"],
+      "descriptions": [
+        "A workshop with crafting tools and materials.",
+        "A forge with metalworking equipment.",
+        "A carpentry shop with saws and hammers.",
+        "A blacksmith's station with anvils.",
+        "A tinker's room with gears and parts.",
+        "A crafting chamber with various tools.",
+        "A artisan's workshop with half-finished projects.",
+        "A repair station with tools scattered about.",
+        "A creation space with raw materials.",
+        "A workshop with blueprints and designs."
+      ],
+      "possible_items": ["Iron Ore", "Steel Ingot", "Hammer", "Tongs", "Anvil", "Gear", "Metal Scraps", "Crafting Kit", "Tool"],
+      "possible_enemies": ["Goblin", "Animated Tool", "Construct"],
+      "rarity_weight": 0.07
+    },
+    {
+      "type": "garden",
+      "themes": ["GENERIC", "FOREST", "MAGICAL"],
+      "descriptions": [
+        "A garden with medicinal herbs and plants.",
+        "A greenhouse with exotic flora.",
+        "A botanical garden with rare specimens.",
+        "A healing grove with therapeutic plants.",
+        "A cultivation area with growing crops.",
+        "A flower garden with beautiful blooms.",
+        "A plant nursery with seedlings.",
+        "An herb garden with aromatic plants.",
+        "A terrarium with carefully tended plants.",
+        "A sanctuary with restorative vegetation."
+      ],
+      "possible_items": ["Healing Herb", "Poison Ivy", "Medicinal Plant", "Berry", "Fruit", "Seeds", "Flower", "Mushroom", "Potion Ingredient"],
+      "possible_enemies": ["Poisonous Plant", "Thorny Vine", "Plant Creature"],
+      "rarity_weight": 0.05
     }
   ],
   "themed_rooms": {
