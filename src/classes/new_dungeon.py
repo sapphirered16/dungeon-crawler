@@ -75,7 +75,7 @@ class GridCell:
 
 
 class SeededDungeon:
-    def __init__(self, seed: int = None, grid_width: int = 20, grid_height: int = 20):
+    def __init__(self, seed: int = None, grid_width: int = 25, grid_height: int = 25):
         if seed is not None:
             random.seed(seed)
         self.seed = seed
