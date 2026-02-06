@@ -37,10 +37,6 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - **Environmental Features**: Various environmental effects that appear in room descriptions
 - **Detailed Statistics**: Track score, enemies defeated, treasures collected, floors explored, rooms explored, and distance traveled
 
-### 📋 Batch Command Processing
-- Execute multiple commands in sequence: `python src/batch_processor.py "move north" "look" "stats"`
-- Perfect for automated sequences and scripted gameplay
-
 ### 💾 Efficient Save System
 - **Seed-Based Saves**: Only save items and changes during gameplay, reducing save file size
 - **Persistent Progress**: All game state preserved between sessions
@@ -143,12 +139,6 @@ python -m src.main --seed 12345 stats
 ./play.sh stairs
 ```
 
-### Batch Command Processing
-```bash
-# Execute multiple commands in sequence (for testing)
-python src/batch_processor.py "move north" "look" "stats"
-```
-
 ### Visualize Dungeon
 ```bash
 # Visualize dungeon layout for a specific seed
@@ -184,7 +174,6 @@ dungeon-game/
 │   ├── main.py                 # Main entry point with single command support
 │   ├── new_game_engine.py      # Main game engine with proper room-based layouts
 │   ├── command_processor.py    # Command processing system
-│   ├── batch_processor.py      # Batch command execution
 │   ├── dungeon_visualizer.py   # Dungeon visualization tool
 │   └── data/
 │       ├── data_loader.py      # External data loading system

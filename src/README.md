@@ -32,9 +32,6 @@ Processes player commands and interfaces with the game engine.
 ### dungeon_visualizer.py
 Provides visualization tools for dungeon layouts based on seeds.
 
-### batch_processor.py
-Handles batch command execution for automated sequences (for testing/debugging).
-
 ## Entry Points
 
 ### Interactive Play
@@ -44,6 +41,3 @@ Handles batch command execution for automated sequences (for testing/debugging).
 ### Single Command Execution
 - `python -m src.main <command>` - Execute single command
 - `./play.sh <command>` - Execute single command via script
-
-### Batch Processing
-- `python src/batch_processor.py` - Execute multiple commands (testing only)
