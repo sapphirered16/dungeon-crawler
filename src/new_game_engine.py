@@ -41,9 +41,14 @@ class SeededGameEngine:
             for pos in self.current_room.get_all_positions():
                 self.explored_positions.add((*pos, self.current_room.z))
         
-        # Initialize logging
-        self.log_file = f"dungeon_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+        # Initialize logging - use a single log file and clear it on new game start
+        self.log_file = "dungeon_log.txt"
         self.log_actions = []
+        
+        # Clear the log file at the start of each game
+        with open(self.log_file, 'w', encoding='utf-8') as f:
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            f.write(f"[{timestamp}] NEW GAME STARTED with seed: {self.seed}\n")
         
         # Initialize event buffer for turn-based event logging
         self.event_buffer = []
@@ -1182,7 +1187,7 @@ class SeededGameEngine:
         log_entry = f"[{timestamp}] Position: {position} | Action: {action}"
         self.log_actions.append(log_entry)
         
-        # Write to log file
+        # Append to the single log file
         with open(self.log_file, 'a', encoding='utf-8') as f:
             f.write(log_entry + '\n')
 

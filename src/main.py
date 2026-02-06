@@ -11,11 +11,10 @@ def main():
     parser = argparse.ArgumentParser(description="Dungeon Crawler Game")
     parser.add_argument("--seed", type=int, help="Set the random seed for dungeon generation")
     parser.add_argument("--load", action="store_true", help="Load a saved game")
+    parser.add_argument("command", nargs="?", help="Optional command to run (for single command execution)")
+    parser.add_argument("args", nargs="*", help="Additional arguments for the command")
     
     args = parser.parse_args()
-    
-    print("🏰 Welcome to the Dungeon Crawler! 🐉")
-    print("Type 'help' for available commands.\n")
     
     # Create game engine
     seed = args.seed or None
@@ -27,6 +26,21 @@ def main():
     
     # Create command processor
     command_processor = CommandProcessor(game)
+    
+    # If a command was provided, execute it and exit
+    if args.command:
+        # Combine command and args into a single string
+        full_command = args.command
+        if args.args:
+            full_command += " " + " ".join(args.args)
+        
+        # Execute the command
+        command_processor.process_command(full_command)
+        return
+    
+    # Otherwise, run in interactive mode
+    print("🏰 Welcome to the Dungeon Crawler! 🐉")
+    print("Type 'help' for available commands.\n")
     
     # Show initial room
     command_processor.process_command('look')
@@ -46,7 +60,6 @@ def main():
             print("\n\n👋 Game interrupted. Goodbye!")
             break
         except EOFError:
-            break
             break
     
     # Game over message

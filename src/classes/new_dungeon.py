@@ -105,7 +105,11 @@ class SeededDungeon:
         # Ensure stairs are properly connected between all floors
         self._connect_stairs_properly()
         
-        # After all rooms are placed, populate them with items and entities
+        # Add special features including obstacles with logical progression
+        for floor in range(num_floors):
+            self._add_special_features(floor)
+        
+        # After all rooms and obstacles are placed, populate them with items and entities
         self._populate_all_rooms()
 
     def _determine_number_of_floors(self, room_templates):
@@ -514,30 +518,74 @@ class SeededDungeon:
         self._add_obstacles_to_hallways(floor)
     
     def _add_obstacles_to_hallways(self, floor: int):
-        """Add locked doors and blocked passages to hallway tiles between rooms."""
+        """Add locked doors and blocked passages to hallway tiles between rooms with logical progression."""
         # Get all hallway positions on this floor
         hallway_positions = [(x, y, z) for (x, y, z), cell in self.grid.items() 
                              if z == floor and cell.cell_type == 'hallway']
         
+        if not hallway_positions:
+            return  # No hallways to add obstacles to
+        
+        # Get all rooms on this floor to determine logical progression order
+        floor_rooms = [room for room in self.rooms if room.z == floor]
+        
+        # Create a logical ordering of positions based on path from start to end
+        # Find start and end rooms for this floor
+        start_room = None
+        end_room = None
+        
+        for room in floor_rooms:
+            if room.room_type == "entrance" or (floor == 0 and room.room_type == "hub"):
+                start_room = room
+                break
+        
+        # If no entrance, find the room closest to the start of the grid
+        if not start_room and floor_rooms:
+            start_room = min(floor_rooms, key=lambda r: r.x + r.y)
+        
+        # Order positions based on distance from start room
+        position_distances = {}
+        for pos in hallway_positions:
+            if start_room:
+                dist = abs(pos[0] - start_room.x) + abs(pos[1] - start_room.y)
+            else:
+                dist = pos[0] + pos[1]  # Fallback distance
+            position_distances[pos] = dist
+        
+        # Sort hallway positions by distance (logical progression order)
+        sorted_hallway_positions = sorted(hallway_positions, key=lambda pos: position_distances[pos])
+        
+        # Divide positions into early (first half) and late (second half)
+        split_point = len(sorted_hallway_positions) // 2
+        early_positions = sorted_hallway_positions[:split_point] if split_point > 0 else []
+        late_positions = sorted_hallway_positions[split_point:]
+        
         # Place locked doors and blocked passages on hallway tiles
-        # We'll place them randomly to create challenges between rooms
+        # We'll place them in later positions but ensure required items are in earlier positions
         items = self.data_provider.get_items()
         key_items = [item for item in items if item.get("type", "").lower() == "key"]
         
-        # Place locked doors (magical barriers that require keys)
-        num_locked_doors = min(len(hallway_positions) // 10, 5)  # Place up to 5 locked doors
-        selected_hallways = random.sample(hallway_positions, min(num_locked_doors, len(hallway_positions)))
+        # Place locked doors (magical barriers that require keys) in later positions
+        num_locked_doors = min(len(late_positions), 5)  # Place up to 5 locked doors
+        selected_late_hallways = random.sample(late_positions, min(num_locked_doors, len(late_positions))) if late_positions else []
         
-        for pos in selected_hallways:
+        for pos in selected_late_hallways:
             if key_items:
                 key_item = random.choice(key_items)
                 direction = random.choice(list(Direction))  # Random direction for the lock
                 self.grid[pos].locked_doors[direction] = key_item["name"]
+                
+                # Place the required key in an earlier position to ensure logical progression
+                if early_positions:
+                    key_pos = random.choice(early_positions)
+                    key_item_obj = self._find_item_by_name(key_item["name"])
+                    if key_pos in self.grid and key_item_obj:
+                        self.grid[key_pos].items.append(key_item_obj)
         
-        # Place blocked passages (magical barriers that require trigger items)
-        remaining_hallways = [pos for pos in hallway_positions if pos not in selected_hallways]
-        num_blocked_passages = min(len(remaining_hallways) // 15, 3)  # Place up to 3 blocked passages
-        selected_blocked = random.sample(remaining_hallways, min(num_blocked_passages, len(remaining_hallways)))
+        # Place blocked passages (magical barriers that require trigger items) in later positions
+        remaining_late_positions = [pos for pos in late_positions if pos not in selected_late_hallways]
+        num_blocked_passages = min(len(remaining_late_positions), 3)  # Place up to 3 blocked passages
+        selected_blocked = random.sample(remaining_late_positions, min(num_blocked_passages, len(remaining_late_positions))) if remaining_late_positions else []
         
         for pos in selected_blocked:
             # Choose a random item as the trigger (could be any item type)
@@ -546,6 +594,34 @@ class SeededDungeon:
                 trigger_item = random.choice(all_items)
                 direction = random.choice(list(Direction))  # Random direction for the block
                 self.grid[pos].blocked_passages[direction] = trigger_item["name"]
+                
+                # Place the required trigger item in an earlier position to ensure logical progression
+                if early_positions:
+                    trigger_pos = random.choice(early_positions)
+                    trigger_item_obj = self._find_item_by_name(trigger_item["name"])
+                    if trigger_pos in self.grid and trigger_item_obj:
+                        self.grid[trigger_pos].items.append(trigger_item_obj)
+
+    def _find_item_by_name(self, name: str):
+        """Find an item object by its name."""
+        items = self.data_provider.get_items()
+        for item_data in items:
+            if item_data["name"] == name:
+                return Item(
+                    name=item_data["name"],
+                    item_type=ItemType(item_data.get("type", "CONSUMABLE")),
+                    value=item_data.get("value", 0),
+                    description=item_data.get("description", ""),
+                    attack_bonus=item_data.get("attack_bonus", 0),
+                    defense_bonus=item_data.get("defense_bonus", 0),
+                    health_bonus=item_data.get("health_bonus", 0),
+                    status_effects=item_data.get("status_effects", {}),
+                    status_effect=item_data.get("status_effect"),
+                    status_chance=item_data.get("status_chance", 0.0),
+                    status_damage=item_data.get("status_damage", 0)
+                )
+        # If not found, return a basic version
+        return Item(name, ItemType.KEY, 10, f"A key to unlock {name}", status_effects={})
 
     def _connect_stairs_properly(self):
         """Ensure stairs are properly connected between floors."""

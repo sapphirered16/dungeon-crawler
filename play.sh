@@ -1,117 +1,43 @@
 #!/bin/bash
 
 # Terminal Dungeon Crawler - Main Play Script
-# Usage: ./play.sh [seed]
+# Usage: ./play.sh [seed] [command]
+# Examples:
+#   ./play.sh                  # Interactive play with random seed
+#   ./play.sh 12345           # Interactive play with specific seed
+#   ./play.sh stats           # Run single command with random seed
+#   ./play.sh 12345 stats     # Run single command with specific seed
 
-if [ $# -gt 0 ]; then
-    PYTHONPATH=. python3 -c "
-import sys
-import os
-sys.path.insert(0, 'src')
-
-from src.game_engine import SeededGameEngine
-from src.command_processor import CommandProcessor
-
-def main():
-    print('🏰 TERMINAL DUNGEON CRAWLER 🐉')
-    print('===============================')
-    
-    # Get seed from command line argument or generate random
-    seed = None
-    if len(sys.argv) > 1:
-        try:
-            seed = int(sys.argv[1])
-        except ValueError:
-            print(f'Invalid seed: {sys.argv[1]}, using random seed')
-            seed = None
-    
-    # Create game instance
-    game = SeededGameEngine(seed)
-    processor = CommandProcessor(game)
-    
-    print(f'Dungeon Seed: {game.seed}')
-    print()
-    
-    # Show initial room
-    processor.process_command('look')
-    print()
-    
-    # Main game loop
-    while not game.is_game_over():
-        try:
-            command = input('> ').strip()
-            if not command:
-                continue
-            
-            # Process command
-            continue_game = processor.process_command(command)
-            if not continue_game:
-                break
-            
-            print()  # Extra line for readability
-            
-        except KeyboardInterrupt:
-            break
-        except EOFError:
-            break
-    
-    if game.player.victory:
-        print('\\n🎉 CONGRATULATIONS! You have conquered the dungeon! 🏆')
-    elif not game.player.is_alive():
-        print('\\n💀 You have been defeated... Better luck next time! 😵')
-
-if __name__ == '__main__':
-    main()
-" "$@"
+if [ $# -eq 0 ]; then
+    # No arguments - interactive mode with random seed
+    python3 -m src.main
+elif [ $# -eq 1 ]; then
+    # One argument - could be seed or command
+    arg="$1"
+    if [[ "$arg" =~ ^[0-9]+$ ]]; then
+        # It's a number - treat as seed for interactive mode
+        python3 -m src.main --seed "$arg"
+    else
+        # It's not a number - treat as command with random seed
+        python3 -m src.main "$arg"
+    fi
+elif [ $# -eq 2 ]; then
+    # Two arguments - first is seed, second is command
+    seed="$1"
+    command="$2"
+    if [[ "$seed" =~ ^[0-9]+$ ]]; then
+        python3 -m src.main --seed "$seed" "$command"
+    else
+        echo "Usage: ./play.sh [seed] [command]"
+        echo "Example: ./play.sh 12345 stats"
+        exit 1
+    fi
 else
-    PYTHONPATH=. python3 -c "
-import sys
-import os
-sys.path.insert(0, 'src')
-
-from src.game_engine import SeededGameEngine
-from src.command_processor import CommandProcessor
-
-def main():
-    print('🏰 TERMINAL DUNGEON CRAWLER 🐉')
-    print('===============================')
-    
-    # Create game instance with random seed
-    game = SeededGameEngine()
-    processor = CommandProcessor(game)
-    
-    print(f'Dungeon Seed: {game.seed}')
-    print()
-    
-    # Show initial room
-    processor.process_command('look')
-    print()
-    
-    # Main game loop
-    while not game.is_game_over():
-        try:
-            command = input('> ').strip()
-            if not command:
-                continue
-            
-            # Process command
-            continue_game = processor.process_command(command)
-            if not continue_game:
-                break
-            
-            print()  # Extra line for readability
-            
-        except KeyboardInterrupt:
-            break
-        except EOFError:
-            break
-    
-    if game.player.victory:
-        print('\\n🎉 CONGRATULATIONS! You have conquered the dungeon! 🏆')
-    elif not game.player.is_alive():
-        print('\\n💀 You have been defeated... Better luck next time! 😵')
-
-if __name__ == '__main__':
-    main()
-"
+    echo "Usage: ./play.sh [seed] [command]"
+    echo "Examples:"
+    echo "  ./play.sh              # Interactive play with random seed"
+    echo "  ./play.sh 12345        # Interactive play with specific seed"
+    echo "  ./play.sh stats        # Run single command with random seed"
+    echo "  ./play.sh 12345 stats  # Run single command with specific seed"
+    exit 1
 fi
