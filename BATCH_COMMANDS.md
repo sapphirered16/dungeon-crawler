@@ -1,6 +1,6 @@
 # Batch Command Processing
 
-The dungeon crawler now supports batch command processing, allowing you to execute multiple commands in sequence.
+The dungeon crawler supports batch command processing for automated testing, allowing you to execute multiple commands in sequence.
 
 **IMPORTANT**: Batch processing is intended for **testing and automation purposes only**. For actual gameplay, use the interactive mode:
 
@@ -38,12 +38,11 @@ python src/batch_processor.py "move north" "move north" "move east" "move south"
 - `attack <number>` - Attack enemy number in room
 - `take <number>` - Take item number from room
 - `equip <number>` - Equip item number from inventory
-- `unequip <weapon|armor>` - Unequip weapon or armor
+- `use <number>` - Use consumable item number from inventory
 - `talk <number>` - Talk to NPC number in room
 - `look` - Look around the current room
-- `inventory` - View your inventory
+- `inventory` or `i` - View your inventory
 - `stats` - View your character stats
-- `rest` - Rest to recover health
 - `save` - Save the game
 - `load` - Load a saved game
 

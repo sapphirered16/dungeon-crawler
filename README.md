@@ -5,15 +5,15 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 ## 🎮 Features
 
 ### 🏰 Enhanced Room-Based Dungeon Generation
-- **Authentic Room Layouts**: Instead of single-tile rooms, the dungeon now features actual rectangular room areas (4x4 to 8x8 tiles) connected by narrow hallways
+- **Authentic Room Layouts**: Instead of single-tile rooms, the dungeon now features actual rectangular room areas (2x2 to 8x8 tiles) connected by narrow hallways
 - **Strategic Floor Layout**: Each floor has specific required rooms - Floor 1 has the starting room and stairs down, upper floors have stairs up and down with appropriate room distributions
 - **Thematic Variety**: Different room types including starting rooms, treasure rooms, monster rooms, NPC rooms, and staircase rooms
 - **Floor-Specific Requirements**: Floor-specific room placement ensuring proper dungeon flow (staircase up only on floors > 0, staircase down only on non-last floors)
 - **Seed-Based Generation**: Deterministic dungeon generation based on a seed value for efficient saving
 - **Strategic Connections**: Rooms are connected via L-shaped hallways creating authentic dungeon feel
-- **NEW: Proper Room Dimensions**: Rooms now have actual dimensions (e.g., a library might be 3x5 tiles) instead of single tiles
-- **NEW: Spaced Room Placement**: Rooms are placed with minimum spacing between them on a large grid (like 30x30)
-- **NEW: Hallway Connections**: Rooms connect via hallways rather than directly touching, creating authentic dungeon feel
+- **Proper Room Dimensions**: Rooms now have actual dimensions (e.g., a library might be 3x5 tiles) instead of single tiles
+- **Spaced Room Placement**: Rooms are placed with minimum spacing between them on a large grid (25x25)
+- **Hallway Connections**: Rooms connect via hallways rather than directly touching, creating authentic dungeon feel
 
 ### ⚡ Map Effects System
 - **Hidden Traps**: Environmental hazards that trigger when stepped on, causing damage
@@ -40,7 +40,6 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 ### 📋 Batch Command Processing
 - Execute multiple commands in sequence: `python src/batch_processor.py "move north" "look" "stats"`
 - Perfect for automated sequences and scripted gameplay
-- Comprehensive documentation in [BATCH_COMMANDS.md](BATCH_COMMANDS.md)
 
 ### 💾 Efficient Save System
 - **Seed-Based Saves**: Only save items and changes during gameplay, reducing save file size
@@ -63,9 +62,14 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - **Enhanced Navigation**: Makes it easier to find backtracked items
 - **Both Maps Supported**: Works on both full floor maps and local 5x5 maps
 
+### 🪜 Stairs Location Command
+- **Stairs Map Command**: Use `stairs`, `staircase`, or `levels` command to show locations of stairs on current floor
+- **Distance Indicators**: Shows how close player is to nearby stairs
+- **Enhanced Navigation**: Makes it easier to find staircases to progress through dungeon levels
+
 ### 🎨 Extended ASCII Map Characters
 - **Enhanced Visual Appeal**: Replaced simple ASCII characters with distinctive Unicode symbols
-- **Better Readability**: Uses symbols like ▫ (empty room), ◘ (room with items), ∿ (hallway), ≈ (hallway with items), ♀ (player), ░ (unknown area), · (explored empty space)
+- **Better Readability**: Uses symbols like □ (empty room), ■ (room with items), ∿ (hallway), ≈ (hallway with items), ♀ (player), ░ (unknown area), · (explored empty space)
 - **Improved Map Clarity**: Each map element now has a visually distinct representation
 
 ### 🤖 Intelligent Enemy AI
@@ -73,10 +77,25 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 - Enemies patrol and hunt intelligently
 - Line-of-sight detection for realistic AI behavior
 
+### 🧭 Logical Progression System
+- **Required Items Before Obstacles**: The dungeon generation ensures that required items appear before obstacles that need them
+- **Solvable Puzzles**: Prevents unsolvable loops by placing keys and trigger items in earlier positions than locked doors and blocked passages
+- **Strategic Exploration**: Players must explore strategically to find required items before encountering obstacles
+
 ### 🔧 External Data System
 - **Separation of Content and Code**: Game data stored in JSON files in the `data/` directory
 - **Easy Customization**: Modify items, enemies, rooms, and NPCs without changing code
 - **Expandable Content**: Add new game elements by editing JSON files
+
+### 📝 Single Command Execution
+- **New Execution Method**: Run single commands with `python -m src.main <command>`
+- **Script Integration**: Use `./play.sh <command>` for quick command execution
+- **Example**: `./play.sh stats` or `./play.sh 12345 map`
+
+### 📁 Logging System
+- **Single Log File**: Uses `dungeon_log.txt` for all game events
+- **Cleared on New Game**: Log file is cleared when a new game starts
+- **Action Tracking**: All player actions are logged with timestamps and positions
 
 ### Classic RPG Elements
 - Turn-based exploration of a multi-level dungeon
@@ -95,7 +114,7 @@ A nethack-inspired terminal-based dungeon crawler game with persistent state bet
 ### Interactive Gameplay (Recommended)
 ```bash
 # Start a new game with interactive mode
-python src/main.py
+python -m src.main
 
 # Or use the play script
 ./play.sh
@@ -104,13 +123,30 @@ python src/main.py
 ./play.sh 12345
 ```
 
-### Individual Commands (For Testing)
+### Single Command Execution
 ```bash
 # Execute individual commands
-python src/main.py move north
-python src/main.py attack 1
-python src/main.py take 1
-python src/main.py stats
+python -m src.main stats
+python -m src.main map
+python -m src.main items
+python -m src.main stairs
+python -m src.main look
+python -m src.main --seed 12345 stats
+```
+
+### Script Usage
+```bash
+# Execute single commands with the play script
+./play.sh stats
+./play.sh 12345 map
+./play.sh items
+./play.sh stairs
+```
+
+### Batch Command Processing
+```bash
+# Execute multiple commands in sequence (for testing)
+python src/batch_processor.py "move north" "look" "stats"
 ```
 
 ### Visualize Dungeon
@@ -121,41 +157,51 @@ python src/dungeon_visualizer.py 12345 0  # Visualize only floor 0
 ```
 
 ### Available Commands
-- `move <direction>` - Move north, south, east, west, up, or down (automatically looks after movement)
+- `stats` - View your character stats
+- `look` - Look around the current room and show local map
+- `map` - Show current floor map
+- `items` or `item` - Show map with item location indicators
+- `stairs`, `staircase`, or `levels` - Show locations of stairs on current floor
+- `local` or `lm` - Show 5x5 local map around player
+- `inventory` or `i` - View your inventory
+- `go <direction>` or `move <direction>` - Move north, south, east, west, up, or down
 - `attack <number>` - Attack enemy number in room
 - `take <number>` - Take item number from room
 - `equip <number>` - Equip item number from inventory
-- `unequip <weapon|armor>` - Unequip weapon or armor
+- `use <number>` - Use consumable item number from inventory
 - `talk <number>` - Talk to NPC number in room
-- `look` - Look around the current room
-- `inventory` - View your inventory
-- `stats` - View your character stats
-- `map` - Show current floor map
-- `local` or `lm` - Show 5x5 local map around player
-- `rest` - Rest to recover health
 - `save` - Save the game
 - `load` - Load a saved game
-- `quit` - Quit the game
-- `help` - Show available commands and tips
+- `log` or `history` - View game log history
+- `clear` - Clear save and log files
+- `quit`, `q`, or `exit` - Quit the game
+- `help`, `h`, or `?` - Show available commands and tips
 
 ## 📁 Directory Structure
 ```
 dungeon-game/
 ├── src/
-│   ├── new_game_engine.py        # Main game engine with proper room-based layouts
-│   ├── classes/
-│   │   ├── new_dungeon.py       # New dungeon system with proper room dimensions
-│   │   └── ...                  # Other class files
-│   ├── batch_processor.py        # Batch command execution
-│   ├── dungeon_visualizer.py     # Dungeon visualization tool
-│   └── data_loader.py           # External data loading system
-├── data/
-│   ├── items.json               # Game items definition
-│   ├── enemies.json             # Enemy definitions
-│   ├── npcs.json               # NPC definitions
-│   └── rooms.json              # Room templates
-├── demo_improvements.py         # Demo script for new features
-└── BATCH_COMMANDS.md           # Batch command documentation
+│   ├── main.py                 # Main entry point with single command support
+│   ├── new_game_engine.py      # Main game engine with proper room-based layouts
+│   ├── command_processor.py    # Command processing system
+│   ├── batch_processor.py      # Batch command execution
+│   ├── dungeon_visualizer.py   # Dungeon visualization tool
+│   └── data/
+│       ├── data_loader.py      # External data loading system
+│       ├── items.json          # Game items definition
+│       ├── enemies.json        # Enemy definitions
+│       ├── npcs.json           # NPC definitions
+│       └── rooms.json          # Room templates
+├── src/classes/
+│   ├── new_dungeon.py          # New dungeon system with proper room dimensions
+│   ├── base.py                 # Base classes and enums
+│   ├── character.py            # Player and enemy character classes
+│   ├── item.py                 # Item class and definitions
+│   ├── room.py                 # Room class with dimensions
+│   ├── enemy.py                # Enemy AI and behavior
+│   ├── map_effects.py          # Environmental hazards and effects
+│   └── ...
+└── play.sh                     # Main play script with single command support
 ```
 
 ## 🎯 Game Elements
@@ -164,7 +210,6 @@ dungeon-game/
 - **Starting Room**: Safe starting area with basic equipment
 - **Treasure Room**: Contains valuable items and equipment
 - **Monster Room**: Hostile creatures to battle
-- **Trap Room**: Dangerous areas with hazards
 - **NPC Room**: Characters offering quests and rewards
 - **Staircase Room**: Connections between dungeon levels
 - **Hallway**: Narrow corridors connecting rooms
@@ -173,7 +218,7 @@ dungeon-game/
 ### Items & Equipment
 - **Weapons**: Swords, bows, staves with attack bonuses and status effects
 - **Armor**: Protection with defense bonuses and health boosts
-- **Consumables**: Potions and healing items
+- **Consumables**: Potions and healing items with temporary buffs
 - **Keys**: Required to unlock doors
 - **Triggers**: Special items to clear blocked passages
 
