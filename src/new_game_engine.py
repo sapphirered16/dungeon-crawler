@@ -914,17 +914,18 @@ class SeededGameEngine:
             return False
 
     def visualize_floor(self, floor: int = None):
-        """Visualize the current floor or a specific floor."""
+        """Visualize the current floor or a specific floor with side-by-side legend."""
         if floor is None:
             floor = self.player.position[2]
         
-        print(f"\n--- FLOOR {floor + 1} VISUALIZATION (Seed: {self.seed}) ---")
+        print(f"\n┌─ FLOOR {floor + 1} (Seed: {self.seed}) ─────────────────────────────────────────────────┐")
         
         # Get all rooms on this floor
         floor_rooms = self.dungeon.get_all_rooms_on_floor(floor)
         
         if not floor_rooms:
-            print("No rooms on this floor.")
+            print("│ No rooms on this floor.                                          │")
+            print("└────────────────────────────────────────────────────────────────────────┘")
             return
         
         # Determine bounds based on room positions
@@ -1033,8 +1034,12 @@ class SeededGameEngine:
                         else:
                             grid[(x, y)] = '░'  # Unknown area
     
-        # Display grid
-        for y in range(min_y, max_y + 1):  # Print from low Y to high Y so North (lower Y values) appears at top
+        # Create map rows and legend lines for side-by-side display
+        map_rows = []
+        legend_lines = []
+        
+        # Build map rows
+        for y in range(min_y, max_y + 1):
             row = ""
             for x in range(min_x, max_x + 1):
                 pos = (x, y)
@@ -1042,20 +1047,43 @@ class SeededGameEngine:
                     row += "♀"  # Female symbol for player
                 else:
                     row += grid[pos]
-            print(row)
+            map_rows.append(row)
         
-        # Show legend
-        print("\nLegend:")
-        print("  ♀ = Player Position")
-        print("  # = Obstacle (locked doors/blocked passages)")
-        print("  ■ = Room/Hallway (with items)")
-        print("  □ = Room (no items)")
-        print("  ∿ = Hallway (no items)")
-        print("  ≈ = Hallway (with items)")
-        print("  ░ = Unknown Area")
-        print("  · = Explored Empty Space")
-        print("\nNote: Environmental hazards like traps, wet areas, etc. are not visible on this map")
-        print("but will trigger when you step on those tiles.")
+        # Build legend lines
+        legend_lines.append("LEGEND:")
+        legend_lines.append("  ♀ Player")
+        legend_lines.append("  # Obstacle")
+        legend_lines.append("  ■ Room w/ Items")
+        legend_lines.append("  □ Room wo/ Items")
+        legend_lines.append("  ∿ Hallway")
+        legend_lines.append("  ≈ Hallway+ Items")
+        legend_lines.append("  ░ Unknown")
+        legend_lines.append("  · Explored")
+        legend_lines.append("  ↑ Stairs Up")
+        legend_lines.append("  ↓ Stairs Down")
+        legend_lines.append("")
+        legend_lines.append("Traps/etc. hidden")
+        legend_lines.append("trigger on step.")
+        
+        # Display map and legend side-by-side
+        map_width = max(len(row) for row in map_rows)
+        separator = " │ "
+        available_width = 120 - map_width - len(separator)
+        
+        for i in range(max(len(map_rows), len(legend_lines))):
+            map_part = map_rows[i] if i < len(map_rows) else " " * map_width
+            legend_part = legend_lines[i] if i < len(legend_lines) else ""
+            
+            # Truncate legend if too long
+            if len(legend_part) > available_width:
+                legend_part = legend_part[:available_width]
+            
+            # Pad legend part to fit available width
+            legend_part = legend_part.ljust(available_width)
+            
+            print(f"│ {map_part}{separator}{legend_part}│")
+        
+        print("└─────────────────────────────────────────────────────────────────────────┘")
 
     def save_game(self, filename: str = "savegame.json"):
         """Save the current game state."""
