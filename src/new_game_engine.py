@@ -142,6 +142,20 @@ class SeededGameEngine:
         
         print("🧭 Explore deeper to find stairs leading down.")
 
+    def _has_stair_at_position(self, pos: Tuple[int, int, int], direction: Direction) -> bool:
+        """Check if there's a stair of the specified direction at the given position."""
+        # Check if the position is in the grid
+        if pos not in self.dungeon.grid:
+            return False
+        
+        # Look for Stair objects in the grid cell
+        from classes.new_dungeon import Stair
+        for item in self.dungeon.grid[pos].items:
+            if isinstance(item, Stair) and item.position == pos and item.direction == direction:
+                return True
+        
+        return False
+
     def look_around(self):
         """Look around the current room."""
         print(f"\n--- {self.current_room.description} ---")
@@ -293,9 +307,9 @@ class SeededGameEngine:
                 # For stairs, check if available at either room level or grid cell level
                 current_pos = self.player.position
                 has_stairs_up = (self.current_room.has_stairs_up or 
-                                 (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_up))
+                                 (current_pos in self.dungeon.grid and self._has_stair_at_position(current_pos, Direction.UP)))
                 has_stairs_down = (self.current_room.has_stairs_down or 
-                                   (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_down))
+                                   (current_pos in self.dungeon.grid and self._has_stair_at_position(current_pos, Direction.DOWN)))
                 
                 if (direction == Direction.UP and has_stairs_up) or \
                    (direction == Direction.DOWN and has_stairs_down):
@@ -388,9 +402,9 @@ class SeededGameEngine:
                 # For stairs, check if available at either room level or grid cell level
                 current_pos = self.player.position
                 has_stairs_up = (self.current_room.has_stairs_up or 
-                                 (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_up))
+                                 (current_pos in self.dungeon.grid and self._has_stair_at_position(current_pos, Direction.UP)))
                 has_stairs_down = (self.current_room.has_stairs_down or 
-                                   (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_down))
+                                   (current_pos in self.dungeon.grid and self._has_stair_at_position(current_pos, Direction.DOWN)))
                 
                 if (direction == Direction.UP and has_stairs_up) or \
                    (direction == Direction.DOWN and has_stairs_down):
