@@ -59,7 +59,6 @@ def main():
     if os.path.exists("savegame.json"):
         try:
             game.load_game()
-            print("📂 Game loaded from savegame.json")
         except Exception as e:
             print(f"⚠️  Could not load save file: {e}. Starting new game.")
             if seed is not None:

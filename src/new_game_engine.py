@@ -90,57 +90,38 @@ class SeededGameEngine:
         raise Exception("No starting room found on floor 0")
     
     def show_stats(self):
-        """Display player statistics."""
-        print("\n--- 🦸 Hero's Stats ---")
-        print(f"Level: {self.player.level}")
-        print(f"HP: {self.player.health}/{self.player.max_health}")
-        print(f"Attack: {self.player.get_total_attack()}")
-        print(f"Defense: {self.player.get_total_defense()}")
-        print(f"EXP: {self.player.exp}/{self.player.exp_to_next_level}")
-        print(f"Gold: {self.player.gold}")
-        print(f"Position: Floor {self.player.position[2] + 1}, {self.player.position[:2]}")
-        print(f"Score: {self.player.score}")
-        print(f"Enemies Defeated: {self.player.enemies_defeated}")
-        print(f"Treasures Collected: {self.player.treasures_collected}")
-        print(f"Floors Explored: {self.player.floors_explored}")
-        print(f"Rooms Explored: {len(self.player.rooms_explored)}")
-        print(f"Distance Traveled: {self.player.distance_traveled}")
+        """Display player statistics with dense formatting."""
+        print(f"\n┌─ STATS ───────────────────────────────────────────────────────────────────────┐")
+        print(f"│ LV:{self.player.level:>2} HP:{self.player.health:>3}/{self.player.max_health:<3} ATK:{self.player.get_total_attack():>2} "
+              f"DEF:{self.player.get_total_defense():>2} EXP:{self.player.exp:>3}/{self.player.exp_to_next_level:<3} │")
         
-        if self.player.equipped_weapon:
-            print(f"Weapon: {self.player.equipped_weapon.name}")
-        else:
-            print("Weapon: None equipped")
+        weapon_name = self.player.equipped_weapon.name if self.player.equipped_weapon else "None"
+        armor_name = self.player.equipped_armor.name if self.player.equipped_armor else "None"
+        print(f"│ {weapon_name:<20} {armor_name:<20} GLD:{self.player.gold:>4} │")
         
-        if self.player.equipped_armor:
-            print(f"Armor: {self.player.equipped_armor.name}")
-        else:
-            print("Armor: None equipped")
-        
-        # Show active temporary buffs
+        buffs = []
         if self.player.temporary_buffs:
-            temp_buffs_info = []
             if 'attack' in self.player.temporary_buffs:
-                attack_buff = self.player.temporary_buffs['attack']
-                attack_turns = self.player.temporary_buffs.get('attack_turns', 0)
-                temp_buffs_info.append(f"+{attack_buff} attack ({attack_turns} turns)")
+                turns = self.player.temporary_buffs.get('attack_turns', 0)
+                buffs.append(f"+{self.player.temporary_buffs['attack']}ATK({turns})")
             if 'defense' in self.player.temporary_buffs:
-                defense_buff = self.player.temporary_buffs['defense']
-                defense_turns = self.player.temporary_buffs.get('defense_turns', 0)
-                temp_buffs_info.append(f"+{defense_buff} defense ({defense_turns} turns)")
-            if temp_buffs_info:
-                print(f"⚡ Active Buffs: {', '.join(temp_buffs_info)}")
+                turns = self.player.temporary_buffs.get('defense_turns', 0)
+                buffs.append(f"+{self.player.temporary_buffs['defense']}DEF({turns})")
         
-        # Show active status effects
+        effects = []
         if self.player.active_status_effects:
-            status_effects = [f"{effect}({duration})" for effect, duration in self.player.active_status_effects.items()]
-            print(f"🌀 Status Effects: {', '.join(status_effects)}")
+            effects = [f"{e}({d})" for e,d in self.player.active_status_effects.items()]
         
-        # Show keys in inventory
+        status_line = f"{' '.join(buffs+effects):<30}" if buffs or effects else ""
+        print(f"│ {status_line} │")
+        
         keys = [item.name for item in self.player.inventory if item.item_type.value == "key"]
-        if keys:
-            print(f"🔑 Keys in inventory: {', '.join(keys)}")
+        keys_line = f"K:{','.join(keys):<15}" if keys else ""
         
-        print("🧭 Explore deeper to find stairs leading down.")
+        print(f"│ {keys_line} FLOOR:{self.player.position[2]+1:>2} ({self.player.position[0]:>2},{self.player.position[1]:>2}) │")
+        print(f"│ SCORE:{self.player.score:>5} ENM:{self.player.enemies_defeated:>3} TRS:{self.player.treasures_collected:>3} "
+              f"DST:{self.player.distance_traveled:>4} │")
+        print(f"└──────────────────────────────────────────────────────────────────────────────┘")
 
     def _has_stair_at_position(self, pos: Tuple[int, int, int], direction: Direction) -> bool:
         """Check if there's a stair of the specified direction at the given position."""
@@ -1133,8 +1114,6 @@ class SeededGameEngine:
         # If we couldn't find a room at the saved position, the player might be in a hallway
         # In the new system, we need to find a nearby room or use the player's last known room
         if self.current_room is None:
-            print("⚠️  Current room not found at saved position (likely in hallway), searching for nearby room...")
-            
             # Try to find a room in the same floor that's connected or nearby
             target_floor = current_pos[2]
             
@@ -1143,7 +1122,6 @@ class SeededGameEngine:
                 cell = self.dungeon.grid[current_pos]
                 if cell.room_ref:
                     self.current_room = cell.room_ref
-                    print("📁 Found room reference in grid cell.")
                 else:
                     # Player is in a hallway, find the closest room by checking nearby positions
                     # Look for connected rooms in the immediate vicinity
@@ -1157,7 +1135,6 @@ class SeededGameEngine:
                                 nearby_cell = self.dungeon.grid[nearby_pos]
                                 if nearby_cell.room_ref:
                                     self.current_room = nearby_cell.room_ref
-                                    print("📁 Found nearby room in hallway area.")
                                     break
                         if self.current_room:
                             break
@@ -1167,7 +1144,6 @@ class SeededGameEngine:
                 for room in self.dungeon.rooms:
                     if room.z == target_floor:
                         self.current_room = room
-                        print(f"📁 Found suitable room on floor {target_floor}.")
                         break
         
         # Update player position to ensure consistency
@@ -1176,8 +1152,6 @@ class SeededGameEngine:
             actual_room = self.dungeon.get_room_at_position(self.player.position)
             if actual_room:
                 self.current_room = actual_room
-        
-        print(f"📂 Game loaded from {filename}")
 
     def is_game_over(self) -> bool:
         """Check if the game is over."""

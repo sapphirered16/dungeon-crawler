@@ -105,33 +105,31 @@ class CommandProcessor:
             return True
 
     def help_command(self, args: List[str]) -> bool:
-        """Show help information."""
-        print("\n📖 Available Commands:")
-        print("  help/h/?          - Show this help message")
-        print("  stats             - Show player statistics")
-        print("  look/l            - Look around the current room")
-        print("  go/move <dir>     - Move in a direction (n/s/e/w/u/d)")
-        print("  attack <num>      - Attack monster number <num>")
-        print("  take/get <num>    - Take item number <num>")
-        print("  equip <num>       - Equip item number <num>")
-        print("  use <num>         - Use consumable item number <num>")
-        print("  inventory/i       - Show inventory")
-        print("  talk/speak <num>  - Talk to NPC number <num>")
-        print("  map               - Show full current floor map")
-        print("  local/lm          - Show 5x5 local map around player")
-        print("  items/item        - Show map with item location indicators")
-        print("  stairs/staircase  - Show locations of stairs on current floor")
-        print("  save              - Save game")
-        print("  load              - Load game")
-        print("  clear             - Clear save and log files")
-        print("  log/history       - View game log history (optional: <num> lines)")
-        print("  quit/q/exit       - Quit game")
-        print("\n💡 Tips:")
-        print("  - Move directly with direction names: n/s/e/w/u/d")
-        print("  - Items/monsters/NPCs are numbered in room descriptions")
-        print("  - Use 'local' or 'lm' for 5x5 map view")
-        print("  - Use 'items' to see item location indicators on the map")
-        print("  - Use 'log' to review adventure history")
+        """Show help information with dense formatting."""
+        print("┌─ COMMANDS ─────────────────────────────────────────────────────────────────┐")
+        print("│ help/h/?           │ Show this help message                       │")
+        print("│ stats              │ Show player statistics (dense format)             │")
+        print("│ look/l             │ Look around current room + local map              │")
+        print("│ go/move n/s/e/w/u/d│ Move in direction                              │")
+        print("│ attack <num>        │ Attack monster <num>                             │")
+        print("│ take/get <num>      │ Take item <num> from room                        │")
+        print("│ equip <num>        │ Equip item <num> from inventory                  │")
+        print("│ use <num>          │ Use consumable <num> from inventory               │")
+        print("│ inventory/i        │ Show inventory (dense format)                    │")
+        print("│ talk/speak <num>    │ Talk to NPC <num> in room                        │")
+        print("│ map                │ Show full current floor map                     │")
+        print("│ local/lm           │ Show 5x5 local map around player                 │")
+        print("│ items/item         │ Show map with item locations                     │")
+        print("│ stairs/staircase    │ Show stair locations on current floor               │")
+        print("│ save               │ Save game to savegame.json                       │")
+        print("│ load               │ Load game from savegame.json                     │")
+        print("│ clear              │ Delete save and log files                      │")
+        print("│ log/history <num>   │ View last <num> log lines (default: 10)          │")
+        print("│ quit/q/exit        │ Exit game                                      │")
+        print("├─ TIPS ──────────────────────────────────────────────────────────────────┤")
+        print("│ • Move: n/s/e/w/u/d • Room: numbered items/monsters/NPCs                │")
+        print("│ • 'local' = 5x5 map  • 'items' = item locs • 'log' = history    │")
+        print("└────────────────────────────────────────────────────────────────────────┘")
         return True
 
     def stats_command(self, args: List[str]) -> bool:
@@ -229,23 +227,22 @@ class CommandProcessor:
         return True
 
     def inventory_command(self, args: List[str]) -> bool:
-        """Show player inventory."""
+        """Show player inventory with dense formatting."""
         if not self.game_engine.player.inventory:
-            print("🎒 Your inventory is empty.")
+            print("┌─ INVENTORY ─────────────────────────────────────────────────────────┐")
+            print("│                    (empty)                                      │")
+            print("└────────────────────────────────────────────────────────────────┘")
         else:
-            print("\n🎒 Inventory:")
+            print("┌─ INVENTORY ─────────────────────────────────────────────────────────┐")
             for i, item in enumerate(self.game_engine.player.inventory, 1):
-                print(f"  {i}. {item.name} (Value: {item.value})")
-        
-        if self.game_engine.player.equipped_weapon:
-            print(f"\n⚔️  Equipped Weapon: {self.game_engine.player.equipped_weapon.name}")
-        else:
-            print("\n⚔️  Equipped Weapon: None")
-        
-        if self.game_engine.player.equipped_armor:
-            print(f"🛡️  Equipped Armor: {self.game_engine.player.equipped_armor.name}")
-        else:
-            print("🛡️  Equipped Armor: None")
+                equipped = "*" if item == self.game_engine.player.equipped_weapon or item == self.game_engine.player.equipped_armor else " "
+                value_str = f"VAL:{item.value:>3}" if item.value > 0 else ""
+                type_str = f"TYPE:{item.item_type.value[:3]:>3}"
+                print(f"│ {equipped}{i:>2}. {item.name:<20} {type_str} {value_str:<8} │")
+            
+            weapon = self.game_engine.player.equipped_weapon.name if self.game_engine.player.equipped_weapon else "None"
+            armor = self.game_engine.player.equipped_armor.name if self.game_engine.player.equipped_armor else "None"
+            print(f"├─ WPN:{weapon:<15} ARM:{armor:<15} ─────────────────────┘")
         
         return True
 
