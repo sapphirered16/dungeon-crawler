@@ -7,15 +7,7 @@ Visualizes the dungeon layout based on a given seed for debugging purposes.
 import random
 from enum import Enum
 from typing import Dict, List, Tuple, Optional
-
-
-class Direction(Enum):
-    NORTH = "north"
-    SOUTH = "south"
-    EAST = "east"
-    WEST = "west"
-    UP = "up"
-    DOWN = "down"
+from classes.base import Direction
 
 
 class RoomType(Enum):

@@ -12,15 +12,15 @@ current_dir = os.path.dirname(__file__)
 grandparent_dir = os.path.join(current_dir, '..', '..')
 sys.path.insert(0, os.path.abspath(grandparent_dir))
 
-from src.classes.new_dungeon import SeededDungeon, Room
-from src.classes.character import Player
-from src.classes.room import RoomState
-from src.classes.base import Direction, Entity
-from src.classes.map_effects import MapEffectType
+from classes.new_dungeon import SeededDungeon, Room
+from classes.character import Player
+from classes.room import RoomState
+from classes.base import Direction, Entity
+from classes.map_effects import MapEffectType
 
 # Import data loader from the data module
 try:
-    from src.data.data_loader import DataProvider
+    from data.data_loader import DataProvider
 except ImportError:
     # Fallback for when running in a different context
     from ..data.data_loader import DataProvider
@@ -164,7 +164,7 @@ class SeededGameEngine:
                     print(f"  {i}. {item.name} (Value: {item.value})")
         
         # Show creatures in room (excluding NPCs, only if there are creatures)
-        from .classes.character import NonPlayerCharacter
+        from classes.character import NonPlayerCharacter
         creatures = []
         for e in self.current_room.entities:
             if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
@@ -252,7 +252,7 @@ class SeededGameEngine:
                     print(f"  {i}. {item.name} (Value: {item.value})")
         
         # Show creatures in room (excluding NPCs, only if there are creatures)
-        from .classes.character import NonPlayerCharacter
+        from classes.character import NonPlayerCharacter
         creatures = []
         for e in self.current_room.entities:
             if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
@@ -290,9 +290,15 @@ class SeededGameEngine:
             elif direction == Direction.WEST:
                 new_x -= 1
             elif direction in [Direction.UP, Direction.DOWN]:
-                # For stairs, check if available
-                if (direction == Direction.UP and self.current_room.has_stairs_up) or \
-                   (direction == Direction.DOWN and self.current_room.has_stairs_down):
+                # For stairs, check if available at either room level or grid cell level
+                current_pos = self.player.position
+                has_stairs_up = (self.current_room.has_stairs_up or 
+                                 (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_up))
+                has_stairs_down = (self.current_room.has_stairs_down or 
+                                   (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_down))
+                
+                if (direction == Direction.UP and has_stairs_up) or \
+                   (direction == Direction.DOWN and has_stairs_down):
                     available_directions.append(direction.value)
                 continue  # Skip to next direction
             else:
@@ -341,7 +347,7 @@ class SeededGameEngine:
                 print(f"  {i}. {item.name} (Value: {item.value})")
         
         # Show creatures in room (excluding NPCs, only if there are creatures)
-        from .classes.character import NonPlayerCharacter
+        from classes.character import NonPlayerCharacter
         creatures = []
         for e in self.current_room.entities:
             if e.is_alive() and e.name != "Player" and not isinstance(e, NonPlayerCharacter):
@@ -379,9 +385,15 @@ class SeededGameEngine:
             elif direction == Direction.WEST:
                 new_x -= 1
             elif direction in [Direction.UP, Direction.DOWN]:
-                # For stairs, check if available
-                if (direction == Direction.UP and self.current_room.has_stairs_up) or \
-                   (direction == Direction.DOWN and self.current_room.has_stairs_down):
+                # For stairs, check if available at either room level or grid cell level
+                current_pos = self.player.position
+                has_stairs_up = (self.current_room.has_stairs_up or 
+                                 (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_up))
+                has_stairs_down = (self.current_room.has_stairs_down or 
+                                   (current_pos in self.dungeon.grid and self.dungeon.grid[current_pos].has_stairs_down))
+                
+                if (direction == Direction.UP and has_stairs_up) or \
+                   (direction == Direction.DOWN and has_stairs_down):
                     available_directions.append(direction.value)
                 continue  # Skip to next direction
             else:
@@ -422,9 +434,9 @@ class SeededGameEngine:
 
     def talk_to_npc(self, npc_index: int) -> bool:
         """Talk to an NPC in the current room."""
-        from .classes.character import NonPlayerCharacter
-        from .classes.item import Item
-        from .classes.base import ItemType
+        from classes.character import NonPlayerCharacter
+        from classes.item import Item
+        from classes.base import ItemType
         
         # Get all NPCs in the room
         npcs = self.current_room.npcs
@@ -577,11 +589,61 @@ class SeededGameEngine:
                     return False
 
         # Handle special directions (stairs)
-        if direction == Direction.UP and self.current_room.has_stairs_up:
+        # Check for Stair objects at the current position first (primary method)
+        current_pos = self.player.position
+        
+        # Check if player is standing on a Stair object
+        if current_pos in self.dungeon.grid:
+            current_cell = self.dungeon.grid[current_pos]
+            
+            # Look for Stair objects in the current cell
+            for item in current_cell.items:
+                # Import Stair class to check type
+                from classes.new_dungeon import Stair
+                
+                if isinstance(item, Stair) and item.position == current_pos:
+                    # Player is standing on a stair - check if direction matches
+                    if direction == item.direction:
+                        # Use the stair to move to its connected position
+                        target_pos = item.connects_to
+                        old_pos = self.player.position
+                        
+                        # Find the room at the target position
+                        target_room = self.dungeon.get_room_at_position(target_pos)
+                        if target_room:
+                            self.current_room = target_room
+                            self.player.travel_to(target_pos)
+                            # Add all positions in the new room to explored areas
+                            for pos in self.current_room.get_all_positions():
+                                self.explored_positions.add((*pos, self.current_room.z))
+                            
+                            # Provide direction-specific feedback
+                            if direction == Direction.UP:
+                                self.event_buffer.append("⬆️  You climb up the stairs...")
+                            elif direction == Direction.DOWN:
+                                self.event_buffer.append("⬇️  You descend down the stairs...")
+                            
+                            self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {target_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                            # Trigger any map effects at the new position
+                            self._trigger_map_effects_at_current_position()
+                            # Process monster AI after moving
+                            self.process_monster_ai()
+                            # Update temporary buffs
+                            self.player.update_temporary_buffs()
+                            # Display all events and final state after moving
+                            self._display_events()
+                            self.look_around_with_map()
+                            return True
+        
+        # Fallback to room-level stair flags (for backward compatibility)
+        # This handles old saves and ensures robustness
+        has_stairs_up = self.current_room.has_stairs_up
+        has_stairs_down = self.current_room.has_stairs_down
+        
+        if direction == Direction.UP and has_stairs_up:
             target_pos = self.current_room.stairs_up_target
             if target_pos:
                 old_pos = self.player.position
-                # Find the room at the target position
                 target_room = self.dungeon.get_room_at_position(target_pos)
                 if target_room:
                     self.current_room = target_room
@@ -601,11 +663,10 @@ class SeededGameEngine:
                     self._display_events()
                     self.look_around_with_map()
                     return True
-        elif direction == Direction.DOWN and self.current_room.has_stairs_down:
+        elif direction == Direction.DOWN and has_stairs_down:
             target_pos = self.current_room.stairs_down_target
             if target_pos:
                 old_pos = self.player.position
-                # Find the room at the target position
                 target_room = self.dungeon.get_room_at_position(target_pos)
                 if target_room:
                     self.current_room = target_room
@@ -696,7 +757,7 @@ class SeededGameEngine:
         self.event_buffer = []
         
         # Filter for living enemies only (excluding NPCs)
-        from .classes.character import NonPlayerCharacter
+        from classes.character import NonPlayerCharacter
         
         living_enemies = []
         for e in self.current_room.entities:
@@ -897,7 +958,21 @@ class SeededGameEngine:
                         cell_at_pos = self.dungeon.grid.get(pos)
                         has_items = cell_at_pos and cell_at_pos.items
                         has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
-                        if has_obstacles:
+                        
+                        # Check for Stair objects first (primary display)
+                        has_stair = False
+                        stair_symbol = None
+                        if has_items:
+                            from classes.new_dungeon import Stair
+                            for item in cell_at_pos.items:
+                                if isinstance(item, Stair):
+                                    has_stair = True
+                                    stair_symbol = item.symbol
+                                    break
+                        
+                        if has_stair:
+                            grid[(x, y)] = stair_symbol  # Show stair symbol (↑ or ↓)
+                        elif has_obstacles:
                             grid[(x, y)] = '#'  # Hallway with obstacles (locked doors/blocked passages)
                         elif has_items:
                             grid[(x, y)] = '≈'  # Hallway with items
@@ -908,7 +983,21 @@ class SeededGameEngine:
                         cell_at_pos = self.dungeon.grid.get(pos)
                         has_items = cell_at_pos and cell_at_pos.items
                         has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
-                        if has_obstacles:
+                        
+                        # Check for Stair objects first (primary display)
+                        has_stair = False
+                        stair_symbol = None
+                        if has_items:
+                            from classes.new_dungeon import Stair
+                            for item in cell_at_pos.items:
+                                if isinstance(item, Stair):
+                                    has_stair = True
+                                    stair_symbol = item.symbol
+                                    break
+                        
+                        if has_stair:
+                            grid[(x, y)] = stair_symbol  # Show stair symbol (↑ or ↓)
+                        elif has_obstacles:
                             grid[(x, y)] = '#'  # Room with obstacles (locked doors/blocked passages)
                         elif has_items:
                             grid[(x, y)] = '■'  # Room with items (black square)
@@ -922,7 +1011,21 @@ class SeededGameEngine:
                         cell_at_pos = self.dungeon.grid.get(pos)
                         has_items = cell_at_pos and cell_at_pos.items
                         has_obstacles = cell_at_pos and (cell_at_pos.locked_doors or cell_at_pos.blocked_passages)
-                        if has_obstacles:
+                        
+                        # Check for Stair objects first (primary display)
+                        has_stair = False
+                        stair_symbol = None
+                        if has_items:
+                            from classes.new_dungeon import Stair
+                            for item in cell_at_pos.items:
+                                if isinstance(item, Stair):
+                                    has_stair = True
+                                    stair_symbol = item.symbol
+                                    break
+                        
+                        if has_stair:
+                            grid[(x, y)] = stair_symbol  # Show stair symbol (↑ or ↓)
+                        elif has_obstacles:
                             grid[(x, y)] = '#'  # Hallway with obstacles (locked doors/blocked passages)
                         elif has_items:
                             grid[(x, y)] = '≈'  # Hallway with items
@@ -1081,8 +1184,8 @@ class SeededGameEngine:
 
     def process_monster_ai(self):
         """Process AI for all monsters in the dungeon."""
-        from .classes.new_enemy import Enemy
-        from .classes.character import NonPlayerCharacter
+        from classes.new_enemy import Enemy
+        from classes.character import NonPlayerCharacter
         
         # Process each room for monster actions
         for room in self.dungeon.rooms:
@@ -1214,8 +1317,8 @@ class SeededGameEngine:
 
     def _process_loot_drops(self, enemy) -> List:
         """Process loot drops based on enemy's defined drops."""
-        from .classes.item import Item
-        from .classes.base import ItemType
+        from classes.item import Item
+        from classes.base import ItemType
         
         dropped_items = []
         

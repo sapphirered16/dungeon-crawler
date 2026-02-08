@@ -28,6 +28,22 @@ class NonPlayerCharacter(Entity):
             return random.choice(self.dialogue)
         return f"{self.name} doesn't seem to have anything to say."
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        """Create NPC from dictionary for loading."""
+        npc = cls(
+            name=data["name"],
+            health=data["max_health"],
+            attack=data["attack"],
+            defense=data["defense"],
+            dialogue=data.get("dialogue", [])
+        )
+        npc.health = data["health"]
+        npc.active_status_effects = data.get("active_status_effects", {})
+        npc.quest_items_given = data.get("quest_items_given", [])
+        npc.quest_completed = data.get("quest_completed", False)
+        return npc
+
 
 class Player(Entity):
     def __init__(self, name: str = "Hero"):

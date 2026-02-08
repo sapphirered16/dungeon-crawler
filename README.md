@@ -139,6 +139,17 @@ python -m src.main --seed 12345 stats
 ./play.sh stairs
 ```
 
+### New Game Creation
+```bash
+# Start a new game with random seed (resets all progress)
+python -m src.main --newgame
+./play.sh newgame
+
+# Start a new game with specific seed
+python -m src.main --newgame --seed 12345
+./play.sh newgame 12345
+```
+
 ### Visualize Dungeon
 ```bash
 # Visualize dungeon layout for a specific seed

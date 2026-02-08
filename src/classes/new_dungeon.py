@@ -24,6 +24,15 @@ except ImportError:
     from ..data.data_loader import DataProvider
 
 
+class Stair:
+    """Represents a single-tile stair for floor transitions."""
+    def __init__(self, position: Tuple[int, int, int], direction: Direction, connects_to: Tuple[int, int, int]):
+        self.position = position  # (x, y, z) position of the stair
+        self.direction = direction  # UP or DOWN direction
+        self.connects_to = connects_to  # (x, y, z) target position when used
+        self.symbol = '↑' if direction == Direction.UP else '↓'  # Visual symbol
+
+
 class Room:
     """Represents a room with actual dimensions and position."""
     def __init__(self, x: int, y: int, z: int, width: int, height: int, room_type: str):
@@ -624,7 +633,7 @@ class SeededDungeon:
         return Item(name, ItemType.KEY, 10, f"A key to unlock {name}", status_effects={})
 
     def _connect_stairs_properly(self):
-        """Ensure stairs are properly connected between floors."""
+        """Ensure stairs are properly connected between floors as single-tile objects."""
         all_floors = set(room.z for room in self.rooms)
         max_floor = max(all_floors) if all_floors else 0
         min_floor = min(all_floors) if all_floors else 0
@@ -644,11 +653,38 @@ class SeededDungeon:
                 from_center = from_room.get_center()
                 to_center = to_room.get_center()
                 
-                # Add stairs to the rooms
+                # Add stairs to the rooms as single-tile Stair objects
+                # Create the down stair on the current floor
+                stair_down = Stair(
+                    position=from_center,  # Where the stair object is placed
+                    direction=Direction.DOWN,  # Direction of movement
+                    connects_to=to_center  # Where it takes you
+                )
+                
+                # Create the up stair on the next floor
+                stair_up = Stair(
+                    position=to_center,  # Where the stair object is placed
+                    direction=Direction.UP,  # Direction of movement
+                    connects_to=from_center  # Where it takes you
+                )
+                
+                # Add Stair objects to the grid cells at the center of each room
+                # This ensures that when a player stands on these positions, they can interact with stairs
+                if from_center in self.grid:
+                    self.grid[from_center].items.append(stair_down)
+                    # Also add to the room's items list for backward compatibility
+                    from_room.items.append(stair_down)
+                
+                if to_center in self.grid:
+                    self.grid[to_center].items.append(stair_up)
+                    # Also add to the room's items list for backward compatibility
+                    to_room.items.append(stair_up)
+                
+                # Keep room-level flags for backward compatibility with existing code
                 from_room.has_stairs_down = True
-                from_room.stairs_down_target = (*to_center, floor + 1)
+                from_room.stairs_down_target = to_center
                 to_room.has_stairs_up = True
-                to_room.stairs_up_target = (*from_center, floor)
+                to_room.stairs_up_target = from_center
         
         # Ensure there's a special artifact room on the deepest (highest-numbered) floor as the win condition
         deepest_floor_rooms = [room for room in self.rooms if room.z == max_floor]
@@ -805,7 +841,7 @@ class SeededDungeon:
 
     def _generate_random_enemy(self, floor: int):
         """Generate a random enemy based on floor."""
-        from .enemy import Enemy
+        from .new_enemy import Enemy
         
         # Scale enemy strength based on floor
         enemies = self.data_provider.get_enemies()
@@ -1054,11 +1090,27 @@ class SeededDungeon:
                 item = Item.from_dict(item_data)
                 room.items.append(item)
             
-            # Reconstruct entities (simplified)
-            room.entities = room_data['entities']
+            # Reconstruct entities - check if they have enemy-specific attributes
+            room.entities = []
+            for entity_data in room_data['entities']:
+                # Check if entity has enemy-specific attributes (ai_state indicates it's an Enemy)
+                if 'ai_state' in entity_data:
+                    # This is an Enemy
+                    from .new_enemy import Enemy
+                    enemy = Enemy.from_dict(entity_data)
+                    room.entities.append(enemy)
+                else:
+                    # This is a generic Entity
+                    from .base import Entity
+                    entity = Entity.from_dict(entity_data)
+                    room.entities.append(entity)
             
-            # Reconstruct NPCs (simplified)
-            room.npcs = room_data['npcs']
+            # Reconstruct NPCs
+            from .character import NonPlayerCharacter
+            room.npcs = []
+            for npc_data in room_data['npcs']:
+                npc = NonPlayerCharacter.from_dict(npc_data)
+                room.npcs.append(npc)
             
             # Restore other properties
             room.locked_doors = room_data['locked_doors']

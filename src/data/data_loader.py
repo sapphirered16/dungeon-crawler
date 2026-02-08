@@ -2,17 +2,7 @@
 
 import json
 import os
-from enum import Enum
 from typing import List, Dict, Any
-
-
-class ItemType(Enum):
-    WEAPON = "weapon"
-    ARMOR = "armor"
-    CONSUMABLE = "consumable"
-    KEY = "key"
-    TRIGGER = "trigger"
-    ARTIFACT = "artifact"
 
 
 class DataProvider:
@@ -103,14 +93,14 @@ class DataProvider:
                     # Categorized format: {category: [items]}
                     for category, items in item_data.items():
                         for item in items:
-                            # Normalize the type to lowercase to match ItemType enum values
+                            # Normalize the type to lowercase to match ItemType enum (classes.base.ItemType)
                             if "type" in item:
                                 item["type"] = item["type"].lower()
                             self.items.append(item)
                 elif isinstance(item_data, list):
                     # Flat format: [items]
                     for item in item_data:
-                        # Normalize the type to lowercase to match ItemType enum values
+                        # Normalize the type to lowercase to match ItemType enum (classes.base.ItemType)
                         if "type" in item:
                             item["type"] = item["type"].lower()
                         self.items.append(item)

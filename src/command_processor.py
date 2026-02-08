@@ -2,8 +2,8 @@
 
 import re
 from typing import List, Tuple, Optional
-from .classes.base import Direction
-from .new_game_engine import SeededGameEngine
+from classes.base import Direction
+from new_game_engine import SeededGameEngine
 
 
 class CommandProcessor:
@@ -70,12 +70,33 @@ class CommandProcessor:
             success = self.game_engine.move_player(direction)
             if not success:
                 print(f"❌ You cannot move {direction.value}.")
+            else:
+                # Auto-save after successful movement
+                self.game_engine.save_game()
+                # Show the local map after movement
+                try:
+                    # Debug: print that we're trying to show the map
+                    print("📍 Showing map after movement...")
+                    # Get the current room if it exists, or find the nearest room
+                    if hasattr(self.game_engine, 'current_room') and self.game_engine.current_room:
+                        # Show the room description and local map
+                        self.game_engine.look_around_with_map()
+                    else:
+                        # If no current room, just show the local map around player position
+                        print("\n📍 Local Map:")
+                        self.game_engine.show_local_map_no_legend()
+                except Exception as e:
+                    print(f"⚠️  Error showing local map after movement: {e}")
             return True
         
         # Look for command in mapping
         if cmd in self.command_map:
             try:
-                return self.command_map[cmd](args)
+                result = self.command_map[cmd](args)
+                # Auto-save after most commands (except save/load/help which manage state themselves)
+                if cmd not in ['save', 'load', 'help', 'h', '?', 'quit', 'q', 'exit']:
+                    self.game_engine.save_game()
+                return result
             except Exception as e:
                 print(f"❌ Error processing command '{cmd}': {str(e)}")
                 return True

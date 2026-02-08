@@ -79,3 +79,29 @@ class Entity:
         self.health = min(self.max_health, self.health + amount)
         healed = self.health - old_health
         return healed
+
+    def to_dict(self) -> dict:
+        """Convert entity to dictionary for saving."""
+        return {
+            "name": self.name,
+            "max_health": self.max_health,
+            "health": self.health,
+            "attack": self.attack,
+            "defense": self.defense,
+            "speed": self.speed,
+            "active_status_effects": self.active_status_effects.copy()
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict):
+        """Create entity from dictionary for loading."""
+        entity = cls(
+            name=data["name"],
+            health=data["max_health"],
+            attack=data["attack"],
+            defense=data["defense"],
+            speed=data.get("speed", 10)
+        )
+        entity.health = data["health"]
+        entity.active_status_effects = data.get("active_status_effects", {})
+        return entity

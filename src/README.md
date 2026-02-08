@@ -41,3 +41,9 @@ Provides visualization tools for dungeon layouts based on seeds.
 ### Single Command Execution
 - `python -m src.main <command>` - Execute single command
 - `./play.sh <command>` - Execute single command via script
+
+### New Game Creation
+- `python -m src.main --newgame` - Start a new game with random seed
+- `python -m src.main --newgame --seed <number>` - Start a new game with specific seed
+- `./play.sh newgame` - Start a new game with random seed via script
+- `./play.sh newgame <number>` - Start a new game with specific seed via script
