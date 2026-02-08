@@ -228,16 +228,20 @@ class CommandProcessor:
 
     def inventory_command(self, args: List[str]) -> bool:
         """Show player inventory with dense formatting."""
-        if not self.game_engine.player.inventory:
+        # Filter out Stair objects from inventory display
+        from classes.new_dungeon import Stair
+        inventory_items = [item for item in self.game_engine.player.inventory if not isinstance(item, Stair)]
+        
+        if not inventory_items:
             print("┌─ INVENTORY ─────────────────────────────────────────────────────────┐")
             print("│                    (empty)                                      │")
             print("└────────────────────────────────────────────────────────────────┘")
         else:
             print("┌─ INVENTORY ─────────────────────────────────────────────────────────┐")
-            for i, item in enumerate(self.game_engine.player.inventory, 1):
+            for i, item in enumerate(inventory_items, 1):
                 equipped = "*" if item == self.game_engine.player.equipped_weapon or item == self.game_engine.player.equipped_armor else " "
                 value_str = f"VAL:{item.value:>3}" if item.value > 0 else ""
-                type_str = f"TYPE:{item.item_type.value[:3]:>3}"
+                type_str = f"TYPE:{item.item_type.value[:3]:>3}" if hasattr(item, 'item_type') else "TYPE:---"
                 print(f"│ {equipped}{i:>2}. {item.name:<20} {type_str} {value_str:<8} │")
             
             weapon = self.game_engine.player.equipped_weapon.name if self.game_engine.player.equipped_weapon else "None"

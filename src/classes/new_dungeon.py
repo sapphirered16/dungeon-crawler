@@ -31,6 +31,32 @@ class Stair:
         self.direction = direction  # UP or DOWN direction
         self.connects_to = connects_to  # (x, y, z) target position when used
         self.symbol = '↑' if direction == Direction.UP else '↓'  # Visual symbol
+        self.name = f"Stone Stairs {direction.value.upper()}"  # Display name
+        self.value = 0  # Stairs have no value
+        self.item_type = None  # Stairs aren't regular items
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert stair to dictionary for saving."""
+        return {
+            'position': self.position,
+            'direction': self.direction.value,
+            'connects_to': self.connects_to,
+            'symbol': self.symbol,
+            'name': self.name,
+            'value': self.value
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'Stair':
+        """Create stair from dictionary for loading."""
+        stair = cls(
+            position=tuple(data['position']),
+            direction=Direction(data['direction']),
+            connects_to=tuple(data['connects_to'])
+        )
+        stair.name = data.get('name', f"Stone Stairs {data['direction'].upper()}")
+        stair.value = data.get('value', 0)
+        return stair
 
 
 class Room:
