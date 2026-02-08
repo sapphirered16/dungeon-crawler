@@ -43,7 +43,8 @@ class Stair:
             'connects_to': self.connects_to,
             'symbol': self.symbol,
             'name': self.name,
-            'value': self.value
+            'value': self.value,
+            'item_type': 'trigger'  # Include item_type so loading doesn't fail
         }
     
     @classmethod
@@ -56,6 +57,7 @@ class Stair:
         )
         stair.name = data.get('name', f"Stone Stairs {data['direction'].upper()}")
         stair.value = data.get('value', 0)
+        # Don't set item_type attribute since stairs aren't regular items
         return stair
 
 
@@ -1061,6 +1063,10 @@ class SeededDungeon:
         # For now, we'll serialize the room information
         room_data = []
         for room in self.rooms:
+            # Filter out Stair objects from items list - they are handled separately
+            from classes.new_dungeon import Stair
+            regular_items = [item for item in room.items if not isinstance(item, Stair)]
+            
             room_data.append({
                 'x': room.x,
                 'y': room.y,
@@ -1069,7 +1075,7 @@ class SeededDungeon:
                 'height': room.height,
                 'room_type': room.room_type,
                 'description': room.description,
-                'items': [item.to_dict() for item in room.items],
+                'items': [item.to_dict() for item in regular_items],  # Only regular items
                 'entities': [entity.to_dict() if hasattr(entity, 'to_dict') else str(entity) for entity in room.entities],
                 'npcs': [npc.to_dict() if hasattr(npc, 'to_dict') else str(npc) for npc in room.npcs],
                 'locked_doors': room.locked_doors,
@@ -1110,11 +1116,18 @@ class SeededDungeon:
             )
             room.description = room_data['description']
             
-            # Reconstruct items
+            # Reconstruct items - check for Stair objects
             from .item import Item
             for item_data in room_data['items']:
-                item = Item.from_dict(item_data)
-                room.items.append(item)
+                # Check if this is a Stair object by looking for stair-specific attributes
+                if 'direction' in item_data and 'connects_to' in item_data:
+                    # This is a Stair object
+                    stair = Stair.from_dict(item_data)
+                    room.items.append(stair)
+                else:
+                    # This is a regular Item
+                    item = Item.from_dict(item_data)
+                    room.items.append(item)
             
             # Reconstruct entities - check if they have enemy-specific attributes
             room.entities = []
