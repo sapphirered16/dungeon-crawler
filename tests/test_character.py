@@ -2,9 +2,9 @@
 
 import unittest
 import random
-from src.classes.character import Player, NonPlayerCharacter
-from src.classes.base import ItemType
-from src.classes.item import Item
+from classes.character import Player, NonPlayerCharacter
+from classes.base import ItemType
+from classes.item import Item
 
 
 class TestPlayer(unittest.TestCase):

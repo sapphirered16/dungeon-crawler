@@ -1,10 +1,10 @@
 """Unit tests for room classes."""
 
 import unittest
-from src.classes.room import RoomState
-from src.classes.item import Item
-from src.classes.base import ItemType, Direction
-from src.classes.character import Entity, NonPlayerCharacter
+from classes.room import RoomState
+from classes.item import Item
+from classes.base import ItemType, Direction
+from classes.character import Entity, NonPlayerCharacter
 
 
 class TestRoomState(unittest.TestCase):

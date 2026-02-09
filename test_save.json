@@ -1,0 +1,2527 @@
+{
+  "metadata": {
+    "seed": 12345,
+    "save_version": "2.0",
+    "timestamp": "2026-02-09T16:31:49.246787",
+    "player_position": [
+      4,
+      10,
+      0
+    ]
+  },
+  "player": {
+    "stats": {
+      "name": "Hero",
+      "level": 1,
+      "exp": 0,
+      "exp_to_next_level": 100,
+      "max_health": 100,
+      "health": 100,
+      "attack": 10,
+      "defense": 5,
+      "speed": 10,
+      "gold": 0,
+      "score": 0
+    },
+    "position": [
+      4,
+      10,
+      0
+    ],
+    "equipment": {
+      "weapon": null,
+      "armor": null
+    },
+    "inventory": [],
+    "status_effects": {},
+    "temporary_buffs": {},
+    "exploration": {
+      "enemies_defeated": 0,
+      "treasures_collected": 0,
+      "floors_explored": 1,
+      "distance_traveled": 14,
+      "rooms_explored": [
+        [
+          4,
+          10,
+          0
+        ]
+      ]
+    }
+  },
+  "world_changes": {
+    "defeated_enemies": [],
+    "collected_items": [],
+    "completed_quests": [],
+    "unlocked_doors": [],
+    "removed_obstacles": [],
+    "grid_items": {
+      "(4, 13, 0)": [
+        {
+          "name": "Frost Helm",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 3,
+          "defense_bonus": 10,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "chill": 2
+          }
+        },
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(4, 14, 0)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Power Stone",
+          "item_type": "trigger",
+          "value": 5,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(4, 15, 0)": [
+        {
+          "name": "Frost Helm",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 3,
+          "defense_bonus": 10,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "chill": 2
+          }
+        }
+      ],
+      "(4, 16, 0)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Dagger",
+          "item_type": "weapon",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 7,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(6, 17, 0)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(7, 17, 0)": [
+        {
+          "name": "Thunder Hammer",
+          "item_type": "weapon",
+          "value": 150,
+          "description": "",
+          "attack_bonus": 25,
+          "defense_bonus": 3,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "stun": 2
+          }
+        },
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 18, 0)": [
+        {
+          "name": "Chain Mail",
+          "item_type": "armor",
+          "value": 40,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 10,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 19, 0)": [
+        {
+          "name": "Flame Sword",
+          "item_type": "weapon",
+          "value": 100,
+          "description": "",
+          "attack_bonus": 15,
+          "defense_bonus": 2,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "burn": 3
+          }
+        }
+      ],
+      "(9, 23, 0)": [
+        {
+          "position": [
+            9,
+            23,
+            0
+          ],
+          "direction": "down",
+          "connects_to": [
+            20,
+            9,
+            1
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(11, 15, 0)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(11, 17, 0)": [
+        {
+          "name": "Healing Amulet",
+          "item_type": "armor",
+          "value": 60,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 5,
+          "health_bonus": 50,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(12, 17, 0)": [
+        {
+          "name": "Power Rune",
+          "item_type": "trigger",
+          "value": 5,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(23, 20, 0)": [
+        {
+          "name": "Iron Sword",
+          "item_type": "weapon",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 10,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(24, 18, 0)": [
+        {
+          "name": "Plate Armor",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 18,
+          "health_bonus": 35,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 6, 1)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Thunder Hammer",
+          "item_type": "weapon",
+          "value": 150,
+          "description": "",
+          "attack_bonus": 25,
+          "defense_bonus": 3,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "stun": 2
+          }
+        },
+        {
+          "name": "Plate Armor",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 18,
+          "health_bonus": 35,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(11, 6, 1)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(12, 6, 1)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Plate Armor",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 18,
+          "health_bonus": 35,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 6, 1)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 7, 1)": [
+        {
+          "name": "Crystal of Power",
+          "item_type": "artifact",
+          "value": 2000,
+          "description": "",
+          "attack_bonus": 10,
+          "defense_bonus": 10,
+          "health_bonus": 100,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 11, 1)": [
+        {
+          "position": [
+            13,
+            11,
+            1
+          ],
+          "direction": "down",
+          "connects_to": [
+            7,
+            11,
+            2
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(14, 9, 1)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(15, 9, 1)": [
+        {
+          "name": "Rusty Sword",
+          "item_type": "weapon",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(16, 9, 1)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(20, 9, 1)": [
+        {
+          "position": [
+            20,
+            9,
+            1
+          ],
+          "direction": "up",
+          "connects_to": [
+            9,
+            23,
+            0
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        },
+        {
+          "name": "Healing Amulet",
+          "item_type": "armor",
+          "value": 60,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 5,
+          "health_bonus": 50,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(7, 5, 2)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(7, 6, 2)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(7, 7, 2)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(7, 11, 2)": [
+        {
+          "position": [
+            7,
+            11,
+            2
+          ],
+          "direction": "up",
+          "connects_to": [
+            13,
+            11,
+            1
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(9, 11, 2)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Steel Sword",
+          "item_type": "weapon",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 18,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 11, 2)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Power Crystal",
+          "item_type": "trigger",
+          "value": 5,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 12, 2)": [
+        {
+          "name": "Robe",
+          "item_type": "armor",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 3,
+          "health_bonus": 25,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 13, 2)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Rusty Sword",
+          "item_type": "weapon",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 15, 2)": [
+        {
+          "name": "Rusty Sword",
+          "item_type": "weapon",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 15, 2)": [
+        {
+          "name": "Leather Armor",
+          "item_type": "armor",
+          "value": 20,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 5,
+          "health_bonus": 10,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(14, 14, 2)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(22, 21, 2)": [
+        {
+          "position": [
+            22,
+            21,
+            2
+          ],
+          "direction": "down",
+          "connects_to": [
+            12,
+            16,
+            3
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(3, 9, 3)": [
+        {
+          "name": "Power Rune",
+          "item_type": "trigger",
+          "value": 5,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(6, 9, 3)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(6, 23, 3)": [
+        {
+          "name": "Power Elixir",
+          "item_type": "consumable",
+          "value": 30,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 5,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(7, 9, 3)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 4, 3)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 5, 3)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Frost Helm",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 3,
+          "defense_bonus": 10,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "chill": 2
+          }
+        }
+      ],
+      "(10, 6, 3)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Healing Amulet",
+          "item_type": "armor",
+          "value": 60,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 5,
+          "health_bonus": 50,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 9, 3)": [
+        {
+          "name": "Steel Sword",
+          "item_type": "weapon",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 18,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 13, 3)": [
+        {
+          "name": "Leather Armor",
+          "item_type": "armor",
+          "value": 20,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 5,
+          "health_bonus": 10,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 15, 3)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 16, 3)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(12, 16, 3)": [
+        {
+          "position": [
+            12,
+            16,
+            3
+          ],
+          "direction": "up",
+          "connects_to": [
+            22,
+            21,
+            2
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        },
+        {
+          "position": [
+            12,
+            16,
+            3
+          ],
+          "direction": "down",
+          "connects_to": [
+            13,
+            9,
+            4
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(12, 17, 3)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(6, 11, 4)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(6, 12, 4)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(8, 9, 4)": [
+        {
+          "name": "Power Rune",
+          "item_type": "trigger",
+          "value": 5,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 9, 4)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 9, 4)": [
+        {
+          "name": "Frost Helm",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 3,
+          "defense_bonus": 10,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "chill": 2
+          }
+        },
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(11, 15, 4)": [
+        {
+          "name": "Orb of Destiny",
+          "item_type": "artifact",
+          "value": 5000,
+          "description": "",
+          "attack_bonus": 20,
+          "defense_bonus": 20,
+          "health_bonus": 200,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(12, 19, 4)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 9, 4)": [
+        {
+          "position": [
+            13,
+            9,
+            4
+          ],
+          "direction": "up",
+          "connects_to": [
+            12,
+            16,
+            3
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(13, 15, 4)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 19, 4)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Robe",
+          "item_type": "armor",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 3,
+          "health_bonus": 25,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(15, 15, 4)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Iron Sword",
+          "item_type": "weapon",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 10,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(20, 12, 4)": [
+        {
+          "position": [
+            20,
+            12,
+            4
+          ],
+          "direction": "down",
+          "connects_to": [
+            13,
+            13,
+            5
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(8, 6, 5)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(8, 7, 5)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Steel Sword",
+          "item_type": "weapon",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 18,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Leather Armor",
+          "item_type": "armor",
+          "value": 20,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 5,
+          "health_bonus": 10,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(8, 9, 5)": [
+        {
+          "position": [
+            8,
+            9,
+            5
+          ],
+          "direction": "down",
+          "connects_to": [
+            23,
+            21,
+            6
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(8, 11, 5)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(8, 12, 5)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Plate Armor",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 18,
+          "health_bonus": 35,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 13, 5)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 18, 5)": [
+        {
+          "name": "Dagger",
+          "item_type": "weapon",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 7,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 13, 5)": [
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 18, 5)": [
+        {
+          "name": "Health Potion",
+          "item_type": "consumable",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 30,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(11, 13, 5)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(12, 5, 5)": [
+        {
+          "name": "Dagger",
+          "item_type": "weapon",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 7,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 10, 5)": [
+        {
+          "name": "Ancient Relic",
+          "item_type": "artifact",
+          "value": 1000,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 11, 5)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 13, 5)": [
+        {
+          "position": [
+            13,
+            13,
+            5
+          ],
+          "direction": "up",
+          "connects_to": [
+            20,
+            12,
+            4
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(14, 8, 5)": [
+        {
+          "name": "Robe",
+          "item_type": "armor",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 3,
+          "health_bonus": 25,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(15, 12, 5)": [
+        {
+          "name": "Chain Mail",
+          "item_type": "armor",
+          "value": 40,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 10,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(0, 17, 6)": [
+        {
+          "name": "Power Crystal",
+          "item_type": "trigger",
+          "value": 5,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(0, 18, 6)": [
+        {
+          "name": "Iron Sword",
+          "item_type": "weapon",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 10,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(1, 17, 6)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 5, 6)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Power Crystal",
+          "item_type": "trigger",
+          "value": 5,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 9, 6)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Healing Amulet",
+          "item_type": "armor",
+          "value": 60,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 5,
+          "health_bonus": 50,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Frost Helm",
+          "item_type": "armor",
+          "value": 80,
+          "description": "",
+          "attack_bonus": 3,
+          "defense_bonus": 10,
+          "health_bonus": 20,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "chill": 2
+          }
+        },
+        {
+          "name": "Golden Key",
+          "item_type": "key",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 11, 6)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 12, 6)": [
+        {
+          "name": "Dagger",
+          "item_type": "weapon",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 7,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(9, 13, 6)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(10, 11, 6)": [
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(11, 11, 6)": [
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Iron Key",
+          "item_type": "key",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(12, 11, 6)": [
+        {
+          "name": "Silver Key",
+          "item_type": "key",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Ancient Key",
+          "item_type": "key",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(13, 11, 6)": [
+        {
+          "name": "Steel Sword",
+          "item_type": "weapon",
+          "value": 50,
+          "description": "",
+          "attack_bonus": 18,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        },
+        {
+          "name": "Greater Health Potion",
+          "item_type": "consumable",
+          "value": 25,
+          "description": "",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 60,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(14, 11, 6)": [
+        {
+          "name": "Flame Sword",
+          "item_type": "weapon",
+          "value": 100,
+          "description": "",
+          "attack_bonus": 15,
+          "defense_bonus": 2,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "burn": 3
+          }
+        }
+      ],
+      "(16, 9, 6)": [
+        {
+          "name": "Rusty Sword",
+          "item_type": "weapon",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(17, 11, 6)": [
+        {
+          "name": "Dagger",
+          "item_type": "weapon",
+          "value": 15,
+          "description": "",
+          "attack_bonus": 7,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(23, 21, 6)": [
+        {
+          "position": [
+            23,
+            21,
+            6
+          ],
+          "direction": "up",
+          "connects_to": [
+            8,
+            9,
+            5
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "(24, 20, 6)": [
+        {
+          "name": "Rusty Sword",
+          "item_type": "weapon",
+          "value": 10,
+          "description": "",
+          "attack_bonus": 5,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "(24, 22, 6)": [
+        {
+          "name": "Magic Staff",
+          "item_type": "weapon",
+          "value": 40,
+          "description": "",
+          "attack_bonus": 12,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {
+            "burn": 2
+          }
+        }
+      ]
+    },
+    "room_items": {
+      "7_21_0": [
+        {
+          "position": [
+            9,
+            23,
+            0
+          ],
+          "direction": "down",
+          "connects_to": [
+            20,
+            9,
+            1
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "12_9_1": [
+        {
+          "position": [
+            13,
+            11,
+            1
+          ],
+          "direction": "down",
+          "connects_to": [
+            7,
+            11,
+            2
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "19_6_1": [
+        {
+          "position": [
+            20,
+            9,
+            1
+          ],
+          "direction": "up",
+          "connects_to": [
+            9,
+            23,
+            0
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "20_19_2": [
+        {
+          "position": [
+            22,
+            21,
+            2
+          ],
+          "direction": "down",
+          "connects_to": [
+            12,
+            16,
+            3
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "5_9_2": [
+        {
+          "position": [
+            7,
+            11,
+            2
+          ],
+          "direction": "up",
+          "connects_to": [
+            13,
+            11,
+            1
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "11_15_3": [
+        {
+          "position": [
+            12,
+            16,
+            3
+          ],
+          "direction": "up",
+          "connects_to": [
+            22,
+            21,
+            2
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        },
+        {
+          "position": [
+            12,
+            16,
+            3
+          ],
+          "direction": "down",
+          "connects_to": [
+            13,
+            9,
+            4
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "17_11_4": [
+        {
+          "position": [
+            20,
+            12,
+            4
+          ],
+          "direction": "down",
+          "connects_to": [
+            13,
+            13,
+            5
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "12_7_4": [
+        {
+          "position": [
+            13,
+            9,
+            4
+          ],
+          "direction": "up",
+          "connects_to": [
+            12,
+            16,
+            3
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "7_8_5": [
+        {
+          "position": [
+            8,
+            9,
+            5
+          ],
+          "direction": "down",
+          "connects_to": [
+            23,
+            21,
+            6
+          ],
+          "symbol": "\u2193",
+          "name": "Stone Stairs DOWN",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "12_12_5": [
+        {
+          "position": [
+            13,
+            13,
+            5
+          ],
+          "direction": "up",
+          "connects_to": [
+            20,
+            12,
+            4
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ],
+      "6_0_6": [
+        {
+          "name": "Ancient Relic",
+          "item_type": "artifact",
+          "value": 100,
+          "description": "An ancient magical relic",
+          "attack_bonus": 0,
+          "defense_bonus": 0,
+          "health_bonus": 0,
+          "status_effect": null,
+          "status_chance": 0.0,
+          "status_damage": 0,
+          "status_effects": {}
+        }
+      ],
+      "22_20_6": [
+        {
+          "position": [
+            23,
+            21,
+            6
+          ],
+          "direction": "up",
+          "connects_to": [
+            8,
+            9,
+            5
+          ],
+          "symbol": "\u2191",
+          "name": "Stone Stairs UP",
+          "value": 0,
+          "item_type": "trigger"
+        }
+      ]
+    }
+  },
+  "progress": {
+    "explored_positions": [
+      [
+        2,
+        10,
+        0
+      ],
+      [
+        2,
+        12,
+        0
+      ],
+      [
+        4,
+        11,
+        0
+      ],
+      [
+        3,
+        9,
+        0
+      ],
+      [
+        3,
+        11,
+        0
+      ],
+      [
+        4,
+        9,
+        0
+      ],
+      [
+        5,
+        9,
+        0
+      ],
+      [
+        5,
+        11,
+        0
+      ],
+      [
+        3,
+        8,
+        0
+      ],
+      [
+        2,
+        9,
+        0
+      ],
+      [
+        4,
+        8,
+        0
+      ],
+      [
+        2,
+        11,
+        0
+      ],
+      [
+        4,
+        10,
+        0
+      ],
+      [
+        5,
+        8,
+        0
+      ],
+      [
+        3,
+        10,
+        0
+      ],
+      [
+        3,
+        12,
+        0
+      ],
+      [
+        4,
+        12,
+        0
+      ],
+      [
+        5,
+        10,
+        0
+      ],
+      [
+        5,
+        12,
+        0
+      ],
+      [
+        2,
+        8,
+        0
+      ]
+    ],
+    "game_time": 0,
+    "turn_count": 0
+  }
+}

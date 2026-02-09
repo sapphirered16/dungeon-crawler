@@ -1,7 +1,7 @@
 """Unit tests for base classes."""
 
 import unittest
-from src.classes.base import Entity, ItemType, Direction
+from classes.base import Entity, ItemType, Direction
 
 
 class TestEntity(unittest.TestCase):

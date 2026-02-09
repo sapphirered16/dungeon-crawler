@@ -7,6 +7,17 @@ import sys
 from datetime import datetime
 from typing import Tuple, List, Dict, Any
 
+# Import improved save system
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+try:
+    from improved_save_system import ImprovedSaveSystem
+except ImportError:
+    # Fallback if the improved save system is not available
+    class ImprovedSaveSystem:
+        def __init__(self, game_engine):
+            self.game_engine = game_engine
+            print("⚠️  Improved save system not available, using basic save")
+
 # Add the parent directory to the path for imports
 current_dir = os.path.dirname(__file__)
 grandparent_dir = os.path.join(current_dir, '..', '..')
@@ -33,6 +44,9 @@ class SeededGameEngine:
         self.player = Player()
         self.current_room = self._find_starting_room()
         self.data_provider = DataProvider()
+        
+        # Initialize improved save system
+        self.save_system = ImprovedSaveSystem(self)
         
         # Track explored areas for visualization
         self.explored_positions = set()
@@ -518,6 +532,8 @@ class SeededGameEngine:
                 print(f"{npc.name} nods politely.")
                 self._log_action(f"Talked to {npc.name} (no quest) - HP: {self.player.health}/{self.player.max_health}", self.player.position)
             
+            # Auto-save after talking to NPC (quest completion, item rewards, etc.)
+            self.save_system.auto_save()
             return True
         else:
             print("Invalid NPC selection.")
@@ -730,6 +746,8 @@ class SeededGameEngine:
                 # Update temporary buffs
                 self.player.update_temporary_buffs()
                 self._log_action(f"Moved {direction.value.upper()} from {old_pos} to {new_pos} - HP: {self.player.health}/{self.player.max_health}", old_pos)
+                # Auto-save after successful movement
+                self.save_system.auto_save()
                 # Display all events and final state after moving
                 self._display_events()
                 self.look_around_with_map()
@@ -825,6 +843,8 @@ class SeededGameEngine:
                 self.process_monster_ai()
                 # Update temporary buffs
                 self.player.update_temporary_buffs()
+                # Auto-save after defeating enemy
+                self.save_system.auto_save()
                 self._log_action(f"Defeated {enemy.name}, dealt {enemy_damage} damage - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 self._display_events()
                 self.look_around_simple()
@@ -843,6 +863,8 @@ class SeededGameEngine:
             self.process_monster_ai()
             # Update temporary buffs
             self.player.update_temporary_buffs()
+            # Auto-save after combat
+            self.save_system.auto_save()
             self._display_events()
             self.look_around_simple()
             return True
@@ -883,6 +905,8 @@ class SeededGameEngine:
                 # Update temporary buffs
                 self.player.update_temporary_buffs()
                 self.player.treasures_collected += 1  # Update treasures collected
+                # Auto-save after taking item
+                self.save_system.auto_save()
                 self._log_action(f"Took item {item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
                 return True
         
@@ -906,6 +930,8 @@ class SeededGameEngine:
             self.process_monster_ai()
             # Update temporary buffs
             self.player.update_temporary_buffs()
+            # Auto-save after using item
+            self.save_system.auto_save()
             self._log_action(f"Used item {item.name} - HP: {self.player.health}/{self.player.max_health}", self.player.position)
             return True
         else:
@@ -1086,18 +1112,8 @@ class SeededGameEngine:
         print("└─────────────────────────────────────────────────────────────────────────┘")
 
     def save_game(self, filename: str = "savegame.json"):
-        """Save the current game state."""
-        game_state = {
-            "seed": self.seed,
-            "dungeon": self.dungeon.to_dict(),
-            "player": self.player.to_dict(),
-            "current_room_pos": self.player.position
-        }
-        
-        with open(filename, 'w') as f:
-            json.dump(game_state, f, indent=2)
-        
-        print(f"💾 Game saved to {filename}")
+        """Save the current game state using improved save system."""
+        return self.save_system.save_game_state(filename)
 
     def initialize_full_dungeon(self):
         """Fully initialize the dungeon with all items, enemies, NPCs, and obstacles based on the seed."""
@@ -1123,63 +1139,8 @@ class SeededGameEngine:
         print(f"✅ Dungeon fully initialized with seed {self.seed}")
 
     def load_game(self, filename: str = "savegame.json"):
-        """Load a saved game state."""
-        if not os.path.exists(filename):
-            print(f"❌ Save file {filename} does not exist.")
-            return
-        
-        with open(filename, 'r') as f:
-            game_state = json.load(f)
-        
-        self.seed = game_state["seed"]
-        self.dungeon = SeededDungeon.from_dict(game_state["dungeon"])
-        self.player = Player.from_dict(game_state["player"])
-        
-        # Set current room based on player position
-        current_pos = tuple(game_state["current_room_pos"])
-        self.current_room = self.dungeon.get_room_at_position(current_pos)
-        
-        # If we couldn't find a room at the saved position, the player might be in a hallway
-        # In the new system, we need to find a nearby room or use the player's last known room
-        if self.current_room is None:
-            # Try to find a room in the same floor that's connected or nearby
-            target_floor = current_pos[2]
-            
-            # First, check if the grid cell at player position has a room reference
-            if current_pos in self.dungeon.grid:
-                cell = self.dungeon.grid[current_pos]
-                if cell.room_ref:
-                    self.current_room = cell.room_ref
-                else:
-                    # Player is in a hallway, find the closest room by checking nearby positions
-                    # Look for connected rooms in the immediate vicinity
-                    for dx in [-1, 0, 1]:
-                        for dy in [-1, 0, 1]:
-                            if dx == 0 and dy == 0:
-                                continue  # Skip the current position
-                            
-                            nearby_pos = (current_pos[0] + dx, current_pos[1] + dy, current_pos[2])
-                            if nearby_pos in self.dungeon.grid:
-                                nearby_cell = self.dungeon.grid[nearby_pos]
-                                if nearby_cell.room_ref:
-                                    self.current_room = nearby_cell.room_ref
-                                    break
-                        if self.current_room:
-                            break
-            
-            # If still no room found, try to find any room on the same floor
-            if self.current_room is None:
-                for room in self.dungeon.rooms:
-                    if room.z == target_floor:
-                        self.current_room = room
-                        break
-        
-        # Update player position to ensure consistency
-        if hasattr(self.player, 'position'):
-            # Make sure current room matches player's position
-            actual_room = self.dungeon.get_room_at_position(self.player.position)
-            if actual_room:
-                self.current_room = actual_room
+        """Load a saved game state using improved save system."""
+        return self.save_system.load_game_state(filename)
 
     def is_game_over(self) -> bool:
         """Check if the game is over."""

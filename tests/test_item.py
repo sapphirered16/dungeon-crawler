@@ -1,8 +1,8 @@
 """Unit tests for item class."""
 
 import unittest
-from src.classes.item import Item
-from src.classes.base import ItemType
+from classes.item import Item
+from classes.base import ItemType
 
 
 class TestItem(unittest.TestCase):

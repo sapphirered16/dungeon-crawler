@@ -3,7 +3,11 @@
 import unittest
 import tempfile
 import os
-from src.game_engine import SeededGameEngine
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+from new_game_engine import SeededGameEngine
 
 
 class TestSeededGameEngine(unittest.TestCase):
@@ -15,7 +19,7 @@ class TestSeededGameEngine(unittest.TestCase):
         self.assertEqual(self.game.seed, 12345)
         self.assertIsNotNone(self.game.dungeon)
         self.assertIsNotNone(self.game.player)
-        self.assertIsNotNone(self.game.current_room_state)
+        self.assertIsNotNone(self.game.current_room)
         self.assertIsNotNone(self.game.data_provider)
 
     def test_player_starts_at_correct_position(self):
@@ -39,7 +43,7 @@ class TestSeededGameEngine(unittest.TestCase):
 
     def test_move_player_directions(self):
         """Test that player can move in different directions."""
-        from src.classes.base import Direction
+        from classes.base import Direction
         
         # Try to move in each direction and ensure it doesn't crash
         directions = [Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST]
